@@ -6,10 +6,20 @@ class BottomBar extends StatefulWidget {
   final Widget child;
   final int currentPage;
   final TabController tabController;
+  final List<Color> colors;
+  final Color unselectedColor;
+  final Color barColor;
+  final double end;
+  final double start;
   const BottomBar({
     required this.child,
     required this.currentPage,
     required this.tabController,
+    required this.colors,
+    required this.unselectedColor,
+    required this.barColor,
+    required this.end,
+    required this.start,
     Key? key,
   }) : super(key: key);
 
@@ -24,7 +34,6 @@ class _BottomBarState extends State<BottomBar>
   late Animation<Offset> _offsetAnimation;
   bool isScrollingDown = false;
   bool isOnTop = true;
-  bool result = true;
 
   @override
   void initState() {
@@ -35,11 +44,11 @@ class _BottomBarState extends State<BottomBar>
       vsync: this,
     );
     _offsetAnimation = Tween<Offset>(
-      begin: const Offset(0, 1),
+      begin: Offset(0, widget.end),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _controller,
-      curve: Curves.linear,
+      curve: Curves.easeIn,
     ))
       ..addListener(() {
         if (mounted) {
@@ -104,83 +113,25 @@ class _BottomBarState extends State<BottomBar>
           child: widget.child,
         ),
         Positioned(
-          bottom: 0,
-          child: SlideTransition(
-            position: _offsetAnimation,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                    width: MediaQuery.of(context).size.width,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor,
-                      border: Border(
-                        top: BorderSide(
-                          color:
-                              Theme.of(context).brightness == Brightness.light
-                                  ? Colors.black.withOpacity(0.16)
-                                  : Colors.white.withOpacity(0.16),
-                          // width: 1.0
-                        ),
-                      ),
-                    ),
-                    child: TabBar(
-                      indicatorPadding: const EdgeInsets.fromLTRB(6, 0, 6, 0),
-                      labelStyle: Theme.of(context).textTheme.caption!.copyWith(
-                            color: Colors.white,
-                          ),
-                      controller: widget.tabController,
-                      indicator: UnderlineTabIndicator(),
-                      tabs: [
-                        SizedBox(
-                          height: 55,
-                          width: 40,
-                          child: Center(child: Icon(Icons.home)),
-                        ),
-                        SizedBox(
-                          height: 55,
-                          width: 40,
-                          child: Center(child: Icon(Icons.home)),
-                        ),
-                        SizedBox(
-                          height: 55,
-                          width: 40,
-                          child: Center(child: Icon(Icons.home)),
-                        ),
-                        SizedBox(
-                          height: 55,
-                          width: 40,
-                          child: Center(child: Icon(Icons.home)),
-                        ),
-                        SizedBox(
-                          height: 55,
-                          width: 40,
-                          child: Center(child: Icon(Icons.home)),
-                        ),
-                      ],
-                    )),
-              ],
+          bottom: widget.start,
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: 300),
+            curve: Curves.easeIn,
+            width: isOnTop == true ? 0 : 40,
+            height: isOnTop == true ? 0 : 40,
+            decoration: BoxDecoration(
+              color: widget.barColor,
+              shape: BoxShape.circle,
             ),
-          ),
-        ),
-        if (isOnTop == true)
-          Container()
-        else
-          Positioned(
-            bottom: 10,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor,
-                shape: BoxShape.circle,
-              ),
-              padding: EdgeInsets.zero,
-              margin: EdgeInsets.zero,
-              child: ClipOval(
-                child: Material(
-                  color: Colors.transparent,
-                  child: SizedBox(
-                    height: 40,
-                    width: 40,
+            padding: EdgeInsets.zero,
+            margin: EdgeInsets.zero,
+            child: ClipOval(
+              child: Material(
+                color: Colors.transparent,
+                child: SizedBox(
+                  height: 40,
+                  width: 40,
+                  child: Center(
                     child: IconButton(
                       padding: EdgeInsets.zero,
                       onPressed: () {
@@ -188,7 +139,7 @@ class _BottomBarState extends State<BottomBar>
                             .animateTo(
                           scrollBottomBarController.position.minScrollExtent,
                           duration: const Duration(milliseconds: 500),
-                          curve: Curves.linear,
+                          curve: Curves.easeIn,
                         )
                             .then((value) {
                           if (mounted) {
@@ -200,13 +151,111 @@ class _BottomBarState extends State<BottomBar>
                           showBottomBar();
                         });
                       },
-                      icon: Icon(Icons.arrow_upward_rounded),
+                      icon: Icon(
+                        Icons.arrow_upward_rounded,
+                        color: widget.unselectedColor,
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
           ),
+        ),
+        Positioned(
+          bottom: widget.start,
+          child: SlideTransition(
+            position: _offsetAnimation,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(500),
+              child: Container(
+                  width: MediaQuery.of(context).size.width * 0.8,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor,
+                    borderRadius: BorderRadius.circular(500),
+                  ),
+                  child: Material(
+                    color: widget.barColor,
+                    child: TabBar(
+                      indicatorPadding: const EdgeInsets.fromLTRB(6, 0, 6, 0),
+                      controller: widget.tabController,
+                      indicator: UnderlineTabIndicator(
+                          borderSide: BorderSide(
+                              color: widget.currentPage == 0
+                                  ? widget.colors[0]
+                                  : widget.currentPage == 1
+                                      ? widget.colors[1]
+                                      : widget.currentPage == 2
+                                          ? widget.colors[2]
+                                          : widget.currentPage == 3
+                                              ? widget.colors[3]
+                                              : widget.currentPage == 4
+                                                  ? widget.colors[4]
+                                                  : widget.unselectedColor,
+                              width: 4),
+                          insets: EdgeInsets.fromLTRB(16, 0, 16, 8)),
+                      tabs: [
+                        SizedBox(
+                          height: 55,
+                          width: 40,
+                          child: Center(
+                              child: Icon(
+                            Icons.home,
+                            color: widget.currentPage == 0
+                                ? widget.colors[0]
+                                : widget.unselectedColor,
+                          )),
+                        ),
+                        SizedBox(
+                          height: 55,
+                          width: 40,
+                          child: Center(
+                              child: Icon(
+                            Icons.search,
+                            color: widget.currentPage == 1
+                                ? widget.colors[1]
+                                : widget.unselectedColor,
+                          )),
+                        ),
+                        SizedBox(
+                          height: 55,
+                          width: 40,
+                          child: Center(
+                              child: Icon(
+                            Icons.add,
+                            color: widget.currentPage == 2
+                                ? widget.colors[2]
+                                : widget.unselectedColor,
+                          )),
+                        ),
+                        SizedBox(
+                          height: 55,
+                          width: 40,
+                          child: Center(
+                              child: Icon(
+                            Icons.favorite,
+                            color: widget.currentPage == 3
+                                ? widget.colors[3]
+                                : widget.unselectedColor,
+                          )),
+                        ),
+                        SizedBox(
+                          height: 55,
+                          width: 40,
+                          child: Center(
+                              child: Icon(
+                            Icons.settings,
+                            color: widget.currentPage == 4
+                                ? widget.colors[4]
+                                : widget.unselectedColor,
+                          )),
+                        ),
+                      ],
+                    ),
+                  )),
+            ),
+          ),
+        ),
       ],
     );
   }

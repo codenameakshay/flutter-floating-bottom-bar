@@ -15,6 +15,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
+      debugShowCheckedModeBanner: false,
       home: MyHomePage(title: 'Flutter Floating Bottom Bar Demo'),
     );
   }
@@ -32,6 +33,13 @@ class _MyHomePageState extends State<MyHomePage>
     with SingleTickerProviderStateMixin {
   late int currentPage;
   late TabController tabController;
+  final List<Color> colors = [
+    Colors.red,
+    Colors.yellow,
+    Colors.green,
+    Colors.blue,
+    Colors.pink
+  ];
 
   @override
   void initState() {
@@ -62,24 +70,26 @@ class _MyHomePageState extends State<MyHomePage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
-      body: BottomBar(
-        currentPage: currentPage,
-        tabController: tabController,
-        child: TabBarView(
-          controller: tabController,
-          dragStartBehavior: DragStartBehavior.down,
-          physics: const BouncingScrollPhysics(),
-          children: [
-            InfiniteListPage(color: Colors.red),
-            InfiniteListPage(color: Colors.yellow),
-            InfiniteListPage(color: Colors.green),
-            InfiniteListPage(color: Colors.blue),
-            InfiniteListPage(color: Colors.pink),
-          ],
+    return SafeArea(
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.title),
+          backgroundColor: Colors.black,
+        ),
+        body: BottomBar(
+          currentPage: currentPage,
+          tabController: tabController,
+          colors: colors,
+          unselectedColor: Colors.white,
+          barColor: Colors.black,
+          start: 10,
+          end: 2,
+          child: TabBarView(
+            controller: tabController,
+            dragStartBehavior: DragStartBehavior.down,
+            physics: const BouncingScrollPhysics(),
+            children: colors.map((e) => InfiniteListPage(color: e)).toList(),
+          ),
         ),
       ),
     );
