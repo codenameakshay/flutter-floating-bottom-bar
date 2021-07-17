@@ -1,7 +1,4 @@
 library floating_bar;
 
-/// A Calculator.
-class Calculator {
-  /// Returns [value] plus 1.
-  int addOne(int value) => value + 1;
-}
+export 'src/bottom_bar.dart';
+export 'src/bottom_bar_scroll_controller_provider.dart';

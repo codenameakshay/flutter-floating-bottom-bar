@@ -1,4 +1,4 @@
-import 'package:floating_bar/provider/inherited_data_provider.dart';
+import 'package:floating_bar/src/bottom_bar_scroll_controller_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
@@ -108,7 +108,7 @@ class _BottomBarState extends State<BottomBar>
       fit: StackFit.expand,
       alignment: Alignment.bottomCenter,
       children: [
-        InheritedDataProvider(
+        BottomBarScrollControllerProvider(
           scrollController: scrollBottomBarController,
           child: widget.child,
         ),

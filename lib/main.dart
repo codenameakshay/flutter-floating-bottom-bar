@@ -1,5 +1,5 @@
-import 'package:floating_bar/pages/infinite_list_page.dart';
-import 'package:floating_bar/widgets/bottom_bar.dart';
+import 'package:floating_bar/floating_bar.dart';
+import 'package:floating_bottom_bar/pages/infinite_list_page.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 

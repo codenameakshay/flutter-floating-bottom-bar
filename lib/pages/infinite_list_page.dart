@@ -1,4 +1,4 @@
-import 'package:floating_bar/provider/inherited_data_provider.dart';
+import 'package:floating_bar/floating_bar.dart';
 import 'package:flutter/material.dart';
 
 class InfiniteListPage extends StatelessWidget {
@@ -8,7 +8,7 @@ class InfiniteListPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ScrollController controller =
-        InheritedDataProvider.of(context).scrollController;
+        BottomBarScrollControllerProvider.of(context).scrollController;
     return ListView.builder(
       controller: controller,
       itemBuilder: (context, index) {
