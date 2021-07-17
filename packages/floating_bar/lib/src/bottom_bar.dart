@@ -2,24 +2,47 @@ import 'package:floating_bar/src/bottom_bar_scroll_controller_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
+/// A floating bottom navigation bar that hides on scroll
+/// up and down on the page, with powerful options
+/// for controlling the look and feel.
 class BottomBar extends StatefulWidget {
+  /// The widget displayed below the `BottomBar`.
+  ///
+  /// This is useful, if the `BottomBar` should react
+  /// to scroll events (i.e. hide from view when a [Scrollable]
+  /// is being scrolled down and show it again when scrolled up).
+  final Widget Function(BuildContext context, ScrollController controller) body;
+
+  ///
+  /// This is the child inside the `BottomBar`.
+  /// Add a TabBar or any other thing that you want to be floating here.
   final Widget child;
-  final int currentPage;
-  final TabController tabController;
-  final List<Color> colors;
-  final Color unselectedColor;
+
+  ///
+  /// This is the scroll to top button. It will be hidden when the
+  /// `BottomBar` is scrolled up. It will be shown when the `BottomBar`
+  /// is scrolled down. Clicking it will scroll the bar on top.
+  final Widget icon;
   final Color barColor;
   final double end;
   final double start;
+  final double bottom;
+  final Duration duration;
+  final Curve curve;
+  final double width;
+  final bool showIcon;
   const BottomBar({
+    required this.body,
     required this.child,
-    required this.currentPage,
-    required this.tabController,
-    required this.colors,
-    required this.unselectedColor,
+    required this.icon,
     required this.barColor,
-    required this.end,
-    required this.start,
+    this.end = 0,
+    this.start = 2,
+    this.bottom = 10,
+    this.duration = const Duration(milliseconds: 300),
+    this.curve = Curves.linear,
+    this.width = 100,
+    this.showIcon = true,
     Key? key,
   }) : super(key: key);
 
@@ -44,8 +67,8 @@ class _BottomBarState extends State<BottomBar>
       vsync: this,
     );
     _offsetAnimation = Tween<Offset>(
-      begin: Offset(0, widget.end),
-      end: Offset.zero,
+      begin: Offset(0, widget.start),
+      end: Offset(0, widget.end),
     ).animate(CurvedAnimation(
       parent: _controller,
       curve: Curves.easeIn,
@@ -110,10 +133,10 @@ class _BottomBarState extends State<BottomBar>
       children: [
         BottomBarScrollControllerProvider(
           scrollController: scrollBottomBarController,
-          child: widget.child,
+          child: widget.body(context, scrollBottomBarController),
         ),
         Positioned(
-          bottom: widget.start,
+          bottom: widget.bottom,
           child: AnimatedContainer(
             duration: Duration(milliseconds: 300),
             curve: Curves.easeIn,
@@ -128,42 +151,32 @@ class _BottomBarState extends State<BottomBar>
             child: ClipOval(
               child: Material(
                 color: Colors.transparent,
-                child: SizedBox(
-                  height: 40,
-                  width: 40,
-                  child: Center(
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: () {
-                        scrollBottomBarController
-                            .animateTo(
-                          scrollBottomBarController.position.minScrollExtent,
-                          duration: const Duration(milliseconds: 500),
-                          curve: Curves.easeIn,
-                        )
-                            .then((value) {
-                          if (mounted) {
-                            setState(() {
-                              isOnTop = true;
-                              isScrollingDown = false;
-                            });
-                          }
-                          showBottomBar();
+                child: InkWell(
+                  onTap: () {
+                    scrollBottomBarController
+                        .animateTo(
+                      scrollBottomBarController.position.minScrollExtent,
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves.easeIn,
+                    )
+                        .then((value) {
+                      if (mounted) {
+                        setState(() {
+                          isOnTop = true;
+                          isScrollingDown = false;
                         });
-                      },
-                      icon: Icon(
-                        Icons.arrow_upward_rounded,
-                        color: widget.unselectedColor,
-                      ),
-                    ),
-                  ),
+                      }
+                      showBottomBar();
+                    });
+                  },
+                  child: widget.icon,
                 ),
               ),
             ),
           ),
         ),
         Positioned(
-          bottom: widget.start,
+          bottom: widget.bottom,
           child: SlideTransition(
             position: _offsetAnimation,
             child: ClipRRect(
@@ -176,82 +189,7 @@ class _BottomBarState extends State<BottomBar>
                   ),
                   child: Material(
                     color: widget.barColor,
-                    child: TabBar(
-                      indicatorPadding: const EdgeInsets.fromLTRB(6, 0, 6, 0),
-                      controller: widget.tabController,
-                      indicator: UnderlineTabIndicator(
-                          borderSide: BorderSide(
-                              color: widget.currentPage == 0
-                                  ? widget.colors[0]
-                                  : widget.currentPage == 1
-                                      ? widget.colors[1]
-                                      : widget.currentPage == 2
-                                          ? widget.colors[2]
-                                          : widget.currentPage == 3
-                                              ? widget.colors[3]
-                                              : widget.currentPage == 4
-                                                  ? widget.colors[4]
-                                                  : widget.unselectedColor,
-                              width: 4),
-                          insets: EdgeInsets.fromLTRB(16, 0, 16, 8)),
-                      tabs: [
-                        SizedBox(
-                          height: 55,
-                          width: 40,
-                          child: Center(
-                              child: Icon(
-                            Icons.home,
-                            color: widget.currentPage == 0
-                                ? widget.colors[0]
-                                : widget.unselectedColor,
-                          )),
-                        ),
-                        SizedBox(
-                          height: 55,
-                          width: 40,
-                          child: Center(
-                              child: Icon(
-                            Icons.search,
-                            color: widget.currentPage == 1
-                                ? widget.colors[1]
-                                : widget.unselectedColor,
-                          )),
-                        ),
-                        SizedBox(
-                          height: 55,
-                          width: 40,
-                          child: Center(
-                              child: Icon(
-                            Icons.add,
-                            color: widget.currentPage == 2
-                                ? widget.colors[2]
-                                : widget.unselectedColor,
-                          )),
-                        ),
-                        SizedBox(
-                          height: 55,
-                          width: 40,
-                          child: Center(
-                              child: Icon(
-                            Icons.favorite,
-                            color: widget.currentPage == 3
-                                ? widget.colors[3]
-                                : widget.unselectedColor,
-                          )),
-                        ),
-                        SizedBox(
-                          height: 55,
-                          width: 40,
-                          child: Center(
-                              child: Icon(
-                            Icons.settings,
-                            color: widget.currentPage == 4
-                                ? widget.colors[4]
-                                : widget.unselectedColor,
-                          )),
-                        ),
-                      ],
-                    ),
+                    child: widget.child,
                   )),
             ),
           ),

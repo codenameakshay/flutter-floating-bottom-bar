@@ -40,6 +40,7 @@ class _MyHomePageState extends State<MyHomePage>
     Colors.blue,
     Colors.pink
   ];
+  final Color unselectedColor = Colors.white;
 
   @override
   void initState() {
@@ -77,18 +78,93 @@ class _MyHomePageState extends State<MyHomePage>
           backgroundColor: Colors.black,
         ),
         body: BottomBar(
-          currentPage: currentPage,
-          tabController: tabController,
-          colors: colors,
-          unselectedColor: Colors.white,
+          child: TabBar(
+            indicatorPadding: const EdgeInsets.fromLTRB(6, 0, 6, 0),
+            controller: tabController,
+            indicator: UnderlineTabIndicator(
+                borderSide: BorderSide(
+                    color: currentPage == 0
+                        ? colors[0]
+                        : currentPage == 1
+                            ? colors[1]
+                            : currentPage == 2
+                                ? colors[2]
+                                : currentPage == 3
+                                    ? colors[3]
+                                    : currentPage == 4
+                                        ? colors[4]
+                                        : unselectedColor,
+                    width: 4),
+                insets: EdgeInsets.fromLTRB(16, 0, 16, 8)),
+            tabs: [
+              SizedBox(
+                height: 55,
+                width: 40,
+                child: Center(
+                    child: Icon(
+                  Icons.home,
+                  color: currentPage == 0 ? colors[0] : unselectedColor,
+                )),
+              ),
+              SizedBox(
+                height: 55,
+                width: 40,
+                child: Center(
+                    child: Icon(
+                  Icons.search,
+                  color: currentPage == 1 ? colors[1] : unselectedColor,
+                )),
+              ),
+              SizedBox(
+                height: 55,
+                width: 40,
+                child: Center(
+                    child: Icon(
+                  Icons.add,
+                  color: currentPage == 2 ? colors[2] : unselectedColor,
+                )),
+              ),
+              SizedBox(
+                height: 55,
+                width: 40,
+                child: Center(
+                    child: Icon(
+                  Icons.favorite,
+                  color: currentPage == 3 ? colors[3] : unselectedColor,
+                )),
+              ),
+              SizedBox(
+                height: 55,
+                width: 40,
+                child: Center(
+                    child: Icon(
+                  Icons.settings,
+                  color: currentPage == 4 ? colors[4] : unselectedColor,
+                )),
+              ),
+            ],
+          ),
+          icon: Center(
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              onPressed: null,
+              icon: Icon(
+                Icons.arrow_upward_rounded,
+                color: unselectedColor,
+              ),
+            ),
+          ),
           barColor: Colors.black,
-          start: 10,
-          end: 2,
-          child: TabBarView(
+          start: 2,
+          end: 0,
+          bottom: 10,
+          body: (context, controller) => TabBarView(
             controller: tabController,
             dragStartBehavior: DragStartBehavior.down,
             physics: const BouncingScrollPhysics(),
-            children: colors.map((e) => InfiniteListPage(color: e)).toList(),
+            children: colors
+                .map((e) => InfiniteListPage(controller: controller, color: e))
+                .toList(),
           ),
         ),
       ),
