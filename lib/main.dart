@@ -34,13 +34,12 @@ class _MyHomePageState extends State<MyHomePage>
   late int currentPage;
   late TabController tabController;
   final List<Color> colors = [
-    Colors.red,
     Colors.yellow,
+    Colors.red,
     Colors.green,
     Colors.blue,
     Colors.pink
   ];
-  final Color unselectedColor = Colors.white;
 
   @override
   void initState() {
@@ -71,6 +70,9 @@ class _MyHomePageState extends State<MyHomePage>
 
   @override
   Widget build(BuildContext context) {
+    final Color unselectedColor = colors[currentPage].computeLuminance() < 0.5
+        ? Colors.black
+        : Colors.white;
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
@@ -154,10 +156,25 @@ class _MyHomePageState extends State<MyHomePage>
               ),
             ),
           ),
-          barColor: Colors.black,
+          borderRadius: BorderRadius.circular(500),
+          duration: Duration(seconds: 1),
+          curve: Curves.decelerate,
+          showIcon: true,
+          width: MediaQuery.of(context).size.width * 0.8,
+          barColor: colors[currentPage].computeLuminance() > 0.5
+              ? Colors.black
+              : Colors.white,
           start: 2,
           end: 0,
           bottom: 10,
+          alignment: Alignment.bottomCenter,
+          iconHeight: 100,
+          iconWidth: 100,
+          reverse: false,
+          hideOnScroll: true,
+          scrollOpposite: false,
+          onBottomBarHidden: () {},
+          onBottomBarShown: () {},
           body: (context, controller) => TabBarView(
             controller: tabController,
             dragStartBehavior: DragStartBehavior.down,

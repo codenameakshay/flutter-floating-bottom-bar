@@ -11,6 +11,7 @@ class InfiniteListPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.builder(
       controller: controller,
+      // reverse: true,
       itemBuilder: (context, index) {
         return ListTile(
           onTap: () {},

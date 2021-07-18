@@ -23,6 +23,8 @@ class BottomBar extends StatefulWidget {
   /// `BottomBar` is scrolled up. It will be shown when the `BottomBar`
   /// is scrolled down. Clicking it will scroll the bar on top.
   final Widget icon;
+  final double iconWidth;
+  final double iconHeight;
   final Color barColor;
   final double end;
   final double start;
@@ -30,19 +32,37 @@ class BottomBar extends StatefulWidget {
   final Duration duration;
   final Curve curve;
   final double width;
+  final BorderRadius borderRadius;
   final bool showIcon;
+  final Alignment alignment;
+  final Function()? onBottomBarShown;
+  final Function()? onBottomBarHidden;
+  final bool reverse;
+  final bool scrollOpposite;
+  final bool hideOnScroll;
+  final StackFit fit;
   const BottomBar({
     required this.body,
     required this.child,
     required this.icon,
-    required this.barColor,
+    this.iconWidth = 40,
+    this.iconHeight = 40,
+    this.barColor = Colors.black,
     this.end = 0,
     this.start = 2,
     this.bottom = 10,
     this.duration = const Duration(milliseconds: 300),
     this.curve = Curves.linear,
-    this.width = 100,
+    this.width = 300,
+    this.borderRadius = BorderRadius.zero,
     this.showIcon = true,
+    this.alignment = Alignment.bottomCenter,
+    this.onBottomBarShown,
+    this.onBottomBarHidden,
+    this.reverse = false,
+    this.scrollOpposite = false,
+    this.hideOnScroll = true,
+    this.fit = StackFit.loose,
     Key? key,
   }) : super(key: key);
 
@@ -55,15 +75,17 @@ class _BottomBarState extends State<BottomBar>
   ScrollController scrollBottomBarController = ScrollController();
   late AnimationController _controller;
   late Animation<Offset> _offsetAnimation;
-  bool isScrollingDown = false;
-  bool isOnTop = true;
+  late bool isScrollingDown;
+  late bool isOnTop;
 
   @override
   void initState() {
+    isScrollingDown = widget.reverse;
+    isOnTop = !widget.reverse;
     myScroll();
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: widget.duration,
       vsync: this,
     );
     _offsetAnimation = Tween<Offset>(
@@ -71,7 +93,7 @@ class _BottomBarState extends State<BottomBar>
       end: Offset(0, widget.end),
     ).animate(CurvedAnimation(
       parent: _controller,
-      curve: Curves.easeIn,
+      curve: widget.curve,
     ))
       ..addListener(() {
         if (mounted) {
@@ -87,32 +109,53 @@ class _BottomBarState extends State<BottomBar>
         _controller.forward();
       });
     }
+    if (widget.onBottomBarShown != null) widget.onBottomBarShown!();
   }
 
   void hideBottomBar() {
-    if (mounted) {
+    if (mounted && widget.hideOnScroll) {
       setState(() {
         _controller.reverse();
       });
     }
+    if (widget.onBottomBarHidden != null) widget.onBottomBarHidden!();
   }
 
   Future<void> myScroll() async {
     scrollBottomBarController.addListener(() {
-      if (scrollBottomBarController.position.userScrollDirection ==
-          ScrollDirection.reverse) {
-        if (!isScrollingDown) {
-          isScrollingDown = true;
-          isOnTop = false;
-          hideBottomBar();
+      if (!widget.reverse) {
+        if (scrollBottomBarController.position.userScrollDirection ==
+            ScrollDirection.reverse) {
+          if (!isScrollingDown) {
+            isScrollingDown = true;
+            isOnTop = false;
+            hideBottomBar();
+          }
         }
-      }
-      if (scrollBottomBarController.position.userScrollDirection ==
-          ScrollDirection.forward) {
-        if (isScrollingDown) {
-          isScrollingDown = false;
-          isOnTop = true;
-          showBottomBar();
+        if (scrollBottomBarController.position.userScrollDirection ==
+            ScrollDirection.forward) {
+          if (isScrollingDown) {
+            isScrollingDown = false;
+            isOnTop = true;
+            showBottomBar();
+          }
+        }
+      } else {
+        if (scrollBottomBarController.position.userScrollDirection ==
+            ScrollDirection.forward) {
+          if (!isScrollingDown) {
+            isScrollingDown = true;
+            isOnTop = false;
+            hideBottomBar();
+          }
+        }
+        if (scrollBottomBarController.position.userScrollDirection ==
+            ScrollDirection.reverse) {
+          if (isScrollingDown) {
+            isScrollingDown = false;
+            isOnTop = true;
+            showBottomBar();
+          }
         }
       }
     });
@@ -128,64 +171,68 @@ class _BottomBarState extends State<BottomBar>
   @override
   Widget build(BuildContext context) {
     return Stack(
-      fit: StackFit.expand,
-      alignment: Alignment.bottomCenter,
+      fit: widget.fit,
+      alignment: widget.alignment,
       children: [
         BottomBarScrollControllerProvider(
           scrollController: scrollBottomBarController,
           child: widget.body(context, scrollBottomBarController),
         ),
-        Positioned(
-          bottom: widget.bottom,
-          child: AnimatedContainer(
-            duration: Duration(milliseconds: 300),
-            curve: Curves.easeIn,
-            width: isOnTop == true ? 0 : 40,
-            height: isOnTop == true ? 0 : 40,
-            decoration: BoxDecoration(
-              color: widget.barColor,
-              shape: BoxShape.circle,
-            ),
-            padding: EdgeInsets.zero,
-            margin: EdgeInsets.zero,
-            child: ClipOval(
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    scrollBottomBarController
-                        .animateTo(
-                      scrollBottomBarController.position.minScrollExtent,
-                      duration: const Duration(milliseconds: 500),
-                      curve: Curves.easeIn,
-                    )
-                        .then((value) {
-                      if (mounted) {
-                        setState(() {
-                          isOnTop = true;
-                          isScrollingDown = false;
-                        });
-                      }
-                      showBottomBar();
-                    });
-                  },
-                  child: widget.icon,
+        if (widget.showIcon)
+          Positioned(
+            bottom: widget.bottom,
+            child: AnimatedContainer(
+              duration: widget.duration,
+              curve: widget.curve,
+              width: isOnTop == true ? 0 : widget.iconWidth,
+              height: isOnTop == true ? 0 : widget.iconHeight,
+              decoration: BoxDecoration(
+                color: widget.barColor,
+                shape: BoxShape.circle,
+              ),
+              padding: EdgeInsets.zero,
+              margin: EdgeInsets.zero,
+              child: ClipOval(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      scrollBottomBarController
+                          .animateTo(
+                        (!widget.scrollOpposite)
+                            ? scrollBottomBarController.position.minScrollExtent
+                            : scrollBottomBarController
+                                .position.maxScrollExtent,
+                        duration: widget.duration,
+                        curve: widget.curve,
+                      )
+                          .then((value) {
+                        if (mounted) {
+                          setState(() {
+                            isOnTop = true;
+                            isScrollingDown = false;
+                          });
+                        }
+                        showBottomBar();
+                      });
+                    },
+                    child: widget.icon,
+                  ),
                 ),
               ),
             ),
           ),
-        ),
         Positioned(
           bottom: widget.bottom,
           child: SlideTransition(
             position: _offsetAnimation,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(500),
+              borderRadius: widget.borderRadius,
               child: Container(
-                  width: MediaQuery.of(context).size.width * 0.8,
+                  width: widget.width,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor,
-                    borderRadius: BorderRadius.circular(500),
+                    color: widget.barColor,
+                    borderRadius: widget.borderRadius,
                   ),
                   child: Material(
                     color: widget.barColor,
