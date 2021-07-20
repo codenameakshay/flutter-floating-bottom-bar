@@ -11,6 +11,9 @@ class BottomBar extends StatefulWidget {
   /// This is useful, if the `BottomBar` should react
   /// to scroll events (i.e. hide from view when a [Scrollable]
   /// is being scrolled down and show it again when scrolled up).
+  ///
+  /// For that, use this exposed `ScrollController` and
+  /// you can also add listeners on this `ScrollController`.
   final Widget Function(BuildContext context, ScrollController controller) body;
 
   ///
@@ -22,25 +25,86 @@ class BottomBar extends StatefulWidget {
   /// This is the scroll to top button. It will be hidden when the
   /// `BottomBar` is scrolled up. It will be shown when the `BottomBar`
   /// is scrolled down. Clicking it will scroll the bar on top.
+  ///
+  /// You can hide this by using the `showIcon` property.
   final Widget icon;
+
+  ///
+  /// The width of the scroll to top button.
   final double iconWidth;
+
+  ///
+  /// The height of the scroll to top button.
   final double iconHeight;
+
+  ///
+  /// The color of the `BottomBar`.
   final Color barColor;
+
+  ///
+  /// The end position in `y-axis` of the SlideTransition of the `BottomBar`.
   final double end;
+
+  ///
+  /// The start position in `y-axis` of the SlideTransition of the `BottomBar`.
   final double start;
+
+  ///
+  /// The position of the bar from the bottom in double.
   final double bottom;
+
+  ///
+  /// The duration of the `SlideTransition` of the `BottomBar`.
   final Duration duration;
+
+  ///
+  /// The curve of the `SlideTransition` of the `BottomBar`.
   final Curve curve;
+
+  ///
+  /// The width of the `BottomBar`.
   final double width;
+
+  ///
+  /// The border radius of the `BottomBar`.
   final BorderRadius borderRadius;
+
+  ///
+  /// If you don't want the scroll to top button to be visible,
+  /// set this to `false`.
   final bool showIcon;
+
+  ///
+  /// The alignment of the Stack in which the `BottomBar` is placed.
   final Alignment alignment;
+
+  ///
+  /// The callback when the `BottomBar` is shown i.e. on response to scroll events.
   final Function()? onBottomBarShown;
+
+  ///
+  /// The callback when the `BottomBar` is hidden i.e. on response to scroll events.
   final Function()? onBottomBarHidden;
+
+  ///
+  /// To reverse the direction in which the scroll reacts, i.e. if you want to make
+  /// the bar visible when you scroll down and hide it when you scroll up, set this
+  /// to `true`.
   final bool reverse;
+
+  ///
+  /// To reverse the direction in which the scroll to top button scrolls, i.e. if
+  /// you want to scroll to bottom, set this to `true`.
   final bool scrollOpposite;
+
+  ///
+  /// If you don't want the bar to be hidden ever, set this to `false`.
   final bool hideOnScroll;
+
+  ///
+  /// The fit property of the `Stack` in which the `BottomBar` is placed.
   final StackFit fit;
+
   const BottomBar({
     required this.body,
     required this.child,

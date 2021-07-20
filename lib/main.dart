@@ -146,6 +146,7 @@ class _MyHomePageState extends State<MyHomePage>
               ),
             ],
           ),
+          fit: StackFit.expand,
           icon: Center(
             child: IconButton(
               padding: EdgeInsets.zero,
