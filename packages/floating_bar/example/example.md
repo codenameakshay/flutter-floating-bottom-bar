@@ -1,3 +1,5 @@
+Simple basic example that demonstrates all properties of the `BottomBar` widget, and how to use them.
+
 ```
 
 class MyHomePage extends StatefulWidget {
@@ -148,8 +150,8 @@ class _MyHomePageState extends State<MyHomePage>
           end: 0,
           bottom: 10,
           alignment: Alignment.bottomCenter,
-          iconHeight: 100,
-          iconWidth: 100,
+          iconHeight: 35,
+          iconWidth: 35,
           reverse: false,
           hideOnScroll: true,
           scrollOpposite: false,
@@ -163,6 +165,66 @@ class _MyHomePageState extends State<MyHomePage>
                 .map((e) => InfiniteListPage(controller: controller, color: e))
                 .toList(),
           ),
+        ),
+      ),
+    );
+  }
+}
+```
+
+# Floating Search Bar
+```
+
+class MyHomePage extends StatelessWidget {
+  MyHomePage({Key? key, required this.title}) : super(key: key);
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(title),
+          backgroundColor: Colors.black,
+        ),
+        body: BottomBar(
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Card(
+              elevation: 10,
+              child: Container(
+                height: 46,
+                child: TextField(
+                  style: Theme.of(context).textTheme.subtitle2,
+                  maxLines: 1,
+                  minLines: 1,
+                  textCapitalization: TextCapitalization.sentences,
+                  cursorColor: Theme.of(context).accentColor,
+                  decoration: InputDecoration(
+                    suffixIcon: Icon(Icons.search),
+                    contentPadding: const EdgeInsets.all(16),
+                    hintStyle: Theme.of(context).textTheme.subtitle2,
+                    hintText: 'Search...',
+                    border: InputBorder.none,
+                    labelStyle: Theme.of(context).textTheme.subtitle2,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          fit: StackFit.expand,
+          borderRadius: BorderRadius.circular(12),
+          duration: Duration(milliseconds: 300),
+          curve: Curves.decelerate,
+          showIcon: false,
+          width: MediaQuery.of(context).size.width - 32,
+          barColor: Colors.transparent,
+          start: 2,
+          end: 0,
+          bottom: 10,
+          alignment: Alignment.bottomCenter,
+          body: (context, controller) => InfiniteListPage(
+              controller: controller, color: Colors.blueAccent),
         ),
       ),
     );

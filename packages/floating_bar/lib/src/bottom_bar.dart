@@ -108,7 +108,16 @@ class BottomBar extends StatefulWidget {
   const BottomBar({
     required this.body,
     required this.child,
-    required this.icon,
+    this.icon = const Center(
+      child: IconButton(
+        padding: EdgeInsets.zero,
+        onPressed: null,
+        icon: Icon(
+          Icons.arrow_upward_rounded,
+          color: Colors.white,
+        ),
+      ),
+    ),
     this.iconWidth = 40,
     this.iconHeight = 40,
     this.barColor = Colors.black,
