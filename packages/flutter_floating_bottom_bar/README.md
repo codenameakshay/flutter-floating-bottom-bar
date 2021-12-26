@@ -26,7 +26,7 @@ and the Flutter guide for
       alt="Pub Package" />
   </a>
   <a href="https://opensource.org/licenses/MIT">
-    <img src="https://img.shields.io/github/license/aagarwal1012/animated-text-kit?color=red"
+    <img src="https://img.shields.io/github/license/codenameakshay/flutter-floating-bottom-bar?color=red"
       alt="License: MIT" />
   </a>
   <a href="https://www.paypal.me/codenameakshay">
@@ -35,11 +35,11 @@ and the Flutter guide for
   </a>
 </p><br>
 
- 
 
-| ![Example](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/screenshots/demo.gif)  | ![Example App](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/screenshots/image.jpg)  |
-|---|---|
-|  **Example in another app** |  **Example app screenshot** |
+| ![A floating tab bar](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/screenshots/1.gif)  | ![A floating search bar](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/screenshots/2.gif)  | ![A basic example](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/screenshots/3.gif)  |
+|---|---|---|
+|  **A floating tab bar** |  **A floating search bar** |  **A basic example** |
+
 ## Features
 The package allows you to create a floating widget like a bottom navigation bar that reacts to scrolling events.
 
