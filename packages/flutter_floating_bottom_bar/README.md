@@ -21,7 +21,7 @@ and the Flutter guide for
     <img src="https://img.shields.io/badge/Platform-Flutter-02569B?logo=flutter"
       alt="Platform" />
   </a>
-  <a href="https://pub.dartlang.org/packages/flutter-floating-bottom-bar">
+  <a href="https://pub.dartlang.org/packages/flutter_floating_bottom_bar">
     <img src="https://img.shields.io/pub/v/flutter-floating-bottom-bar.svg"
       alt="Pub Package" />
   </a>
