@@ -84,137 +84,236 @@ import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 
 # Usage
 
-`AsyncWallpaper` is a _Class_ that exposes some methods, variables which you can call to set wallpapers.
-When you want to set wallpaper simply use it like:
+`BottomBar` is a _Widget_ that can be wrapped over any child to convert it into a bottom bar.
+Below is the most simple use:
 
 ```dart
-await AsyncWallpaper.setWallpaperFromFile(
-          file.path, AsyncWallpaper.HOME_SCREEN);
+    BottomBar(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              "This is the floating widget",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+          body: (context, controller) =>
+              InfiniteListPage(controller: controller, color: Colors.blue,
+    )
 ```
 
-It needs two positional arguments - 
-- `filePath` – the path of the file to set as wallpaper
-- `wallpaperLocation` – the location where you want to set the wallpaper
-
-AsyncWallpaper has three locations predefined - 
-- `HOME_SCREEN` – set wallpaper on home screen
-- `LOCK_SCREEN` – set wallpaper on lock screen
-- `BOTH_SCREENS` – set wallpaper on both home and lock screen
+It needs two required arguments - 
+- `child` – This is the child inside the `BottomBar` (widget which is floating)
+- `body` – The widget displayed below the `BottomBar` (like your main app)
 
 # Detailed Usage
 
-Below is the detailed usage of the package, including all functions defined.
-
-## platformVersion
+Below is the detailed usage of the package, including all properties defined.
 
 ```dart
-await AsyncWallpaper.platformVersion ?? 'Unknown platform version';
+BottomBar(
+          child: TabBar(), # A floating tab bar
+          fit: StackFit.expand,
+          icon: Center(
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              onPressed: null,
+              icon: Icon(
+                Icons.arrow_upward_rounded,
+                color: unselectedColor,
+              ),
+            ),
+          ),
+          borderRadius: BorderRadius.circular(500),
+          duration: Duration(seconds: 1),
+          curve: Curves.decelerate,
+          showIcon: true,
+          width: MediaQuery.of(context).size.width * 0.8,
+          barColor: colors[currentPage].computeLuminance() > 0.5
+              ? Colors.black
+              : Colors.white,
+          start: 2,
+          end: 0,
+          bottom: 10,
+          alignment: Alignment.bottomCenter,
+          iconHeight: 35,
+          iconWidth: 35,
+          reverse: false,
+          hideOnScroll: true,
+          scrollOpposite: false,
+          onBottomBarHidden: () {},
+          onBottomBarShown: () {},
+          body: (context, controller) => TabBarView(
+            controller: tabController,
+            dragStartBehavior: DragStartBehavior.down,
+            physics: const BouncingScrollPhysics(),
+            children: [] # Add children here
+          ),
+        )
 ```
-
-It returns the platform version of the device. Useful for all the Android 11, 12 permission related stuff.
-
-## setWallpaperFromFile
-
-Setting wallpaper from a file path, on home screen.
-```dart
-String result;
-var file = await DefaultCacheManager().getSingleFile(url);
-// Platform messages may fail, so we use a try/catch PlatformException.
-try {
-    result = await AsyncWallpaper.setWallpaperFromFile(
-          file.path, AsyncWallpaper.HOME_SCREEN);
-} on PlatformException {
-    result = 'Failed to get wallpaper.';
-}
-
-```
-
-Setting wallpaper from a file path, on lock screen.
-```dart
-String result;
-var file = await DefaultCacheManager().getSingleFile(url);
-// Platform messages may fail, so we use a try/catch PlatformException.
-try {
-    result = await AsyncWallpaper.setWallpaperFromFile(
-          file.path, AsyncWallpaper.LOCK_SCREEN);
-} on PlatformException {
-    result = 'Failed to get wallpaper.';
-}
-
-```
-
-Setting wallpaper from a file path, on both screens.
-```dart
-String result;
-var file = await DefaultCacheManager().getSingleFile(url);
-// Platform messages may fail, so we use a try/catch PlatformException.
-try {
-    result = await AsyncWallpaper.setWallpaperFromFile(
-          file.path, AsyncWallpaper.BOTH_SCREENS);
-} on PlatformException {
-    result = 'Failed to get wallpaper.';
-}
-
-```
-
-> Note - You can use the `flutter_cache_manager` plugin to download the file from the internet, and get the file path.
-
-## setWallpaper
-
-Setting wallpaper from a url, on home screen.
-```dart
-String result;
-// Platform messages may fail, so we use a try/catch PlatformException.
-try {
-    result = await AsyncWallpaper.setWallpaper(
-          url, AsyncWallpaper.HOME_SCREEN);
-} on PlatformException {
-    result = 'Failed to get wallpaper.';
-}
-
-```
-
-Setting wallpaper from a url, on lock screen.
-```dart
-String result;
-// Platform messages may fail, so we use a try/catch PlatformException.
-try {
-    result = await AsyncWallpaper.setWallpaper(
-          url, AsyncWallpaper.LOCK_SCREEN);
-} on PlatformException {
-    result = 'Failed to get wallpaper.';
-}
-
-```
-
-Setting wallpaper from a url, on both screens.
-```dart
-String result;
-// Platform messages may fail, so we use a try/catch PlatformException.
-try {
-    result = await AsyncWallpaper.setWallpaper(
-          url, AsyncWallpaper.BOTH_SCREENS);
-} on PlatformException {
-    result = 'Failed to get wallpaper.';
-}
-
-```
-## setLiveWallpaper
-
-Setting live wallpaper requires `.mp4` file. Also currently local files are only supported, so download it before calling this function. The method call redirect to native Android live wallpaper setting intent, so no locations are currently supported.
+## icon
 
 ```dart
-String result;
-var file = await DefaultCacheManager().getSingleFile(liveUrl);
-// Platform messages may fail, so we use a try/catch PlatformException.
-try {
-    result = await AsyncWallpaper.setLiveWallpaper(
-          file.path);
-} on PlatformException {
-    result = 'Failed to get wallpaper.';
-}
-
+    icon: Center(
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              onPressed: null,
+              icon: Icon(
+                Icons.arrow_upward_rounded,
+                color: unselectedColor,
+              ),
+            ),
+          ),
 ```
+
+This is the scroll to top button. It will be hidden when the `BottomBar` is scrolled up. It will be shown when the `BottomBar` is scrolled down. Clicking it will scroll the bar on top.
+
+You can hide this by using the `showIcon` property.
+
+## iconWidth
+
+```dart
+    iconWidth: 35,
+```
+
+The width of the scroll to top button.
+
+## iconHeight
+
+```dart
+    iconHeight: 35,
+```
+
+The height of the scroll to top button.
+
+## barColor
+
+```dart
+     barColor: Colors.white,
+```
+
+The color of the `BottomBar`.
+
+## end
+
+```dart
+     end: 0,
+```
+
+The end position in `y-axis` of the SlideTransition of the `BottomBar`.
+
+## start
+
+```dart
+     start: 2,
+```
+
+The start position in `y-axis` of the SlideTransition of the `BottomBar`.
+
+## bottom
+
+```dart
+     bottom: 10,
+```
+
+The position of the bar from the bottom in double.
+
+## duration
+
+```dart
+     duration: Duration(seconds: 1),
+```
+
+The duration of the `SlideTransition` of the `BottomBar`.
+
+## curve
+
+```dart
+     curve: Curves.decelerate,
+```
+
+The curve of the `SlideTransition` of the `BottomBar`.
+
+## width
+
+```dart
+     width: MediaQuery.of(context).size.width * 0.8,
+```
+
+The width of the `BottomBar`.
+
+## borderRadius
+
+```dart
+     borderRadius: BorderRadius.circular(500),
+```
+
+The border radius of the `BottomBar`.
+
+## showIcon
+
+```dart
+     showIcon: true,
+```
+
+If you don't want the scroll to top button to be visible, set this to `false`.
+
+## alignment
+
+```dart
+     alignment: Alignment.bottomCenter,
+```
+
+The alignment of the Stack in which the `BottomBar` is placed.
+
+## onBottomBarShown
+
+```dart
+     onBottomBarShown: () {},
+```
+
+The callback when the `BottomBar` is shown i.e. on response to scroll events.
+
+## onBottomBarHidden
+
+```dart
+     onBottomBarHidden: () {},
+```
+
+The callback when the `BottomBar` is hidden i.e. on response to scroll events.
+
+## reverse
+
+```dart
+     reverse: true,
+```
+
+To reverse the direction in which the scroll reacts, i.e. if you want to make the bar visible when you scroll down and hide it when you scroll up, set this to `true`.
+
+## scrollOpposite
+
+```dart
+     scrollOpposite: true,
+```
+
+To reverse the direction in which the scroll to top button scrolls, i.e. if you want to scroll to bottom, set this to `true`.
+
+## hideOnScroll
+
+```dart
+     hideOnScroll: false,
+```
+
+If you don't want the bar to be hidden ever, set this to `false`.
+
+## fit
+
+```dart
+     fit: StackFit.expand,
+```
+
+The fit property of the `Stack` in which the `BottomBar` is placed.
+
 
 > Note - You can find more detailed examples in the `example` directory.
 
