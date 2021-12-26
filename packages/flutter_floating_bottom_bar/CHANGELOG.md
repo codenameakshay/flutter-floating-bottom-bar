@@ -1,3 +1,3 @@
 ## 1.0.0
 
-* First release, with basic functionality.
+* Initial release with basic functionality
