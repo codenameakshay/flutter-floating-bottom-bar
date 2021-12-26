@@ -65,9 +65,9 @@ class MyHomePage extends StatelessWidget {
           showIcon: false,
           width: MediaQuery.of(context).size.width - 32,
           barColor: Colors.transparent,
-          start: 2,
-          end: 0,
-          bottom: 10,
+          start: 0,
+          end: 2,
+          bottom: MediaQuery.of(context).size.height,
           alignment: Alignment.bottomCenter,
           body: (context, controller) => InfiniteListPage(
               controller: controller, color: Colors.blueAccent),

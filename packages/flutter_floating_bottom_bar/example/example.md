@@ -172,7 +172,7 @@ class _MyHomePageState extends State<MyHomePage>
 }
 ```
 
-# Floating Search Bar
+# Floating Bottom Search Bar
 ```
 
 class MyHomePage extends StatelessWidget {
@@ -230,4 +230,12 @@ class MyHomePage extends StatelessWidget {
     );
   }
 }
+```
+
+# FLoating Search Top Bar
+```
+# Simply change these values in the bottom search bar to convert it into top search bar
+          start: 0,
+          end: 2,
+          bottom: MediaQuery.of(context).size.height,
 ```
