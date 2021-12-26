@@ -1,7 +1,7 @@
-import 'package:floating_bar/floating_bar.dart';
 import 'package:floating_bottom_bar/pages/infinite_list_page.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 
 void main() {
   runApp(MyApp());

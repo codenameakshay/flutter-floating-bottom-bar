@@ -1,4 +1,4 @@
-import 'package:floating_bar/src/bottom_bar_scroll_controller_provider.dart';
+import 'package:flutter_floating_bottom_bar/src/bottom_bar_scroll_controller_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 

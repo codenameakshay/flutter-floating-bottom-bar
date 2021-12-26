@@ -1,4 +1,4 @@
-name: floating_bar
+name: flutter_floating_bottom_bar
 description: Creates a floating bar, which reacts to scroll events of the child.
 version: 1.0.0
 homepage: https://github.com/EdsonBueno/focus_detector
