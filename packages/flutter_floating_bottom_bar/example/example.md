@@ -188,7 +188,7 @@ class _MyHomePageState extends State<MyHomePage>
 }
 ```
 
-# Floating Bottom Search Bar
+### Floating Bottom Search Bar
 
 A simple Material search bar in the bottom of your app, which hides on scroll down.
 
@@ -251,7 +251,7 @@ class MyHomePage extends StatelessWidget {
 }
 ```
 
-# FLoating Search Top Bar
+### Floating Search Top Bar
 A simple Material search bar in the top of your app, which hides on scroll down.
 
 ```
