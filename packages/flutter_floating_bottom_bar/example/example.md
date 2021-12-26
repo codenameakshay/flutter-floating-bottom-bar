@@ -1,6 +1,22 @@
+Simple basic example using only required arguments - `child` and `body`.
+```dart
+    BottomBar(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              "This is the floating widget",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+          body: (context, controller) =>
+              InfiniteListPage(controller: controller, color: Colors.blue,
+    )
+```
+
 Simple basic example that demonstrates all properties of the `BottomBar` widget, and how to use them.
 
-```
+```dart
 
 class MyHomePage extends StatefulWidget {
   MyHomePage({Key? key, required this.title}) : super(key: key);
@@ -173,7 +189,10 @@ class _MyHomePageState extends State<MyHomePage>
 ```
 
 # Floating Bottom Search Bar
-```
+
+A simple Material search bar in the bottom of your app, which hides on scroll down.
+
+```dart
 
 class MyHomePage extends StatelessWidget {
   MyHomePage({Key? key, required this.title}) : super(key: key);
@@ -233,6 +252,8 @@ class MyHomePage extends StatelessWidget {
 ```
 
 # FLoating Search Top Bar
+A simple Material search bar in the top of your app, which hides on scroll down.
+
 ```
 # Simply change these values in the bottom search bar to convert it into top search bar
           start: 0,

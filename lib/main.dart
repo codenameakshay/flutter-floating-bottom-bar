@@ -35,42 +35,15 @@ class MyHomePage extends StatelessWidget {
         ),
         body: BottomBar(
           child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Card(
-              elevation: 10,
-              child: Container(
-                height: 46,
-                child: TextField(
-                  style: Theme.of(context).textTheme.subtitle2,
-                  maxLines: 1,
-                  minLines: 1,
-                  textCapitalization: TextCapitalization.sentences,
-                  cursorColor: Theme.of(context).accentColor,
-                  decoration: InputDecoration(
-                    suffixIcon: Icon(Icons.search),
-                    contentPadding: const EdgeInsets.all(16),
-                    hintStyle: Theme.of(context).textTheme.subtitle2,
-                    hintText: 'Search...',
-                    border: InputBorder.none,
-                    labelStyle: Theme.of(context).textTheme.subtitle2,
-                  ),
-                ),
-              ),
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              "This is the floating widget",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white),
             ),
           ),
-          fit: StackFit.expand,
-          borderRadius: BorderRadius.circular(12),
-          duration: Duration(milliseconds: 300),
-          curve: Curves.decelerate,
-          showIcon: false,
-          width: MediaQuery.of(context).size.width - 32,
-          barColor: Colors.transparent,
-          start: 0,
-          end: 2,
-          bottom: MediaQuery.of(context).size.height,
-          alignment: Alignment.bottomCenter,
-          body: (context, controller) => InfiniteListPage(
-              controller: controller, color: Colors.blueAccent),
+          body: (context, controller) =>
+              InfiniteListPage(controller: controller, color: Colors.blue),
         ),
       ),
     );
