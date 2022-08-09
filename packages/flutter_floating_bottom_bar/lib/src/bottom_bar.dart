@@ -2,6 +2,10 @@ import 'package:flutter_floating_bottom_bar/src/bottom_bar_scroll_controller_pro
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
+/// [width] & [height] can be used to animate the size of the back to top icon.
+/// You can also not use them to keep your icon a constant size.
+typedef BackToTopIconBuilder = Widget Function(double width, double height);
+
 /// A floating bottom navigation bar that hides on scroll
 /// up and down on the page, with powerful options
 /// for controlling the look and feel.
@@ -27,7 +31,10 @@ class BottomBar extends StatefulWidget {
   /// is scrolled down. Clicking it will scroll the bar on top.
   ///
   /// You can hide this by using the `showIcon` property.
-  final Widget icon;
+  ///
+  /// `width` & `height` can be used to animate the size of the back to top icon.
+  /// You can also not use them to keep your icon a constant size.
+  final BackToTopIconBuilder? icon;
 
   ///
   /// The width of the scroll to top button.
@@ -108,23 +115,14 @@ class BottomBar extends StatefulWidget {
   const BottomBar({
     required this.body,
     required this.child,
-    this.icon = const Center(
-      child: IconButton(
-        padding: EdgeInsets.zero,
-        onPressed: null,
-        icon: Icon(
-          Icons.arrow_upward_rounded,
-          color: Colors.white,
-        ),
-      ),
-    ),
-    this.iconWidth = 40,
-    this.iconHeight = 40,
+    this.icon,
+    this.iconWidth = 30,
+    this.iconHeight = 30,
     this.barColor = Colors.black,
     this.end = 0,
     this.start = 2,
     this.bottom = 10,
-    this.duration = const Duration(milliseconds: 300),
+    this.duration = const Duration(milliseconds: 120),
     this.curve = Curves.linear,
     this.width = 300,
     this.borderRadius = BorderRadius.zero,
@@ -143,8 +141,7 @@ class BottomBar extends StatefulWidget {
   _BottomBarState createState() => _BottomBarState();
 }
 
-class _BottomBarState extends State<BottomBar>
-    with SingleTickerProviderStateMixin {
+class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMixin {
   ScrollController scrollBottomBarController = ScrollController();
   late AnimationController _controller;
   late Animation<Offset> _offsetAnimation;
@@ -197,16 +194,14 @@ class _BottomBarState extends State<BottomBar>
   Future<void> myScroll() async {
     scrollBottomBarController.addListener(() {
       if (!widget.reverse) {
-        if (scrollBottomBarController.position.userScrollDirection ==
-            ScrollDirection.reverse) {
+        if (scrollBottomBarController.position.userScrollDirection == ScrollDirection.reverse) {
           if (!isScrollingDown) {
             isScrollingDown = true;
             isOnTop = false;
             hideBottomBar();
           }
         }
-        if (scrollBottomBarController.position.userScrollDirection ==
-            ScrollDirection.forward) {
+        if (scrollBottomBarController.position.userScrollDirection == ScrollDirection.forward) {
           if (isScrollingDown) {
             isScrollingDown = false;
             isOnTop = true;
@@ -214,16 +209,14 @@ class _BottomBarState extends State<BottomBar>
           }
         }
       } else {
-        if (scrollBottomBarController.position.userScrollDirection ==
-            ScrollDirection.forward) {
+        if (scrollBottomBarController.position.userScrollDirection == ScrollDirection.forward) {
           if (!isScrollingDown) {
             isScrollingDown = true;
             isOnTop = false;
             hideBottomBar();
           }
         }
-        if (scrollBottomBarController.position.userScrollDirection ==
-            ScrollDirection.reverse) {
+        if (scrollBottomBarController.position.userScrollDirection == ScrollDirection.reverse) {
           if (isScrollingDown) {
             isScrollingDown = false;
             isOnTop = true;
@@ -254,42 +247,63 @@ class _BottomBarState extends State<BottomBar>
         if (widget.showIcon)
           Positioned(
             bottom: widget.bottom,
-            child: AnimatedContainer(
+            child: AnimatedOpacity(
               duration: widget.duration,
               curve: widget.curve,
-              width: isOnTop == true ? 0 : widget.iconWidth,
-              height: isOnTop == true ? 0 : widget.iconHeight,
-              decoration: BoxDecoration(
-                color: widget.barColor,
-                shape: BoxShape.circle,
-              ),
-              padding: EdgeInsets.zero,
-              margin: EdgeInsets.zero,
-              child: ClipOval(
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      scrollBottomBarController
-                          .animateTo(
-                        (!widget.scrollOpposite)
-                            ? scrollBottomBarController.position.minScrollExtent
-                            : scrollBottomBarController
-                                .position.maxScrollExtent,
-                        duration: widget.duration,
-                        curve: widget.curve,
-                      )
-                          .then((value) {
-                        if (mounted) {
-                          setState(() {
-                            isOnTop = true;
-                            isScrollingDown = false;
-                          });
+              opacity: isOnTop == true ? 0 : 1,
+              child: AnimatedContainer(
+                duration: widget.duration,
+                curve: widget.curve,
+                width: isOnTop == true ? 0 : widget.iconWidth,
+                height: isOnTop == true ? 0 : widget.iconHeight,
+                decoration: BoxDecoration(
+                  color: widget.barColor,
+                  shape: BoxShape.circle,
+                ),
+                padding: EdgeInsets.zero,
+                margin: EdgeInsets.zero,
+                child: ClipOval(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        scrollBottomBarController
+                            .animateTo(
+                          (!widget.scrollOpposite)
+                              ? scrollBottomBarController.position.minScrollExtent
+                              : scrollBottomBarController.position.maxScrollExtent,
+                          duration: widget.duration,
+                          curve: widget.curve,
+                        )
+                            .then((value) {
+                          if (mounted) {
+                            setState(() {
+                              isOnTop = true;
+                              isScrollingDown = false;
+                            });
+                          }
+                          showBottomBar();
+                        });
+                      },
+                      child: () {
+                        if (widget.icon != null) {
+                          return widget.icon!(
+                              isOnTop == true ? 0 : widget.iconWidth / 2, isOnTop == true ? 0 : widget.iconHeight / 2);
+                        } else {
+                          return Center(
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              onPressed: null,
+                              icon: Icon(
+                                Icons.arrow_upward_rounded,
+                                color: Colors.white,
+                                size: isOnTop == true ? 0 : widget.iconWidth / 2,
+                              ),
+                            ),
+                          );
                         }
-                        showBottomBar();
-                      });
-                    },
-                    child: widget.icon,
+                      }(),
+                    ),
                   ),
                 ),
               ),

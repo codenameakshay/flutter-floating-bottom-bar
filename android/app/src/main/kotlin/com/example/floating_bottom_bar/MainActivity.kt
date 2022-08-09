@@ -1,4 +1,4 @@
-package com.example.floating_bar
+package com.example.floating_bottom_bar
 
 import io.flutter.embedding.android.FlutterActivity
 
