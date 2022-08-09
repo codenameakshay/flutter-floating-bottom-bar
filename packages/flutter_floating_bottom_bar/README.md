@@ -15,7 +15,6 @@ and the Flutter guide for
 
 <p align="center">A flutter package which allows to show a floating widget which can be used as a tab bar, bottom navigation bar or anything one can think of. The widget reacts to scrolling events too.</p><br>
 
-
 <p align="center">
   <a href="https://flutter.dev">
     <img src="https://img.shields.io/badge/Platform-Flutter-02569B?logo=flutter"
@@ -35,17 +34,21 @@ and the Flutter guide for
   </a>
 </p><br>
 
-
 | ![A floating tab bar](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/screenshots/1.gif)  | ![A floating search bar](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/screenshots/2.gif)  | ![A basic example](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/screenshots/3.gif)  |
 |---|---|---|
 |  **A floating tab bar** |  **A floating search bar** |  **A basic example** |
 
+| ![image](https://user-images.githubusercontent.com/60510869/183573165-28e6b896-6559-4d86-897a-3bc8b0adb927.png)|
+| - |
+|  **A floating tab bar with a FAB** |
+
 ## Features
+
 The package allows you to create a floating widget like a bottom navigation bar that reacts to scrolling events.
 
- - It can be used as a tab bar, bottom navigation bar or anything one can think of.
- - It reacts to scrolling events too.
- - It can be used in a full screen app or in a smaller screen.
+- It can be used as a tab bar, bottom navigation bar or anything one can think of.
+- It reacts to scrolling events too.
+- It can be used in a full screen app or in a smaller screen.
 
 ## Installing
 
@@ -55,7 +58,7 @@ Add this to your package's `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  flutter-floating-bottom-bar: ^1.0.0
+  flutter-floating-bottom-bar: ^1.1.0
 ```
 
 ### 2. Install it
@@ -65,13 +68,13 @@ You can install packages from the command line:
 with `pub`:
 
 ```
-$ pub get
+pub get
 ```
 
 with `Flutter`:
 
 ```
-$ flutter pub get
+flutter pub get
 ```
 
 ### 3. Import it
@@ -102,7 +105,8 @@ Below is the most simple use:
     )
 ```
 
-It needs two required arguments - 
+It needs two required arguments -
+
 - `child` – This is the child inside the `BottomBar` (widget which is floating)
 - `body` – The widget displayed below the `BottomBar` (like your main app)
 
@@ -151,6 +155,7 @@ BottomBar(
           ),
         )
 ```
+
 ## icon
 
 ```dart
@@ -314,6 +319,13 @@ If you don't want the bar to be hidden ever, set this to `false`.
 
 The fit property of the `Stack` in which the `BottomBar` is placed.
 
+## clip
+
+```dart
+     clip: Clip.none,
+```
+
+The clipBehaviour property of the `Stack` in which the `BottomBar` is placed.
 
 > Note - You can find more detailed examples in the `example` directory.
 
@@ -322,4 +334,3 @@ The fit property of the `Stack` in which the `BottomBar` is placed.
 If you encounter any problems feel free to open an [issue](https://github.com/codenameakshay/flutter-floating-bottom-bar/issues/new?template=bug_report.md). If you feel the library is missing a feature, please raise a [ticket](https://github.com/codenameakshay/flutter-floating-bottom-bar/issues/new?template=feature_request.md) on GitHub and I'll look into it. Pull request are also welcome.
 
 See [Contributing.md](https://github.com/codenameakshay/flutter-floating-bottom-bar/blob/master/CONTRIBUTING.md).
-
