@@ -38,6 +38,10 @@ and the Flutter guide for
 |---|---|---|
 |  **A floating tab bar** |  **A floating search bar** |  **A basic example** |
 
+| ![image](https://user-images.githubusercontent.com/60510869/183573165-28e6b896-6559-4d86-897a-3bc8b0adb927.png)|
+| - |
+|  **A floating tab bar with a FAB** |
+
 ## Features
 
 The package allows you to create a floating widget like a bottom navigation bar that reacts to scrolling events.
@@ -54,7 +58,7 @@ Add this to your package's `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  flutter-floating-bottom-bar: ^1.0.1
+  flutter-floating-bottom-bar: ^1.1.0
 ```
 
 ### 2. Install it
@@ -314,6 +318,14 @@ If you don't want the bar to be hidden ever, set this to `false`.
 ```
 
 The fit property of the `Stack` in which the `BottomBar` is placed.
+
+## clip
+
+```dart
+     clip: Clip.none,
+```
+
+The clipBehaviour property of the `Stack` in which the `BottomBar` is placed.
 
 > Note - You can find more detailed examples in the `example` directory.
 

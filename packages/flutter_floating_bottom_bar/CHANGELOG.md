@@ -1,3 +1,8 @@
+## 1.1.0
+
+* Add clip property to support clip behavior.
+* Add an example for bar with a FAB.
+
 ## 1.0.1
 
 * Support for Flutter 3.10.5
