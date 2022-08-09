@@ -1,4 +1,5 @@
 Simple basic example using only required arguments - `child` and `body`.
+
 ```dart
     BottomBar(
           child: Padding(
@@ -252,9 +253,10 @@ class MyHomePage extends StatelessWidget {
 ```
 
 ### Floating Search Top Bar
+
 A simple Material search bar in the top of your app, which hides on scroll down.
 
-```
+```dart
 # Simply change these values in the bottom search bar to convert it into top search bar
           start: 0,
           end: 2,
