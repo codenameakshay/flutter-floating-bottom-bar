@@ -112,6 +112,10 @@ class BottomBar extends StatefulWidget {
   /// The fit property of the `Stack` in which the `BottomBar` is placed.
   final StackFit fit;
 
+  ///
+  /// The clipBehaviour property of the `Stack` in which the `BottomBar` is placed.
+  final Clip clip;
+
   const BottomBar({
     required this.body,
     required this.child,
@@ -134,6 +138,7 @@ class BottomBar extends StatefulWidget {
     this.scrollOpposite = false,
     this.hideOnScroll = true,
     this.fit = StackFit.loose,
+    this.clip = Clip.hardEdge,
     Key? key,
   }) : super(key: key);
 
@@ -239,6 +244,7 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
     return Stack(
       fit: widget.fit,
       alignment: widget.alignment,
+      clipBehavior: widget.clip,
       children: [
         BottomBarScrollControllerProvider(
           scrollController: scrollBottomBarController,
@@ -313,18 +319,17 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
           bottom: widget.bottom,
           child: SlideTransition(
             position: _offsetAnimation,
-            child: ClipRRect(
-              borderRadius: widget.borderRadius,
-              child: Container(
-                  width: widget.width,
-                  decoration: BoxDecoration(
-                    color: widget.barColor,
-                    borderRadius: widget.borderRadius,
-                  ),
-                  child: Material(
-                    color: widget.barColor,
-                    child: widget.child,
-                  )),
+            child: Container(
+              width: widget.width,
+              decoration: BoxDecoration(
+                color: widget.barColor,
+                borderRadius: widget.borderRadius,
+              ),
+              child: Material(
+                color: widget.barColor,
+                child: widget.child,
+                borderRadius: widget.borderRadius,
+              ),
             ),
           ),
         ),
