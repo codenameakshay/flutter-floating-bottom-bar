@@ -49,6 +49,14 @@ class BottomBar extends StatefulWidget {
   final Color barColor;
 
   ///
+  /// The BoxDecoration for the `BottomBar`.
+  final BoxDecoration? barDecoration;
+
+  ///
+  /// The BoxDecoration for the scroll to top icon shown when `BottomBar` is hidden.
+  final BoxDecoration? iconDecoration;
+
+  ///
   /// The end position in `y-axis` of the SlideTransition of the `BottomBar`.
   final double end;
 
@@ -127,6 +135,8 @@ class BottomBar extends StatefulWidget {
     this.iconWidth = 30,
     this.iconHeight = 30,
     this.barColor = Colors.black,
+    this.barDecoration,
+    this.iconDecoration,
     this.end = 0,
     this.start = 2,
     this.offset = 10,
@@ -258,7 +268,7 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
         ),
         if (widget.showIcon)
           Align(
-            alignment: Alignment.topCenter,
+            alignment: widget.barAlignment,
             child: Padding(
               padding: EdgeInsets.all(widget.offset),
               child: AnimatedOpacity(
@@ -270,10 +280,11 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
                   curve: widget.curve,
                   width: isOnTop == true ? 0 : widget.iconWidth,
                   height: isOnTop == true ? 0 : widget.iconHeight,
-                  decoration: BoxDecoration(
-                    color: widget.barColor,
-                    shape: BoxShape.circle,
-                  ),
+                  decoration: widget.iconDecoration ??
+                      BoxDecoration(
+                        color: widget.barColor,
+                        shape: BoxShape.circle,
+                      ),
                   padding: EdgeInsets.zero,
                   margin: EdgeInsets.zero,
                   child: ClipOval(
@@ -325,17 +336,18 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
             ),
           ),
         Align(
-          alignment: Alignment.topCenter,
+          alignment: widget.barAlignment,
           child: Padding(
             padding: EdgeInsets.all(widget.offset),
             child: SlideTransition(
               position: _offsetAnimation,
               child: Container(
                 width: widget.width,
-                decoration: BoxDecoration(
-                  color: widget.barColor,
-                  borderRadius: widget.borderRadius,
-                ),
+                decoration: widget.barDecoration ??
+                    BoxDecoration(
+                      color: widget.barColor,
+                      borderRadius: widget.borderRadius,
+                    ),
                 child: Material(
                   color: widget.barColor,
                   child: widget.child,

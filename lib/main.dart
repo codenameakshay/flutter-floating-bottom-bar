@@ -181,6 +181,14 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
           iconHeight: 30,
           iconWidth: 30,
           reverse: false,
+          barDecoration: BoxDecoration(
+            color: colors[currentPage],
+            borderRadius: BorderRadius.circular(500),
+          ),
+          iconDecoration: BoxDecoration(
+            color: colors[currentPage],
+            borderRadius: BorderRadius.circular(500),
+          ),
           hideOnScroll: true,
           scrollOpposite: false,
           onBottomBarHidden: () {},
