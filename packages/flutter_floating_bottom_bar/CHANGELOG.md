@@ -1,3 +1,10 @@
+## 1.2.0
+
+* Add `offset`, `barAlignment`, `barDecoration`, `iconDecoration` properties.
+* Remove `bottom` property.
+* Deperecated `alignment` property, use `barAlignment` instead. `alignment` will be removed in a future release.
+* Update all code examples, and fix errors.
+
 ## 1.1.0
 
 * Add clip property to support clip behavior.
