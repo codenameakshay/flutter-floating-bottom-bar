@@ -11,7 +11,7 @@ Simple basic example using only required arguments - `child` and `body`.
             ),
           ),
           body: (context, controller) =>
-              InfiniteListPage(controller: controller, color: Colors.blue,
+              InfiniteListPage(controller: controller, color: Colors.blue,),
     )
 ```
 
@@ -27,17 +27,10 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage>
-    with SingleTickerProviderStateMixin {
+class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
   late int currentPage;
   late TabController tabController;
-  final List<Color> colors = [
-    Colors.yellow,
-    Colors.red,
-    Colors.green,
-    Colors.blue,
-    Colors.pink
-  ];
+  final List<Color> colors = [Colors.yellow, Colors.red, Colors.green, Colors.blue, Colors.pink];
 
   @override
   void initState() {
@@ -68,9 +61,7 @@ class _MyHomePageState extends State<MyHomePage>
 
   @override
   Widget build(BuildContext context) {
-    final Color unselectedColor = colors[currentPage].computeLuminance() < 0.5
-        ? Colors.black
-        : Colors.white;
+    final Color unselectedColor = colors[currentPage].computeLuminance() < 0.5 ? Colors.black : Colors.white;
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
@@ -145,13 +136,14 @@ class _MyHomePageState extends State<MyHomePage>
             ],
           ),
           fit: StackFit.expand,
-          icon: Center(
+          icon: (width, height) => Center(
             child: IconButton(
               padding: EdgeInsets.zero,
               onPressed: null,
               icon: Icon(
                 Icons.arrow_upward_rounded,
                 color: unselectedColor,
+                size: width,
               ),
             ),
           ),
@@ -160,13 +152,11 @@ class _MyHomePageState extends State<MyHomePage>
           curve: Curves.decelerate,
           showIcon: true,
           width: MediaQuery.of(context).size.width * 0.8,
-          barColor: colors[currentPage].computeLuminance() > 0.5
-              ? Colors.black
-              : Colors.white,
+          barColor: colors[currentPage].computeLuminance() > 0.5 ? Colors.black : Colors.white,
           start: 2,
           end: 0,
-          bottom: 10,
-          alignment: Alignment.bottomCenter,
+          offset: 10,
+          barAlignment: Alignment.bottomCenter,
           iconHeight: 35,
           iconWidth: 35,
           reverse: false,
@@ -178,9 +168,7 @@ class _MyHomePageState extends State<MyHomePage>
             controller: tabController,
             dragStartBehavior: DragStartBehavior.down,
             physics: const BouncingScrollPhysics(),
-            children: colors
-                .map((e) => InfiniteListPage(controller: controller, color: e))
-                .toList(),
+            children: colors.map((e) => InfiniteListPage(controller: controller, color: e)).toList(),
           ),
         ),
       ),
@@ -188,6 +176,7 @@ class _MyHomePageState extends State<MyHomePage>
   }
 }
 ```
+
 ### With Floating action button
 
 Simple basic example with a floating action button to achieve this effect.
@@ -195,8 +184,6 @@ Simple basic example with a floating action button to achieve this effect.
 ![image](https://user-images.githubusercontent.com/60510869/183573165-28e6b896-6559-4d86-897a-3bc8b0adb927.png)
 
 ```dart
-
-
 class MyHomePage extends StatefulWidget {
   MyHomePage({Key? key, required this.title}) : super(key: key);
   final String title;
@@ -350,8 +337,8 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
           barColor: colors[currentPage].computeLuminance() > 0.5 ? Colors.black : Colors.white,
           start: 2,
           end: 0,
-          bottom: 10,
-          alignment: Alignment.bottomCenter,
+          offset: 10,
+          barAlignment: Alignment.bottomCenter,
           iconHeight: 30,
           iconWidth: 30,
           reverse: false,
@@ -378,7 +365,6 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
     );
   }
 }
-
 ```
 
 ### Floating Bottom Search Bar
@@ -386,7 +372,6 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
 A simple Material search bar in the bottom of your app, which hides on scroll down.
 
 ```dart
-
 class MyHomePage extends StatelessWidget {
   MyHomePage({Key? key, required this.title}) : super(key: key);
   final String title;
@@ -411,7 +396,7 @@ class MyHomePage extends StatelessWidget {
                   maxLines: 1,
                   minLines: 1,
                   textCapitalization: TextCapitalization.sentences,
-                  cursorColor: Theme.of(context).accentColor,
+                  cursorColor: Theme.of(context).primaryColor,
                   decoration: InputDecoration(
                     suffixIcon: Icon(Icons.search),
                     contentPadding: const EdgeInsets.all(16),
@@ -433,10 +418,9 @@ class MyHomePage extends StatelessWidget {
           barColor: Colors.transparent,
           start: 2,
           end: 0,
-          bottom: 10,
-          alignment: Alignment.bottomCenter,
-          body: (context, controller) => InfiniteListPage(
-              controller: controller, color: Colors.blueAccent),
+          offset: 10,
+          barAlignment: Alignment.bottomCenter,
+          body: (context, controller) => InfiniteListPage(controller: controller, color: Colors.blueAccent),
         ),
       ),
     );

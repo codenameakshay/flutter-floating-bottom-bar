@@ -58,7 +58,7 @@ Add this to your package's `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  flutter-floating-bottom-bar: ^1.1.0
+  flutter-floating-bottom-bar: ^1.2.0
 ```
 
 ### 2. Install it
@@ -101,7 +101,7 @@ Below is the most simple use:
             ),
           ),
           body: (context, controller) =>
-              InfiniteListPage(controller: controller, color: Colors.blue,
+              InfiniteListPage(controller: controller, color: Colors.blue,),
     )
 ```
 
@@ -118,13 +118,14 @@ Below is the detailed usage of the package, including all properties defined.
 BottomBar(
           child: TabBar(), # A floating tab bar
           fit: StackFit.expand,
-          icon: Center(
+          icon: (width, height) => Center(
             child: IconButton(
               padding: EdgeInsets.zero,
               onPressed: null,
               icon: Icon(
                 Icons.arrow_upward_rounded,
                 color: unselectedColor,
+                size: width,
               ),
             ),
           ),
@@ -133,16 +134,22 @@ BottomBar(
           curve: Curves.decelerate,
           showIcon: true,
           width: MediaQuery.of(context).size.width * 0.8,
-          barColor: colors[currentPage].computeLuminance() > 0.5
-              ? Colors.black
-              : Colors.white,
+          barColor: colors[currentPage].computeLuminance() > 0.5 ? Colors.black : Colors.white,
           start: 2,
           end: 0,
-          bottom: 10,
-          alignment: Alignment.bottomCenter,
+          offset: 10,
+          barAlignment: Alignment.bottomCenter,
           iconHeight: 35,
           iconWidth: 35,
           reverse: false,
+          barDecoration: BoxDecoration(
+            color: colors[currentPage],
+            borderRadius: BorderRadius.circular(500),
+          ),
+          iconDecoration: BoxDecoration(
+            color: colors[currentPage],
+            borderRadius: BorderRadius.circular(500),
+          ),
           hideOnScroll: true,
           scrollOpposite: false,
           onBottomBarHidden: () {},
@@ -215,13 +222,13 @@ The end position in `y-axis` of the SlideTransition of the `BottomBar`.
 
 The start position in `y-axis` of the SlideTransition of the `BottomBar`.
 
-## bottom
+## offset
 
 ```dart
-     bottom: 10,
+     offset: 10,
 ```
 
-The position of the bar from the bottom in double.
+The padding/offset from all sides of the bar in double.
 
 ## duration
 
@@ -263,13 +270,22 @@ The border radius of the `BottomBar`.
 
 If you don't want the scroll to top button to be visible, set this to `false`.
 
-## alignment
+## alignment (deprecated)
 
 ```dart
      alignment: Alignment.bottomCenter,
 ```
 
 The alignment of the Stack in which the `BottomBar` is placed.
+> Note - This property is deprecated. Use `barAlignment` instead.
+
+## barAlignment
+
+```dart
+     barAlignment: Alignment.bottomCenter,
+```
+
+The alignment of the Bar and the icon in the Stack in which the `BottomBar` is placed.
 
 ## onBottomBarShown
 
@@ -326,6 +342,28 @@ The fit property of the `Stack` in which the `BottomBar` is placed.
 ```
 
 The clipBehaviour property of the `Stack` in which the `BottomBar` is placed.
+
+## barDecoration
+
+```dart
+     barDecoration: BoxDecoration(
+            color: Colors.red,
+            borderRadius: BorderRadius.circular(500),
+          ),
+```
+
+The BoxDecoration for the `BottomBar`.
+
+## iconDecoration
+
+```dart
+     iconDecoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(500),
+          ),
+```
+
+The BoxDecoration for the scroll to top icon shown when `BottomBar` is hidden.
 
 > Note - You can find more detailed examples in the `example` directory.
 
