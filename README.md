@@ -58,7 +58,7 @@ Add this to your package's `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  flutter-floating-bottom-bar: ^1.2.0
+  flutter_floating_bottom_bar: ^1.2.0
 ```
 
 ### 2. Install it
