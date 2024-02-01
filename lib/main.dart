@@ -87,6 +87,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
             clipBehavior: Clip.none,
             children: [
               TabBar(
+                dividerColor: Colors.transparent,
                 indicatorPadding: const EdgeInsets.fromLTRB(6, 0, 6, 0),
                 controller: tabController,
                 indicator: UnderlineTabIndicator(
