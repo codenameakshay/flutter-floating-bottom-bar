@@ -164,6 +164,7 @@ class BottomBar extends StatefulWidget {
 
 class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMixin {
   ScrollController scrollBottomBarController = ScrollController();
+  ScrollController bodyScrollController = ScrollController();
   late AnimationController _controller;
   late Animation<Offset> _offsetAnimation;
   late bool isScrollingDown;
@@ -213,16 +214,16 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
   }
 
   Future<void> myScroll() async {
-    scrollBottomBarController.addListener(() {
+    bodyScrollController.addListener(() {
       if (!widget.reverse) {
-        if (scrollBottomBarController.position.userScrollDirection == ScrollDirection.reverse) {
+        if (bodyScrollController.position.userScrollDirection == ScrollDirection.reverse) {
           if (!isScrollingDown) {
             isScrollingDown = true;
             isOnTop = false;
             hideBottomBar();
           }
         }
-        if (scrollBottomBarController.position.userScrollDirection == ScrollDirection.forward) {
+        if (bodyScrollController.position.userScrollDirection == ScrollDirection.forward) {
           if (isScrollingDown) {
             isScrollingDown = false;
             isOnTop = true;
@@ -230,14 +231,14 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
           }
         }
       } else {
-        if (scrollBottomBarController.position.userScrollDirection == ScrollDirection.forward) {
+        if (bodyScrollController.position.userScrollDirection == ScrollDirection.forward) {
           if (!isScrollingDown) {
             isScrollingDown = true;
             isOnTop = false;
             hideBottomBar();
           }
         }
-        if (scrollBottomBarController.position.userScrollDirection == ScrollDirection.reverse) {
+        if (bodyScrollController.position.userScrollDirection == ScrollDirection.reverse) {
           if (isScrollingDown) {
             isScrollingDown = false;
             isOnTop = true;
@@ -250,7 +251,9 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
 
   @override
   void dispose() {
-    scrollBottomBarController.removeListener(() {});
+    bodyScrollController.removeListener(() {});
+    bodyScrollController.dispose();
+    scrollBottomBarController.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -263,8 +266,8 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
       clipBehavior: widget.clip,
       children: [
         BottomBarScrollControllerProvider(
-          scrollController: scrollBottomBarController,
-          child: widget.body(context, scrollBottomBarController),
+          scrollController: bodyScrollController,
+          child: widget.body(context, bodyScrollController),
         ),
         if (widget.showIcon)
           Align(
