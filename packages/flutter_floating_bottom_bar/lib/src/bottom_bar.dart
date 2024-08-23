@@ -163,7 +163,6 @@ class BottomBar extends StatefulWidget {
 }
 
 class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMixin {
-  ScrollController scrollBottomBarController = ScrollController();
   ScrollController bodyScrollController = ScrollController();
   late AnimationController _controller;
   late Animation<Offset> _offsetAnimation;
@@ -253,7 +252,6 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
   void dispose() {
     bodyScrollController.removeListener(() {});
     bodyScrollController.dispose();
-    scrollBottomBarController.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -272,65 +270,69 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
         if (widget.showIcon)
           Align(
             alignment: widget.barAlignment,
-            child: Padding(
-              padding: EdgeInsets.all(widget.offset),
-              child: AnimatedOpacity(
-                duration: widget.duration,
-                curve: widget.curve,
-                opacity: isOnTop == true ? 0 : 1,
-                child: AnimatedContainer(
+            child: SafeArea(
+              child: Padding(
+                padding: EdgeInsets.all(widget.offset),
+                child: AnimatedOpacity(
                   duration: widget.duration,
                   curve: widget.curve,
-                  width: isOnTop == true ? 0 : widget.iconWidth,
-                  height: isOnTop == true ? 0 : widget.iconHeight,
-                  decoration: widget.iconDecoration ??
-                      BoxDecoration(
-                        color: widget.barColor,
-                        shape: BoxShape.circle,
-                      ),
-                  padding: EdgeInsets.zero,
-                  margin: EdgeInsets.zero,
-                  child: ClipOval(
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          scrollBottomBarController
-                              .animateTo(
-                            (!widget.scrollOpposite)
-                                ? scrollBottomBarController.position.minScrollExtent
-                                : scrollBottomBarController.position.maxScrollExtent,
-                            duration: widget.duration,
-                            curve: widget.curve,
-                          )
-                              .then((value) {
-                            if (mounted) {
-                              setState(() {
-                                isOnTop = true;
-                                isScrollingDown = false;
+                  opacity: isOnTop == true ? 0 : 1,
+                  child: AnimatedContainer(
+                    duration: widget.duration,
+                    curve: widget.curve,
+                    width: isOnTop == true ? 0 : widget.iconWidth,
+                    height: isOnTop == true ? 0 : widget.iconHeight,
+                    decoration: widget.iconDecoration ??
+                        BoxDecoration(
+                          color: widget.barColor,
+                          shape: BoxShape.circle,
+                        ),
+                    padding: EdgeInsets.zero,
+                    margin: EdgeInsets.zero,
+                    child: ClipOval(
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            if (bodyScrollController.hasClients) {
+                              bodyScrollController
+                                  .animateTo(
+                                (!widget.scrollOpposite)
+                                    ? bodyScrollController.position.minScrollExtent
+                                    : bodyScrollController.position.maxScrollExtent,
+                                duration: widget.duration,
+                                curve: widget.curve,
+                              )
+                                  .then((value) {
+                                if (mounted) {
+                                  setState(() {
+                                    isOnTop = true;
+                                    isScrollingDown = false;
+                                  });
+                                }
+                                showBottomBar();
                               });
                             }
-                            showBottomBar();
-                          });
-                        },
-                        child: () {
-                          if (widget.icon != null) {
-                            return widget.icon!(isOnTop == true ? 0 : widget.iconWidth / 2,
-                                isOnTop == true ? 0 : widget.iconHeight / 2);
-                          } else {
-                            return Center(
-                              child: IconButton(
-                                padding: EdgeInsets.zero,
-                                onPressed: null,
-                                icon: Icon(
-                                  Icons.arrow_upward_rounded,
-                                  color: Colors.white,
-                                  size: isOnTop == true ? 0 : widget.iconWidth / 2,
+                          },
+                          child: () {
+                            if (widget.icon != null) {
+                              return widget.icon!(isOnTop == true ? 0 : widget.iconWidth / 2,
+                                  isOnTop == true ? 0 : widget.iconHeight / 2);
+                            } else {
+                              return Center(
+                                child: IconButton(
+                                  padding: EdgeInsets.zero,
+                                  onPressed: null,
+                                  icon: Icon(
+                                    Icons.arrow_upward_rounded,
+                                    color: Colors.white,
+                                    size: isOnTop == true ? 0 : widget.iconWidth / 2,
+                                  ),
                                 ),
-                              ),
-                            );
-                          }
-                        }(),
+                              );
+                            }
+                          }(),
+                        ),
                       ),
                     ),
                   ),
@@ -340,21 +342,23 @@ class _BottomBarState extends State<BottomBar> with SingleTickerProviderStateMix
           ),
         Align(
           alignment: widget.barAlignment,
-          child: Padding(
-            padding: EdgeInsets.all(widget.offset),
-            child: SlideTransition(
-              position: _offsetAnimation,
-              child: Container(
-                width: widget.width,
-                decoration: widget.barDecoration ??
-                    BoxDecoration(
-                      color: widget.barColor,
-                      borderRadius: widget.borderRadius,
-                    ),
-                child: Material(
-                  color: widget.barColor,
-                  child: widget.child,
-                  borderRadius: widget.borderRadius,
+          child: SafeArea(
+            child: Padding(
+              padding: EdgeInsets.all(widget.offset),
+              child: SlideTransition(
+                position: _offsetAnimation,
+                child: Container(
+                  width: widget.width,
+                  decoration: widget.barDecoration ??
+                      BoxDecoration(
+                        color: widget.barColor,
+                        borderRadius: widget.borderRadius,
+                      ),
+                  child: Material(
+                    color: widget.barColor,
+                    child: widget.child,
+                    borderRadius: widget.borderRadius,
+                  ),
                 ),
               ),
             ),
