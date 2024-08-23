@@ -1,3 +1,9 @@
+## 1.2.1
+
+* Update to Flutter v3.22.1
+* Fix divider error in example
+* Update dependencies
+
 ## 1.2.0
 
 * Add `offset`, `barAlignment`, `barDecoration`, `iconDecoration` properties.
