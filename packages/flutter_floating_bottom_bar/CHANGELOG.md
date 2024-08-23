@@ -1,3 +1,7 @@
+## 1.2.1+1
+
+* Fix code formatting
+
 ## 1.2.1
 
 * Update to Flutter v3.22.1
