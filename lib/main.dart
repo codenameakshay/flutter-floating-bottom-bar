@@ -31,7 +31,8 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
+class _MyHomePageState extends State<MyHomePage>
+    with SingleTickerProviderStateMixin {
   late int currentPage;
   late TabController tabController;
   final List<Color> colors = [
@@ -71,8 +72,13 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    final Color unselectedColor = colors[currentPage].computeLuminance() < 0.5 ? Colors.black : Colors.white;
-    final Color unselectedColorReverse = colors[currentPage].computeLuminance() < 0.5 ? Colors.white : Colors.black;
+    final Color unselectedColor = colors[currentPage].computeLuminance() < 0.5
+        ? Colors.black
+        : Colors.white;
+    final Color unselectedColorReverse =
+        colors[currentPage].computeLuminance() < 0.5
+            ? Colors.white
+            : Colors.black;
 
     return Scaffold(
       appBar: AppBar(
@@ -91,7 +97,9 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
               controller: tabController,
               indicator: UnderlineTabIndicator(
                   borderSide: BorderSide(
-                    color: currentPage <= 4 ? colors[currentPage] : unselectedColor,
+                    color: currentPage <= 4
+                        ? colors[currentPage]
+                        : unselectedColor,
                     width: 4,
                   ),
                   insets: EdgeInsets.fromLTRB(16, 0, 16, 8)),
@@ -121,7 +129,8 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                   child: Center(
                     child: Icon(
                       Icons.add,
-                      color: currentPage == 2 ? colors[2] : unselectedColorReverse,
+                      color:
+                          currentPage == 2 ? colors[2] : unselectedColorReverse,
                     ),
                   ),
                 ),
@@ -174,7 +183,9 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
         curve: Curves.decelerate,
         showIcon: true,
         width: MediaQuery.of(context).size.width * 0.8,
-        barColor: colors[currentPage].computeLuminance() > 0.5 ? Colors.black : Colors.white,
+        barColor: colors[currentPage].computeLuminance() > 0.5
+            ? Colors.black
+            : Colors.white,
         start: 3,
         end: 0,
         offset: 10,
