@@ -488,3 +488,41 @@ class MyHomePage extends StatelessWidget {
   }
 }
 ```
+
+---
+
+## Additional examples (v1.4.0)
+
+### With `BottomBarController` and visibility callback
+
+```dart
+final bottomBarController = BottomBarController();
+
+BottomBar(
+  controller: bottomBarController,
+  onVisibilityChanged: (isVisible) {
+    debugPrint('BottomBar visible: $isVisible');
+  },
+  scrollDeltaThreshold: 8,
+  iconTooltip: 'Scroll to top',
+  iconSemanticLabel: 'Scroll list to top',
+  child: const SizedBox(
+    height: 56,
+    child: Center(child: Text('Bottom bar content')),
+  ),
+  body: (context, controller) => ListView.builder(
+    controller: controller,
+    itemBuilder: (context, index) => ListTile(title: Text('Row $index')),
+  ),
+);
+```
+
+### Imperative actions
+
+```dart
+bottomBarController.hide();
+bottomBarController.show();
+bottomBarController.toggle();
+await bottomBarController.scrollToStart();
+await bottomBarController.scrollToEnd();
+```

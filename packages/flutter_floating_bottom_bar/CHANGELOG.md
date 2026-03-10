@@ -1,3 +1,13 @@
+## 1.4.0
+
+- Upgrade project/tooling for Flutter `3.41.4` development via FVM.
+- Update SDK constraints and refresh dependencies.
+- Add `BottomBarController` for programmatic `show`, `hide`, `toggle`, `scrollToStart`, and `scrollToEnd`.
+- Add `onVisibilityChanged` callback for visibility state transitions.
+- Add `scrollDeltaThreshold` to reduce flicker from minor scroll movement.
+- Add `iconSemanticLabel` and `iconTooltip` for better accessibility.
+- Improve internal scroll/visibility handling and test coverage.
+
 ## 1.3.0
 
 - Added `respectSafeArea` property to control whether the BottomBar should respect the SafeArea
