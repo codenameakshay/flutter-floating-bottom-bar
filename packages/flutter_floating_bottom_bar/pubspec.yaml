@@ -1,12 +1,12 @@
 name: flutter_floating_bottom_bar
 description: A flutter package that allows showing a floating widget that can be used as a tab bar, bottom navigation bar, etc. The widget reacts to scrolling events too.
-version: 1.3.0
+version: 1.4.0
 homepage: https://hashstudios.dev
 repository: https://github.com/codenameakshay/flutter-floating-bottom-bar
 
 environment:
-  sdk: ">=2.12.0 <4.0.0"
-  flutter: ">=1.17.0"
+  sdk: ">=3.4.0 <4.0.0"
+  flutter: ">=3.22.0"
 
 dependencies:
   flutter:
@@ -15,6 +15,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
