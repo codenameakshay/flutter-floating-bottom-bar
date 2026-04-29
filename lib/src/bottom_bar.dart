@@ -7,6 +7,7 @@ import 'config/bottom_bar_layout.dart';
 import 'config/bottom_bar_motion.dart';
 import 'config/bottom_bar_scroll_behavior.dart';
 import 'internal/scroll_notification_dispatcher.dart';
+import 'internal/visibility_animator.dart';
 
 /// Builds the back-to-top icon child. `width` and `height` reflect the
 /// animated size at the moment of build; ignore them to keep a constant size.
@@ -56,7 +57,7 @@ class _BottomBarState extends State<BottomBar>
     with SingleTickerProviderStateMixin
     implements BottomBarBindingForController {
   late AnimationController _animationController;
-  late Animation<Offset> _slideAnimation;
+  late Animation<double> _curvedAnimation;
   late ScrollNotificationDispatcher _dispatcher;
 
   bool _isBarVisible = true;
@@ -74,11 +75,9 @@ class _BottomBarState extends State<BottomBar>
       duration: widget.motion.duration,
       vsync: this,
     );
-    _slideAnimation = Tween<Offset>(
-      begin: widget.motion.slideStart,
-      end: widget.motion.slideEnd,
-    ).animate(
-      CurvedAnimation(parent: _animationController, curve: widget.motion.curve),
+    _curvedAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: widget.motion.curve,
     );
 
     _dispatcher = ScrollNotificationDispatcher(
@@ -119,17 +118,10 @@ class _BottomBarState extends State<BottomBar>
       _animationController.duration = widget.motion.duration;
     }
 
-    if (oldWidget.motion.slideStart != widget.motion.slideStart ||
-        oldWidget.motion.slideEnd != widget.motion.slideEnd ||
-        oldWidget.motion.curve != widget.motion.curve) {
-      _slideAnimation = Tween<Offset>(
-        begin: widget.motion.slideStart,
-        end: widget.motion.slideEnd,
-      ).animate(
-        CurvedAnimation(
-          parent: _animationController,
-          curve: widget.motion.curve,
-        ),
+    if (oldWidget.motion.curve != widget.motion.curve) {
+      _curvedAnimation = CurvedAnimation(
+        parent: _animationController,
+        curve: widget.motion.curve,
       );
     }
 
@@ -336,8 +328,9 @@ class _BottomBarState extends State<BottomBar>
   }
 
   Widget _buildBottomBar(BottomBarThemeData theme) {
-    return SlideTransition(
-      position: _slideAnimation,
+    return VisibilityAnimator(
+      animation: _curvedAnimation,
+      motion: widget.motion,
       child: Container(
         key: _barKey,
         width: widget.layout.width,

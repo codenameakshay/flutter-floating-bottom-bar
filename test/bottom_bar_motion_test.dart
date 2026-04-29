@@ -27,4 +27,68 @@ void main() {
       expect(a, b);
     });
   });
+
+  // The bar's child is wrapped in a FadeTransition when transition is fade.
+  // We use a Key on the bar child to narrow the search past
+  // MaterialApp/Navigator route fades and the icon's AnimatedOpacity.
+  testWidgets('BottomBarTransition.fade renders a FadeTransition',
+      (tester) async {
+    const barKey = Key('bar-content');
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+        body: BottomBar(
+          motion: BottomBarMotion(transition: BottomBarTransition.fade),
+          body: SizedBox.shrink(),
+          child: SizedBox(
+            key: barKey,
+            height: 56,
+            child: Center(child: Text('c')),
+          ),
+        ),
+      ),
+    ));
+
+    // VisibilityAnimator wraps the bar's Container (which contains the
+    // keyed SizedBox) in exactly one FadeTransition.
+    final fades = find.ancestor(
+      of: find.byKey(barKey),
+      matching: find.byType(FadeTransition),
+    );
+    expect(fades, findsWidgets);
+    // At least one of those FadeTransitions is the one we just inserted.
+    // We verify it's the immediate wrapper of the bar's Container by
+    // checking its child contains the keyed SizedBox.
+    bool hasBarFade = false;
+    for (final element in fades.evaluate()) {
+      final fade = element.widget as FadeTransition;
+      if (fade.child is Container) {
+        hasBarFade = true;
+        break;
+      }
+    }
+    expect(hasBarFade, isTrue,
+        reason: 'expected a FadeTransition wrapping the bar Container');
+  });
+
+  testWidgets('BottomBarMotion.transitionBuilder overrides the enum',
+      (tester) async {
+    bool builderCalled = false;
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: BottomBar(
+          motion: BottomBarMotion(
+            transitionBuilder: (ctx, anim, child) {
+              builderCalled = true;
+              return Opacity(opacity: anim.value, child: child);
+            },
+          ),
+          body: const SizedBox.shrink(),
+          child: const SizedBox(
+              height: 56, child: Center(child: Text('c'))),
+        ),
+      ),
+    ));
+
+    expect(builderCalled, isTrue);
+  });
 }
