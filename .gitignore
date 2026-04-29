@@ -16,9 +16,13 @@ build/
 
 # FVM
 .fvm/flutter_sdk
+.fvm/versions
 
 # Coverage
 coverage/
+
+# Dart / pub
+/pubspec.lock
 
 # Misc
 *.log
