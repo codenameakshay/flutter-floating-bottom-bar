@@ -6,25 +6,32 @@ void main() {
   Widget buildHarness({
     BottomBarController? controller,
     ValueChanged<bool>? onVisibilityChanged,
-    double scrollDeltaThreshold = 8,
+    BottomBarScrollBehavior scrollBehavior =
+        const BottomBarScrollBehavior(),
     String? iconTooltip,
   }) {
     return MaterialApp(
       home: Scaffold(
         body: BottomBar(
           controller: controller,
-          scrollDeltaThreshold: scrollDeltaThreshold,
+          scrollBehavior: scrollBehavior,
           iconTooltip: iconTooltip,
           onVisibilityChanged: onVisibilityChanged,
+          body: Builder(
+            builder: (context) {
+              final controller = BottomBarScrollControllerProvider.of(context)
+                  .scrollController;
+              return ListView.builder(
+                controller: controller,
+                itemCount: 200,
+                itemBuilder: (context, index) =>
+                    ListTile(title: Text('Item $index')),
+              );
+            },
+          ),
           child: const SizedBox(
             height: 56,
             child: Center(child: Text('Bottom Bar Child')),
-          ),
-          body: (context, scrollController) => ListView.builder(
-            controller: scrollController,
-            itemCount: 200,
-            itemBuilder: (context, index) =>
-                ListTile(title: Text('Item $index')),
           ),
         ),
       ),
@@ -38,7 +45,6 @@ void main() {
 
   testWidgets('controller can hide and show the bar', (tester) async {
     final controller = BottomBarController();
-
     await tester.pumpWidget(buildHarness(controller: controller));
     expect(controller.isAttached, isTrue);
     expect(controller.isVisible, isTrue);
@@ -54,7 +60,6 @@ void main() {
 
   testWidgets('scroll emits visibility changes', (tester) async {
     final visibilityEvents = <bool>[];
-
     await tester.pumpWidget(
       buildHarness(onVisibilityChanged: visibilityEvents.add),
     );
@@ -71,13 +76,14 @@ void main() {
     expect(visibilityEvents, contains(true));
   });
 
-  testWidgets('scroll delta threshold suppresses tiny movements', (
-    tester,
-  ) async {
+  testWidgets('scroll delta threshold suppresses tiny movements',
+      (tester) async {
     final controller = BottomBarController();
-
     await tester.pumpWidget(
-      buildHarness(controller: controller, scrollDeltaThreshold: 200),
+      buildHarness(
+        controller: controller,
+        scrollBehavior: const BottomBarScrollBehavior(deltaThreshold: 200),
+      ),
     );
 
     final scrollable = find.byType(Scrollable).first;
@@ -93,14 +99,12 @@ void main() {
 
   testWidgets('custom tooltip is attached to the icon action', (tester) async {
     final controller = BottomBarController();
-
     await tester.pumpWidget(
       buildHarness(controller: controller, iconTooltip: 'Go to top'),
     );
 
     controller.hide();
     await tester.pumpAndSettle();
-
     expect(find.byTooltip('Go to top'), findsOneWidget);
   });
 }
