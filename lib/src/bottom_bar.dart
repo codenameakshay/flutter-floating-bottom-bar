@@ -1,66 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_floating_bottom_bar/src/bottom_bar_scroll_controller_provider.dart';
 
+import 'bottom_bar_controller.dart';
+
 /// [width] & [height] can be used to animate the size of the back to top icon.
 /// You can also not use them to keep your icon a constant size.
 typedef BackToTopIconBuilder = Widget Function(double width, double height);
-
-/// Imperative controller for [BottomBar].
-class BottomBarController extends ChangeNotifier {
-  _BottomBarState? _state;
-  bool _isVisible = true;
-
-  bool get isVisible => _isVisible;
-
-  bool get isAttached => _state != null;
-
-  void show() =>
-      _state?._setBarVisible(true, notifyCallbacks: true, fromController: true);
-
-  void hide() => _state?._setBarVisible(
-        false,
-        notifyCallbacks: true,
-        fromController: true,
-      );
-
-  void toggle() {
-    if (_isVisible) {
-      hide();
-    } else {
-      show();
-    }
-  }
-
-  Future<void> scrollToStart() async {
-    await _state?._scrollToBoundary(scrollOpposite: false);
-  }
-
-  Future<void> scrollToEnd() async {
-    await _state?._scrollToBoundary(scrollOpposite: true);
-  }
-
-  void _attach(_BottomBarState state) {
-    _state = state;
-    _updateVisibility(state._isBarVisible, shouldNotify: false);
-  }
-
-  void _detach(_BottomBarState state) {
-    if (_state == state) {
-      _state = null;
-    }
-  }
-
-  void _updateVisibility(bool value, {bool shouldNotify = true}) {
-    if (_isVisible == value) {
-      return;
-    }
-
-    _isVisible = value;
-    if (shouldNotify) {
-      notifyListeners();
-    }
-  }
-}
 
 /// A floating bottom navigation bar that hides on scroll
 /// up and down on the page, with powerful options
@@ -238,7 +183,8 @@ class BottomBar extends StatefulWidget {
 }
 
 class _BottomBarState extends State<BottomBar>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin
+    implements BottomBarBindingForController {
   late final ScrollController bodyScrollController;
   late final AnimationController _controller;
   late final Animation<Offset> _offsetAnimation;
@@ -259,9 +205,9 @@ class _BottomBarState extends State<BottomBar>
       end: Offset(0, widget.end),
     ).animate(CurvedAnimation(parent: _controller, curve: widget.curve));
 
-    widget.controller?._attach(this);
+    widget.controller?.attach(this);
     _controller.forward();
-    widget.controller?._updateVisibility(true, shouldNotify: false);
+    widget.controller?.updateVisibility(true, shouldNotify: false);
   }
 
   @override
@@ -269,14 +215,30 @@ class _BottomBarState extends State<BottomBar>
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.controller != widget.controller) {
-      oldWidget.controller?._detach(this);
-      widget.controller?._attach(this);
+      oldWidget.controller?.detach(this);
+      widget.controller?.attach(this);
     }
 
     if (oldWidget.duration != widget.duration) {
       _controller.duration = widget.duration;
     }
   }
+
+  // --- BottomBarBindingForController implementation ---
+
+  @override
+  bool get isVisible => _isBarVisible;
+
+  @override
+  void requestVisible(bool visible) {
+    _setBarVisible(visible, notifyCallbacks: true, fromController: true);
+  }
+
+  @override
+  Future<void> scrollToBoundary({required bool toEnd}) =>
+      _scrollToBoundary(scrollOpposite: toEnd);
+
+  // ---
 
   void _handleScroll() {
     if (!bodyScrollController.hasClients) {
@@ -329,7 +291,7 @@ class _BottomBarState extends State<BottomBar>
       _controller.reverse();
     }
 
-    widget.controller?._updateVisibility(visible);
+    widget.controller?.updateVisibility(visible);
 
     if (notifyCallbacks) {
       widget.onVisibilityChanged?.call(visible);
@@ -359,7 +321,7 @@ class _BottomBarState extends State<BottomBar>
 
   @override
   void dispose() {
-    widget.controller?._detach(this);
+    widget.controller?.detach(this);
     bodyScrollController.removeListener(_handleScroll);
     bodyScrollController.dispose();
     _controller.dispose();
