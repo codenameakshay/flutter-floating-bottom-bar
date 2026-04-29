@@ -41,7 +41,8 @@ void main() {
         onShouldHide: events.add,
       );
 
-      dispatcher.handle(_FakeUpdate(depth: 0, axis: Axis.vertical, pixels: 100));
+      dispatcher
+          .handle(_FakeUpdate(depth: 0, axis: Axis.vertical, pixels: 100));
       dispatcher.handle(_FakeUpdate(depth: 0, axis: Axis.vertical, pixels: 0));
 
       expect(events.last, isTrue);

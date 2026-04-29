@@ -72,7 +72,9 @@ class _BottomBarState extends State<BottomBar>
   }
 
   BottomBarScrollBehavior _effectiveScrollBehavior(BottomBarThemeData theme) {
-    return widget.scrollBehavior ?? theme.scrollBehavior ?? const BottomBarScrollBehavior();
+    return widget.scrollBehavior ??
+        theme.scrollBehavior ??
+        const BottomBarScrollBehavior();
   }
 
   final ValueNotifier<double> _barHeight = ValueNotifier<double>(0);
@@ -84,7 +86,8 @@ class _BottomBarState extends State<BottomBar>
     super.initState();
 
     final initialMotion = widget.motion ?? const BottomBarMotion();
-    final initialScroll = widget.scrollBehavior ?? const BottomBarScrollBehavior();
+    final initialScroll =
+        widget.scrollBehavior ?? const BottomBarScrollBehavior();
 
     _animationController = AnimationController(
       duration: initialMotion.duration,
@@ -99,8 +102,7 @@ class _BottomBarState extends State<BottomBar>
       deltaThreshold: initialScroll.deltaThreshold,
       reverse: initialScroll.reverse,
       predicate: initialScroll.predicate,
-      onShouldHide: (hide) =>
-          _setBarVisible(!hide, notifyCallbacks: true),
+      onShouldHide: (hide) => _setBarVisible(!hide, notifyCallbacks: true),
     );
 
     widget.controller?.attach(this);
@@ -126,7 +128,8 @@ class _BottomBarState extends State<BottomBar>
 
     final oldMotion = oldWidget.motion ?? const BottomBarMotion();
     final newMotion = widget.motion ?? const BottomBarMotion();
-    final oldScroll = oldWidget.scrollBehavior ?? const BottomBarScrollBehavior();
+    final oldScroll =
+        oldWidget.scrollBehavior ?? const BottomBarScrollBehavior();
     final newScroll = widget.scrollBehavior ?? const BottomBarScrollBehavior();
 
     if (oldWidget.controller != widget.controller) {
@@ -279,8 +282,7 @@ class _BottomBarState extends State<BottomBar>
             isVisible: _isVisibleNotifier,
             child: widget.body,
           ),
-          if (widget.showIcon)
-            _wrapWithSafeArea(l, child: _buildIcon(theme)),
+          if (widget.showIcon) _wrapWithSafeArea(l, child: _buildIcon(theme)),
           _wrapWithSafeArea(l, child: _buildBottomBar(theme)),
         ],
       ),
@@ -301,13 +303,21 @@ class _BottomBarState extends State<BottomBar>
     final motion = _effectiveMotion(theme);
     final scroll = _effectiveScrollBehavior(theme);
 
+    // The back-to-top icon's implicit animations always use a safe monotonic
+    // curve. Sharing `motion.curve` here would let an overshooting curve
+    // (e.g. Curves.easeOutBack) drive `AnimatedContainer.width/height`
+    // through negative values, which crashes layout with negative
+    // BoxConstraints. The user's chosen curve still drives the bar's main
+    // transition via `VisibilityAnimator`.
+    const iconCurve = Curves.easeOut;
+
     return AnimatedOpacity(
       duration: motion.duration,
-      curve: motion.curve,
+      curve: iconCurve,
       opacity: _showIconButton ? 1 : 0,
       child: AnimatedContainer(
         duration: motion.duration,
-        curve: motion.curve,
+        curve: iconCurve,
         width: _showIconButton ? iconWidth : 0,
         height: _showIconButton ? iconHeight : 0,
         decoration: theme.iconDecoration,

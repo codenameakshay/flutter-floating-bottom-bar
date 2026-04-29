@@ -44,10 +44,12 @@ class _TabBarDemoPageState extends State<TabBarDemoPage>
 
   @override
   Widget build(BuildContext context) {
-    final unselectedColor =
-        colors[currentPage].computeLuminance() < 0.5 ? Colors.black : Colors.white;
-    final unselectedColorReverse =
-        colors[currentPage].computeLuminance() < 0.5 ? Colors.white : Colors.black;
+    final unselectedColor = colors[currentPage].computeLuminance() < 0.5
+        ? Colors.black
+        : Colors.white;
+    final unselectedColorReverse = colors[currentPage].computeLuminance() < 0.5
+        ? Colors.white
+        : Colors.black;
     final barFillColor = colors[currentPage].computeLuminance() > 0.5
         ? Colors.black
         : Colors.white;

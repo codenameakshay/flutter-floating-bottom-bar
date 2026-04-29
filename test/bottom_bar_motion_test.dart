@@ -83,12 +83,45 @@ void main() {
             },
           ),
           body: const SizedBox.shrink(),
-          child: const SizedBox(
-              height: 56, child: Center(child: Text('c'))),
+          child: const SizedBox(height: 56, child: Center(child: Text('c'))),
         ),
       ),
     ));
 
     expect(builderCalled, isTrue);
+  });
+
+  testWidgets(
+      'overshooting curve does not produce negative icon constraints',
+      (tester) async {
+    final controller = BottomBarController();
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: BottomBar(
+          controller: controller,
+          motion: const BottomBarMotion(
+            duration: Duration(milliseconds: 200),
+            curve: Curves.easeOutBack,
+          ),
+          body: const SizedBox.shrink(),
+          child: const SizedBox(height: 56, child: Center(child: Text('c'))),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // Hide the bar — this triggers the back-to-top icon's AnimatedContainer
+    // to grow from 0 → iconWidth. If the icon shared the user's curve
+    // (`Curves.easeOutBack` overshoots into negative territory), the
+    // implicit width/height tween would emit negative BoxConstraints
+    // mid-animation and crash layout.
+    controller.hide();
+    for (var i = 0; i < 12; i++) {
+      await tester.pump(const Duration(milliseconds: 20));
+      expect(tester.takeException(), isNull,
+          reason: 'No layout exceptions allowed mid-animation.');
+    }
+    await tester.pumpAndSettle();
   });
 }

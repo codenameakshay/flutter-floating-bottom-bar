@@ -6,8 +6,7 @@ void main() {
   Widget buildHarness({
     BottomBarController? controller,
     ValueChanged<bool>? onVisibilityChanged,
-    BottomBarScrollBehavior scrollBehavior =
-        const BottomBarScrollBehavior(),
+    BottomBarScrollBehavior scrollBehavior = const BottomBarScrollBehavior(),
     String? iconTooltip,
   }) {
     return MaterialApp(
