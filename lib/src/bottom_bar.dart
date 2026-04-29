@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'bottom_bar_controller.dart';
+import 'bottom_bar_scope.dart';
 import 'bottom_bar_theme.dart';
 import 'config/bottom_bar_layout.dart';
 import 'config/bottom_bar_motion.dart';
@@ -61,6 +62,10 @@ class _BottomBarState extends State<BottomBar>
   bool _isBarVisible = true;
   bool _showIconButton = false;
 
+  final ValueNotifier<double> _barHeight = ValueNotifier<double>(0);
+  final ValueNotifier<bool> _isVisibleNotifier = ValueNotifier<bool>(true);
+  final GlobalKey _barKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -87,6 +92,18 @@ class _BottomBarState extends State<BottomBar>
     widget.controller?.attach(this);
     _animationController.forward();
     widget.controller?.updateVisibility(true, shouldNotify: false);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measureBar());
+  }
+
+  void _measureBar() {
+    final ctx = _barKey.currentContext;
+    if (ctx == null) return;
+    final renderBox = ctx.findRenderObject();
+    if (renderBox is RenderBox && renderBox.hasSize) {
+      final h = renderBox.size.height;
+      if (_barHeight.value != h) _barHeight.value = h;
+    }
   }
 
   @override
@@ -140,6 +157,8 @@ class _BottomBarState extends State<BottomBar>
       _isBarVisible = visible;
       _showIconButton = !visible;
     });
+
+    _isVisibleNotifier.value = visible;
 
     if (visible) {
       _animationController.forward();
@@ -217,6 +236,8 @@ class _BottomBarState extends State<BottomBar>
   void dispose() {
     widget.controller?.detach(this);
     _animationController.dispose();
+    _barHeight.dispose();
+    _isVisibleNotifier.dispose();
     super.dispose();
   }
 
@@ -226,6 +247,8 @@ class _BottomBarState extends State<BottomBar>
   Widget build(BuildContext context) {
     final theme = _resolvedTheme(context);
     final l = widget.layout;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measureBar());
 
     return NotificationListener<ScrollNotification>(
       onNotification: (n) {
@@ -237,7 +260,11 @@ class _BottomBarState extends State<BottomBar>
         alignment: l.alignment,
         clipBehavior: l.clip,
         children: [
-          widget.body,
+          BottomBarScope(
+            barHeight: _barHeight,
+            isVisible: _isVisibleNotifier,
+            child: widget.body,
+          ),
           if (widget.showIcon)
             _wrapWithSafeArea(l, child: _buildIcon(theme)),
           _wrapWithSafeArea(l, child: _buildBottomBar(theme)),
@@ -312,6 +339,7 @@ class _BottomBarState extends State<BottomBar>
     return SlideTransition(
       position: _slideAnimation,
       child: Container(
+        key: _barKey,
         width: widget.layout.width,
         decoration: theme.barDecoration,
         child: Material(
