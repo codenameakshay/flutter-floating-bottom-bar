@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'demos/basic_demo.dart';
+import 'demos/search_bar_demo.dart';
 import 'demos/tab_bar_demo.dart';
 
 void main() => runApp(const ExampleApp());
@@ -27,6 +28,7 @@ class _DemoPicker extends StatelessWidget {
     final demos = <(String, WidgetBuilder)>[
       ('Tab bar', (_) => const TabBarDemoPage()),
       ('Basic', (_) => const BasicDemoPage()),
+      ('Search bar', (_) => const SearchBarDemoPage()),
     ];
     return Scaffold(
       appBar: AppBar(title: const Text('Demos')),
