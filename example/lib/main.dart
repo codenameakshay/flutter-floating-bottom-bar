@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'demos/badges_demo.dart';
 import 'demos/basic_demo.dart';
+import 'demos/custom_transition_demo.dart';
 import 'demos/nested_scroll_demo.dart';
 import 'demos/search_bar_demo.dart';
 import 'demos/tab_bar_demo.dart';
@@ -33,6 +34,7 @@ class _DemoPicker extends StatelessWidget {
       ('Search bar', (_) => const SearchBarDemoPage()),
       ('Nested scroll', (_) => const NestedScrollDemoPage()),
       ('Badges', (_) => const BadgesDemoPage()),
+      ('Custom transition', (_) => const CustomTransitionDemoPage()),
     ];
     return Scaffold(
       appBar: AppBar(title: const Text('Demos')),
