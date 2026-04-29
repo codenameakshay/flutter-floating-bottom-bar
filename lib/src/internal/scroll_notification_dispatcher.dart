@@ -37,6 +37,11 @@ class ScrollNotificationDispatcher {
     final filter = predicate;
     if (filter != null && !filter(notification)) return;
 
+    // Bottom bar visibility is driven by vertical scrolls only. Horizontal
+    // scrolls (e.g. PageView/TabBarView between siblings) must not be allowed
+    // to flip visibility.
+    if (notification.metrics.axis != Axis.vertical) return;
+
     final key = _keyFor(notification);
 
     if (notification is ScrollEndNotification) {

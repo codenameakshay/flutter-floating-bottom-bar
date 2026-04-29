@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 import 'bottom_bar_controller.dart';
-import 'bottom_bar_scroll_controller_provider.dart';
 import 'bottom_bar_theme.dart';
 import 'config/bottom_bar_layout.dart';
 import 'config/bottom_bar_motion.dart';
 import 'config/bottom_bar_scroll_behavior.dart';
+import 'internal/scroll_notification_dispatcher.dart';
 
 /// Builds the back-to-top icon child. `width` and `height` reflect the
 /// animated size at the moment of build; ignore them to keep a constant size.
@@ -54,20 +54,16 @@ class BottomBar extends StatefulWidget {
 class _BottomBarState extends State<BottomBar>
     with SingleTickerProviderStateMixin
     implements BottomBarBindingForController {
-  late ScrollController _legacyScrollController;
   late AnimationController _animationController;
   late Animation<Offset> _slideAnimation;
+  late ScrollNotificationDispatcher _dispatcher;
 
   bool _isBarVisible = true;
   bool _showIconButton = false;
-  double _lastOffset = 0;
 
   @override
   void initState() {
     super.initState();
-
-    _legacyScrollController = ScrollController();
-    _legacyScrollController.addListener(_handleLegacyScroll);
 
     _animationController = AnimationController(
       duration: widget.motion.duration,
@@ -78,6 +74,14 @@ class _BottomBarState extends State<BottomBar>
       end: widget.motion.slideEnd,
     ).animate(
       CurvedAnimation(parent: _animationController, curve: widget.motion.curve),
+    );
+
+    _dispatcher = ScrollNotificationDispatcher(
+      deltaThreshold: widget.scrollBehavior.deltaThreshold,
+      reverse: widget.scrollBehavior.reverse,
+      predicate: widget.scrollBehavior.predicate,
+      onShouldHide: (hide) =>
+          _setBarVisible(!hide, notifyCallbacks: true),
     );
 
     widget.controller?.attach(this);
@@ -111,21 +115,12 @@ class _BottomBarState extends State<BottomBar>
         ),
       );
     }
-  }
 
-  // -- v1.x scroll-controller path (replaced in Phase 4) ----------------------
-
-  void _handleLegacyScroll() {
-    if (!_legacyScrollController.hasClients) return;
-
-    final position = _legacyScrollController.position;
-    final delta = position.pixels - _lastOffset;
-    _lastOffset = position.pixels;
-
-    if (delta.abs() < widget.scrollBehavior.deltaThreshold) return;
-
-    final shouldHide = widget.scrollBehavior.reverse ? delta < 0 : delta > 0;
-    _setBarVisible(!shouldHide, notifyCallbacks: true);
+    if (oldWidget.scrollBehavior != widget.scrollBehavior) {
+      _dispatcher.deltaThreshold = widget.scrollBehavior.deltaThreshold;
+      _dispatcher.reverse = widget.scrollBehavior.reverse;
+      _dispatcher.predicate = widget.scrollBehavior.predicate;
+    }
   }
 
   // -- visibility plumbing ---------------------------------------------------
@@ -176,11 +171,22 @@ class _BottomBarState extends State<BottomBar>
 
   @override
   Future<void> scrollToBoundary({required bool toEnd}) async {
-    if (!_legacyScrollController.hasClients) return;
-    await _legacyScrollController.animateTo(
-      toEnd
-          ? _legacyScrollController.position.maxScrollExtent
-          : _legacyScrollController.position.minScrollExtent,
+    final position = _dispatcher.lastActivePosition;
+    if (position == null) {
+      assert(() {
+        FlutterError.reportError(FlutterErrorDetails(
+          exception: FlutterError(
+            'BottomBarController.scrollToStart/scrollToEnd called before any '
+            'scroll notification was observed; nothing to scroll.',
+          ),
+          library: 'flutter_floating_bottom_bar',
+        ));
+        return true;
+      }());
+      return;
+    }
+    await position.animateTo(
+      toEnd ? position.maxScrollExtent : position.minScrollExtent,
       duration: widget.motion.duration,
       curve: widget.motion.curve,
     );
@@ -210,8 +216,6 @@ class _BottomBarState extends State<BottomBar>
   @override
   void dispose() {
     widget.controller?.detach(this);
-    _legacyScrollController.removeListener(_handleLegacyScroll);
-    _legacyScrollController.dispose();
     _animationController.dispose();
     super.dispose();
   }
@@ -223,25 +227,22 @@ class _BottomBarState extends State<BottomBar>
     final theme = _resolvedTheme(context);
     final l = widget.layout;
 
-    return Stack(
-      fit: l.fit,
-      alignment: l.alignment,
-      clipBehavior: l.clip,
-      children: [
-        BottomBarScrollControllerProvider(
-          scrollController: _legacyScrollController,
-          child: widget.body,
-        ),
-        if (widget.showIcon)
-          _wrapWithSafeArea(
-            l,
-            child: _buildIcon(theme),
-          ),
-        _wrapWithSafeArea(
-          l,
-          child: _buildBottomBar(theme),
-        ),
-      ],
+    return NotificationListener<ScrollNotification>(
+      onNotification: (n) {
+        _dispatcher.handle(n);
+        return false; // do not absorb
+      },
+      child: Stack(
+        fit: l.fit,
+        alignment: l.alignment,
+        clipBehavior: l.clip,
+        children: [
+          widget.body,
+          if (widget.showIcon)
+            _wrapWithSafeArea(l, child: _buildIcon(theme)),
+          _wrapWithSafeArea(l, child: _buildBottomBar(theme)),
+        ],
+      ),
     );
   }
 

@@ -17,17 +17,10 @@ void main() {
           scrollBehavior: scrollBehavior,
           iconTooltip: iconTooltip,
           onVisibilityChanged: onVisibilityChanged,
-          body: Builder(
-            builder: (context) {
-              final controller = BottomBarScrollControllerProvider.of(context)
-                  .scrollController;
-              return ListView.builder(
-                controller: controller,
-                itemCount: 200,
-                itemBuilder: (context, index) =>
-                    ListTile(title: Text('Item $index')),
-              );
-            },
+          body: ListView.builder(
+            itemCount: 200,
+            itemBuilder: (context, index) =>
+                ListTile(title: Text('Item $index')),
           ),
           child: const SizedBox(
             height: 56,
@@ -106,5 +99,77 @@ void main() {
     controller.hide();
     await tester.pumpAndSettle();
     expect(find.byTooltip('Go to top'), findsOneWidget);
+  });
+
+  testWidgets('hide-on-scroll works with NestedScrollView', (tester) async {
+    final controller = BottomBarController();
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: BottomBar(
+          controller: controller,
+          body: NestedScrollView(
+            headerSliverBuilder: (_, __) => const [
+              SliverAppBar(title: Text('Nested')),
+            ],
+            body: ListView.builder(
+              itemCount: 200,
+              itemBuilder: (_, i) => ListTile(title: Text('I $i')),
+            ),
+          ),
+          child: const SizedBox(
+            height: 56,
+            child: Center(child: Text('child')),
+          ),
+        ),
+      ),
+    ));
+
+    expect(controller.isVisible, isTrue);
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isFalse);
+  });
+
+  testWidgets('switching between sibling scrollables does not false-hide',
+      (tester) async {
+    final controller = BottomBarController();
+    final tabController = TabController(length: 2, vsync: const TestVSync());
+    addTearDown(tabController.dispose);
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: BottomBar(
+          controller: controller,
+          body: TabBarView(
+            controller: tabController,
+            children: [
+              ListView.builder(
+                itemCount: 200,
+                itemBuilder: (_, i) => ListTile(title: Text('A $i')),
+              ),
+              ListView.builder(
+                itemCount: 200,
+                itemBuilder: (_, i) => ListTile(title: Text('B $i')),
+              ),
+            ],
+          ),
+          child: const SizedBox(
+            height: 56,
+            child: Center(child: Text('child')),
+          ),
+        ),
+      ),
+    ));
+
+    // Scroll list A by a tiny amount (below threshold).
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -5));
+    await tester.pumpAndSettle();
+
+    // Switch to tab B.
+    tabController.animateTo(1);
+    await tester.pumpAndSettle();
+
+    // The bar should still be visible (no false hide on tab switch).
+    expect(controller.isVisible, isTrue);
   });
 }
