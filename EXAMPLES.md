@@ -1,175 +1,44 @@
-Simple basic example using only required arguments - `child` and `body`.
+# Recipes
 
-```dart
-    BottomBar(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text(
-              "This is the floating widget",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-          body: (context, controller) =>
-              InfiniteListPage(controller: controller, color: Colors.blue,),
-    )
+A catalogue of patterns for `flutter_floating_bottom_bar` v2.0+. Each recipe in §1–6 has a runnable counterpart under `example/lib/demos/`. Run them with:
+
+```bash
+cd example && flutter run
 ```
 
-Simple basic example that demonstrates all properties of the `BottomBar` widget, and how to use them.
+Then pick the demo from the in-app picker.
+
+---
+
+## 1. Basic
+
+The minimal `BottomBar` setup: provide a `child` (the floating widget) and a `body` (the scrollable content). Use `BottomBarLayout` to control width and corner radius. This is the starting point for every other recipe.
 
 ```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key? key, required this.title}) : super(key: key);
-  final String title;
-
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
-  late int currentPage;
-  late TabController tabController;
-  final List<Color> colors = [Colors.yellow, Colors.red, Colors.green, Colors.blue, Colors.pink];
-
-  @override
-  void initState() {
-    currentPage = 0;
-    tabController = TabController(length: 5, vsync: this);
-    tabController.animation!.addListener(
-      () {
-        final value = tabController.animation!.value.round();
-        if (value != currentPage && mounted) {
-          changePage(value);
-        }
-      },
-    );
-    super.initState();
-  }
-
-  void changePage(int newPage) {
-    setState(() {
-      currentPage = newPage;
-    });
-  }
-
-  @override
-  void dispose() {
-    tabController.dispose();
-    super.dispose();
-  }
+class BasicDemoPage extends StatelessWidget {
+  const BasicDemoPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final Color unselectedColor = colors[currentPage].computeLuminance() < 0.5 ? Colors.black : Colors.white;
-    return SafeArea(
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(widget.title),
-          backgroundColor: Colors.black,
+    return Scaffold(
+      appBar: AppBar(title: const Text('Basic demo')),
+      body: BottomBar(
+        layout: BottomBarLayout(
+          width: 280,
+          borderRadius: BorderRadius.circular(28),
         ),
-        body: BottomBar(
-          child: TabBar(
-            indicatorPadding: const EdgeInsets.fromLTRB(6, 0, 6, 0),
-            controller: tabController,
-            indicator: UnderlineTabIndicator(
-                borderSide: BorderSide(
-                    color: currentPage == 0
-                        ? colors[0]
-                        : currentPage == 1
-                            ? colors[1]
-                            : currentPage == 2
-                                ? colors[2]
-                                : currentPage == 3
-                                    ? colors[3]
-                                    : currentPage == 4
-                                        ? colors[4]
-                                        : unselectedColor,
-                    width: 4),
-                insets: EdgeInsets.fromLTRB(16, 0, 16, 8)),
-            tabs: [
-              SizedBox(
-                height: 55,
-                width: 40,
-                child: Center(
-                    child: Icon(
-                  Icons.home,
-                  color: currentPage == 0 ? colors[0] : unselectedColor,
-                )),
-              ),
-              SizedBox(
-                height: 55,
-                width: 40,
-                child: Center(
-                    child: Icon(
-                  Icons.search,
-                  color: currentPage == 1 ? colors[1] : unselectedColor,
-                )),
-              ),
-              SizedBox(
-                height: 55,
-                width: 40,
-                child: Center(
-                    child: Icon(
-                  Icons.add,
-                  color: currentPage == 2 ? colors[2] : unselectedColor,
-                )),
-              ),
-              SizedBox(
-                height: 55,
-                width: 40,
-                child: Center(
-                    child: Icon(
-                  Icons.favorite,
-                  color: currentPage == 3 ? colors[3] : unselectedColor,
-                )),
-              ),
-              SizedBox(
-                height: 55,
-                width: 40,
-                child: Center(
-                    child: Icon(
-                  Icons.settings,
-                  color: currentPage == 4 ? colors[4] : unselectedColor,
-                )),
-              ),
-            ],
-          ),
-          fit: StackFit.expand,
-          icon: (width, height) => Center(
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              onPressed: null,
-              icon: Icon(
-                Icons.arrow_upward_rounded,
-                color: unselectedColor,
-                size: width,
-              ),
-            ),
-          ),
-          borderRadius: BorderRadius.circular(500),
-          duration: Duration(seconds: 1),
-          curve: Curves.decelerate,
-          showIcon: true,
-          width: MediaQuery.of(context).size.width * 0.8,
-          barColor: colors[currentPage].computeLuminance() > 0.5 ? Colors.black : Colors.white,
-          start: 2,
-          end: 0,
-          offset: 10,
-          barAlignment: Alignment.bottomCenter,
-          iconHeight: 35,
-          iconWidth: 35,
-          reverse: false,
-          hideOnScroll: true,
-          scrollOpposite: false,
-          respectSafeArea: true,
-          onBottomBarHidden: () {},
-          onBottomBarShown: () {},
-          body: (context, controller) => TabBarView(
-            controller: tabController,
-            dragStartBehavior: DragStartBehavior.down,
-            physics: const BouncingScrollPhysics(),
-            children: colors.map((e) => InfiniteListPage(controller: controller, color: e)).toList(),
+        body: ListView.builder(
+          itemCount: 200,
+          itemBuilder: (_, i) => ListTile(title: Text('Item $i')),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.all(16),
+          child: Text(
+            'This is the floating widget',
+            textAlign: TextAlign.center,
           ),
         ),
       ),
@@ -178,22 +47,28 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
 }
 ```
 
-### With Floating action button
+---
 
-Simple basic example with a floating action button to achieve this effect.
+## 2. Tab bar with FAB notch
 
-![image](https://user-images.githubusercontent.com/60510869/183573165-28e6b896-6559-4d86-897a-3bc8b0adb927.png)
+A 5-tab bar that changes colour with each page, with a floating action button notched into the bar. Demonstrates `BottomBarThemeData`, `BottomBarMotion`, `BottomBarScrollBehavior`, and a custom `icon` builder for the scroll-to-top affordance.
 
 ```dart
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key? key, required this.title}) : super(key: key);
-  final String title;
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+
+import '../widgets/infinite_list_page.dart';
+
+class TabBarDemoPage extends StatefulWidget {
+  const TabBarDemoPage({super.key});
 
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  State<TabBarDemoPage> createState() => _TabBarDemoPageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
+class _TabBarDemoPageState extends State<TabBarDemoPage>
+    with SingleTickerProviderStateMixin {
   late int currentPage;
   late TabController tabController;
   final List<Color> colors = [
@@ -206,22 +81,14 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
 
   @override
   void initState() {
+    super.initState();
     currentPage = 0;
     tabController = TabController(length: 5, vsync: this);
-    tabController.animation?.addListener(
-      () {
-        final value = tabController.animation!.value.round();
-        if (value != currentPage && mounted) {
-          changePage(value);
-        }
-      },
-    );
-    super.initState();
-  }
-
-  void changePage(int newPage) {
-    setState(() {
-      currentPage = newPage;
+    tabController.animation?.addListener(() {
+      final value = tabController.animation!.value.round();
+      if (value != currentPage && mounted) {
+        setState(() => currentPage = value);
+      }
     });
   }
 
@@ -233,135 +100,111 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    final Color unselectedColor = colors[currentPage].computeLuminance() < 0.5 ? Colors.black : Colors.white;
-    final Color unselectedColorReverse = colors[currentPage].computeLuminance() < 0.5 ? Colors.white : Colors.black;
+    final unselectedColor =
+        colors[currentPage].computeLuminance() < 0.5 ? Colors.black : Colors.white;
+    final unselectedColorReverse =
+        colors[currentPage].computeLuminance() < 0.5 ? Colors.white : Colors.black;
+    final barFillColor = colors[currentPage].computeLuminance() > 0.5
+        ? Colors.black
+        : Colors.white;
 
-    return SafeArea(
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(widget.title),
-          backgroundColor: Colors.black,
-        ),
-        body: BottomBar(
-          clip: Clip.none,
-          child: Stack(
-            alignment: Alignment.center,
-            clipBehavior: Clip.none,
-            children: [
-              TabBar(
-                indicatorPadding: const EdgeInsets.fromLTRB(6, 0, 6, 0),
-                controller: tabController,
-                indicator: UnderlineTabIndicator(
-                    borderSide: BorderSide(
-                      color: currentPage <= 4 ? colors[currentPage] : unselectedColor,
-                      width: 4,
-                    ),
-                    insets: EdgeInsets.fromLTRB(16, 0, 16, 8)),
-                tabs: [
-                  SizedBox(
-                    height: 55,
-                    width: 40,
-                    child: Center(
-                        child: Icon(
-                      Icons.home,
-                      color: currentPage == 0 ? colors[0] : unselectedColor,
-                    )),
-                  ),
-                  SizedBox(
-                    height: 55,
-                    width: 40,
-                    child: Center(
-                      child: Icon(
-                        Icons.search,
-                        color: currentPage == 1 ? colors[1] : unselectedColor,
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    height: 55,
-                    width: 40,
-                    child: Center(
-                      child: Icon(
-                        Icons.add,
-                        color: currentPage == 2 ? colors[2] : unselectedColorReverse,
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    height: 55,
-                    width: 40,
-                    child: Center(
-                      child: Icon(
-                        Icons.favorite,
-                        color: currentPage == 3 ? colors[3] : unselectedColor,
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    height: 55,
-                    width: 40,
-                    child: Center(
-                      child: Icon(
-                        Icons.settings,
-                        color: currentPage == 4 ? colors[4] : unselectedColor,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              Positioned(
-                top: -25,
-                child: FloatingActionButton(
-                  onPressed: () {},
-                  child: Icon(Icons.add),
-                ),
-              )
-            ],
-          ),
-          fit: StackFit.expand,
-          icon: (width, height) => Center(
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              onPressed: null,
-              icon: Icon(
-                Icons.arrow_upward_rounded,
-                color: unselectedColor,
-                size: width,
-              ),
-            ),
-          ),
+    return Scaffold(
+      appBar: AppBar(title: const Text('Tab bar demo')),
+      body: BottomBar(
+        layout: BottomBarLayout(
+          width: MediaQuery.of(context).size.width * 0.8,
+          offset: 10,
           borderRadius: BorderRadius.circular(500),
+          alignment: Alignment.bottomCenter,
+          fit: StackFit.expand,
+          clip: Clip.none,
+        ),
+        motion: const BottomBarMotion(
           duration: Duration(milliseconds: 500),
           curve: Curves.decelerate,
-          showIcon: true,
-          width: MediaQuery.of(context).size.width * 0.8,
-          barColor: colors[currentPage].computeLuminance() > 0.5 ? Colors.black : Colors.white,
-          start: 2,
-          end: 0,
-          offset: 10,
-          barAlignment: Alignment.bottomCenter,
-          iconHeight: 30,
-          iconWidth: 30,
-          reverse: false,
-          hideOnScroll: true,
-          scrollOpposite: false,
-          respectSafeArea: true,
-          onBottomBarHidden: () {},
-          onBottomBarShown: () {},
-          body: (context, controller) => TabBarView(
-            controller: tabController,
-            dragStartBehavior: DragStartBehavior.down,
-            physics: const BouncingScrollPhysics(),
-            children: colors
-                .map(
-                  (e) => InfiniteListPage(
-                    key: ValueKey('infinite_list_key#${e.toString()}'),
-                    controller: controller,
-                    color: e,
-                  ),
-                )
-                .toList(),
+          slideStart: Offset(0, 3),
+        ),
+        scrollBehavior: const BottomBarScrollBehavior(hideOnScroll: true),
+        theme: BottomBarThemeData(
+          barDecoration: BoxDecoration(
+            color: colors[currentPage],
+            borderRadius: BorderRadius.circular(500),
           ),
+          iconDecoration: BoxDecoration(
+            color: unselectedColor,
+            borderRadius: BorderRadius.circular(500),
+          ),
+          iconWidth: 30,
+          iconHeight: 30,
+        ),
+        icon: (width, height) => Center(
+          child: IconButton(
+            padding: EdgeInsets.zero,
+            onPressed: null,
+            icon: Icon(
+              Icons.arrow_upward_rounded,
+              color: colors[currentPage],
+              size: width,
+            ),
+          ),
+        ),
+        body: TabBarView(
+          controller: tabController,
+          dragStartBehavior: DragStartBehavior.down,
+          physics: const BouncingScrollPhysics(),
+          children: colors
+              .map((c) => InfiniteListPage(
+                    key: ValueKey('infinite_list_$c'),
+                    color: c,
+                  ))
+              .toList(),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            TabBar(
+              dividerColor: Colors.transparent,
+              overlayColor: WidgetStateProperty.all(Colors.transparent),
+              indicatorPadding: const EdgeInsets.fromLTRB(6, 0, 6, 0),
+              controller: tabController,
+              indicator: UnderlineTabIndicator(
+                borderSide: BorderSide(
+                  color: barFillColor,
+                  width: 4,
+                ),
+                insets: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              ),
+              tabs: [
+                _tab(Icons.home, 0, unselectedColor),
+                _tab(Icons.search, 1, unselectedColor),
+                _tab(Icons.add, 2, unselectedColorReverse),
+                _tab(Icons.favorite, 3, unselectedColor),
+                _tab(Icons.settings, 4, unselectedColor),
+              ],
+            ),
+            Positioned(
+              top: -20,
+              child: FloatingActionButton(
+                elevation: 0,
+                onPressed: () {},
+                child: const Icon(Icons.add),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _tab(IconData icon, int idx, Color unselected) {
+    return SizedBox(
+      height: 55,
+      width: 40,
+      child: Center(
+        child: Icon(
+          icon,
+          color: currentPage == idx ? colors[idx] : unselected,
         ),
       ),
     );
@@ -369,120 +212,74 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
 }
 ```
 
-### Floating Bottom Search Bar
-
-A simple Material search bar in the bottom of your app, which hides on scroll down.
+The `InfiniteListPage` helper widget used above:
 
 ```dart
-class MyHomePage extends StatelessWidget {
-  MyHomePage({Key? key, required this.title}) : super(key: key);
-  final String title;
+import 'package:flutter/material.dart';
+
+class InfiniteListPage extends StatelessWidget {
+  final Color color;
+  const InfiniteListPage({super.key, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(title),
-          backgroundColor: Colors.black,
-        ),
-        body: BottomBar(
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Card(
-              elevation: 10,
-              child: Container(
-                height: 46,
-                child: TextField(
-                  style: Theme.of(context).textTheme.subtitle2,
-                  maxLines: 1,
-                  minLines: 1,
-                  textCapitalization: TextCapitalization.sentences,
-                  cursorColor: Theme.of(context).primaryColor,
-                  decoration: InputDecoration(
-                    suffixIcon: Icon(Icons.search),
-                    contentPadding: const EdgeInsets.all(16),
-                    hintStyle: Theme.of(context).textTheme.subtitle2,
-                    hintText: 'Search...',
-                    border: InputBorder.none,
-                    labelStyle: Theme.of(context).textTheme.subtitle2,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          fit: StackFit.expand,
-          borderRadius: BorderRadius.circular(12),
-          duration: Duration(milliseconds: 300),
-          curve: Curves.decelerate,
-          showIcon: false,
-          width: MediaQuery.of(context).size.width - 32,
-          barColor: Colors.transparent,
-          start: 2,
-          end: 0,
-          offset: 10,
-          barAlignment: Alignment.bottomCenter,
-          respectSafeArea: true,
-          body: (context, controller) => InfiniteListPage(controller: controller, color: Colors.blueAccent),
-        ),
-      ),
+    return ListView.builder(
+      itemBuilder: (context, index) =>
+          ListTile(onTap: () {}, tileColor: color, title: Text("$index")),
     );
   }
 }
 ```
 
-### Floating Search Top Bar
+---
 
-A simple Material search bar in the top of your app, which hides on scroll down.
+## 3. Search bar
 
-```dart
-# Simply change these values in the bottom search bar to convert it into top search bar
-          start: 0,
-          end: 2,
-          bottom: MediaQuery.of(context).size.height,
-```
-
-### Example with respectSafeArea: false
-
-This example shows how to use the BottomBar with `respectSafeArea: false` to allow it to extend into the system UI areas:
+Turns the floating bar into a full-width search field. The bar slides in from below with a custom easing curve; the `body` is a live results list. Use this pattern whenever the primary action is search.
 
 ```dart
-class MyHomePage extends StatelessWidget {
-  MyHomePage({Key? key, required this.title}) : super(key: key);
-  final String title;
+import 'package:flutter/material.dart';
+import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+
+class SearchBarDemoPage extends StatelessWidget {
+  const SearchBarDemoPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-        backgroundColor: Colors.black,
-      ),
+      appBar: AppBar(title: const Text('Search bar demo')),
       body: BottomBar(
-        child: Container(
-          height: 60,
+        layout: BottomBarLayout(
+          width: MediaQuery.of(context).size.width - 32,
+          borderRadius: BorderRadius.circular(32),
+          alignment: Alignment.bottomCenter,
+        ),
+        motion: const BottomBarMotion(
+          duration: Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+        ),
+        body: ListView.builder(
+          itemCount: 200,
+          itemBuilder: (_, i) => ListTile(title: Text('Result $i')),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              Icon(Icons.home, color: Colors.white),
-              Icon(Icons.search, color: Colors.white),
-              Icon(Icons.person, color: Colors.white),
+              Icon(Icons.search),
+              SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    hintText: 'Search...',
+                  ),
+                ),
+              ),
+              Icon(Icons.tune),
             ],
           ),
         ),
-        fit: StackFit.expand,
-        borderRadius: BorderRadius.circular(0),
-        duration: Duration(milliseconds: 300),
-        curve: Curves.decelerate,
-        showIcon: false,
-        width: MediaQuery.of(context).size.width,
-        barColor: Colors.black,
-        start: 2,
-        end: 0,
-        offset: 0,
-        barAlignment: Alignment.bottomCenter,
-        respectSafeArea: false, // This allows the bar to extend into the system UI area
-        body: (context, controller) => InfiniteListPage(controller: controller, color: Colors.blueAccent),
       ),
     );
   }
@@ -491,38 +288,272 @@ class MyHomePage extends StatelessWidget {
 
 ---
 
-## Additional examples (v1.4.0)
+## 4. Nested scroll
 
-### With `BottomBarController` and visibility callback
+Wraps a `NestedScrollView` (collapsing `SliverAppBar` + inner list) inside `BottomBar`. The bar tracks the inner scroll controller automatically. Use this whenever you need a collapsing header alongside the floating bar.
 
 ```dart
-final bottomBarController = BottomBarController();
+import 'package:flutter/material.dart';
+import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 
-BottomBar(
-  controller: bottomBarController,
-  onVisibilityChanged: (isVisible) {
-    debugPrint('BottomBar visible: $isVisible');
-  },
-  scrollDeltaThreshold: 8,
-  iconTooltip: 'Scroll to top',
-  iconSemanticLabel: 'Scroll list to top',
-  child: const SizedBox(
-    height: 56,
-    child: Center(child: Text('Bottom bar content')),
+class NestedScrollDemoPage extends StatelessWidget {
+  const NestedScrollDemoPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: BottomBar(
+        layout: BottomBarLayout(
+          width: 280,
+          borderRadius: BorderRadius.circular(28),
+        ),
+        body: NestedScrollView(
+          headerSliverBuilder: (_, __) => const [
+            SliverAppBar(
+              expandedHeight: 200,
+              pinned: true,
+              flexibleSpace: FlexibleSpaceBar(title: Text('Nested scroll')),
+            ),
+          ],
+          body: ListView.builder(
+            itemCount: 200,
+            itemBuilder: (_, i) => ListTile(title: Text('Row $i')),
+          ),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.all(16),
+          child: Text('Bar over a NestedScrollView'),
+        ),
+      ),
+    );
+  }
+}
+```
+
+---
+
+## 5. Badges and items
+
+Uses the `BottomBarItems` + `BottomBarItem` helpers to build a standard 3-tab nav bar with icon/label pairs and a notification badge on the inbox tab. Swap the `badge` property to drive live unread counts from your state management layer.
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+
+class BadgesDemoPage extends StatefulWidget {
+  const BadgesDemoPage({super.key});
+
+  @override
+  State<BadgesDemoPage> createState() => _BadgesDemoPageState();
+}
+
+class _BadgesDemoPageState extends State<BadgesDemoPage> {
+  int _index = 0;
+
+  Widget _badge(String count) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          count,
+          style: const TextStyle(color: Colors.white, fontSize: 10),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Badges demo')),
+      body: BottomBar(
+        layout: BottomBarLayout(
+          width: MediaQuery.of(context).size.width - 32,
+          borderRadius: BorderRadius.circular(28),
+        ),
+        body: ListView.builder(
+          itemCount: 200,
+          itemBuilder: (_, i) => ListTile(title: Text('Row $i')),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: BottomBarItems(
+            children: [
+              BottomBarItem(
+                icon: const Icon(Icons.home_outlined),
+                selectedIcon: const Icon(Icons.home),
+                label: const Text('Home'),
+                selected: _index == 0,
+                onTap: () => setState(() => _index = 0),
+              ),
+              BottomBarItem(
+                icon: const Icon(Icons.inbox_outlined),
+                selectedIcon: const Icon(Icons.inbox),
+                label: const Text('Inbox'),
+                badge: _badge('3'),
+                selected: _index == 1,
+                onTap: () => setState(() => _index = 1),
+              ),
+              BottomBarItem(
+                icon: const Icon(Icons.person_outline),
+                selectedIcon: const Icon(Icons.person),
+                label: const Text('Profile'),
+                selected: _index == 2,
+                onTap: () => setState(() => _index = 2),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+```
+
+---
+
+## 6. Custom transition
+
+Replaces the default slide animation with a combined fade + scale via `BottomBarMotion.transitionBuilder`. Any `AnimationController`-driven widget can be plugged in here — scale, rotation, blur, etc.
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+
+class CustomTransitionDemoPage extends StatelessWidget {
+  const CustomTransitionDemoPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Custom transition demo')),
+      body: BottomBar(
+        layout: BottomBarLayout(
+          width: 280,
+          borderRadius: BorderRadius.circular(28),
+        ),
+        motion: BottomBarMotion(
+          duration: const Duration(milliseconds: 320),
+          curve: Curves.easeOutBack,
+          transitionBuilder: (ctx, anim, child) {
+            return Opacity(
+              opacity: anim.value,
+              child: Transform.scale(
+                scale: 0.6 + 0.4 * anim.value,
+                child: child,
+              ),
+            );
+          },
+        ),
+        body: ListView.builder(
+          itemCount: 200,
+          itemBuilder: (_, i) => ListTile(title: Text('Item $i')),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.all(16),
+          child: Text('Custom fade + scale transition'),
+        ),
+      ),
+    );
+  }
+}
+```
+
+---
+
+## 7. Theming with `BottomBarThemeData`
+
+Set app-wide bar defaults by adding `BottomBarThemeData` to `ThemeData.extensions`. Any `BottomBar` widget that does not supply its own `theme:` parameter will inherit these values automatically.
+
+```dart
+MaterialApp(
+  theme: ThemeData(
+    colorSchemeSeed: Colors.indigo,
+    useMaterial3: true,
+    extensions: const [
+      BottomBarThemeData(
+        iconWidth: 36,
+        iconHeight: 36,
+      ),
+    ],
   ),
-  body: (context, controller) => ListView.builder(
-    controller: controller,
-    itemBuilder: (context, index) => ListTile(title: Text('Row $index')),
-  ),
+  home: ...,
 );
 ```
 
-### Imperative actions
+Override per-widget by passing a local `theme:` to `BottomBar`:
 
 ```dart
-bottomBarController.hide();
-bottomBarController.show();
-bottomBarController.toggle();
-await bottomBarController.scrollToStart();
-await bottomBarController.scrollToEnd();
+BottomBar(
+  theme: BottomBarThemeData(
+    barDecoration: BoxDecoration(
+      color: Colors.deepPurple,
+      borderRadius: BorderRadius.circular(24),
+    ),
+  ),
+  body: ...,
+  child: ...,
+)
 ```
+
+---
+
+## 8. Imperative show/hide via `BottomBarController`
+
+Create a `BottomBarController` and pass it to `BottomBar`. Call `hide()`, `show()`, or `scrollToStart()` from anywhere in your widget tree — useful for hiding the bar during full-screen media playback or chat input focus.
+
+```dart
+final controller = BottomBarController();
+
+// In build:
+BottomBar(
+  controller: controller,
+  body: ...,
+  child: ...,
+)
+
+// Elsewhere (e.g. a button handler or focus listener):
+controller.hide();
+controller.show();
+await controller.scrollToStart();
+```
+
+Remember to dispose the controller when the owning widget is removed:
+
+```dart
+@override
+void dispose() {
+  controller.dispose();
+  super.dispose();
+}
+```
+
+---
+
+## 9. Reading bar height in body via `BottomBarScope`
+
+`BottomBarScope.of(ctx).barHeight` is a `ValueListenable<double>` that reflects the rendered height of the floating bar. Use it to add bottom padding to your scrollable content so the last item is never obscured.
+
+```dart
+BottomBar(
+  body: Builder(
+    builder: (ctx) {
+      final h = BottomBarScope.of(ctx).barHeight;
+      return ValueListenableBuilder<double>(
+        valueListenable: h,
+        builder: (_, height, __) => ListView(
+          padding: EdgeInsets.only(bottom: height + 16),
+          children: [...],
+        ),
+      );
+    },
+  ),
+  child: ...,
+)
+```
+
+`Builder` is required here because `BottomBarScope` is inserted below the `BottomBar` widget itself; `ctx` must be a descendant context.
+
+---
+
+For an API reference, see the project [README](./README.md).
