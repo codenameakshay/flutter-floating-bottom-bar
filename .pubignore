@@ -1,0 +1,14 @@
+# Build artifacts
+build/
+
+# Internal planning / spec docs — not part of the published package
+docs/
+
+# IDE settings
+.vscode/
+
+# Development tooling
+Makefile
+
+# FVM (Flutter Version Management) — local toolchain, not needed by consumers
+.fvm/
