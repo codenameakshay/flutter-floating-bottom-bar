@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:floating_bottom_bar/main.dart';
+import 'package:flutter_floating_bottom_bar_example/main.dart';
 
 void main() {
   testWidgets('demo app renders', (WidgetTester tester) async {

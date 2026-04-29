@@ -1,8 +1,8 @@
 # Makefile for flutter-floating-bottom-bar
 #
 # Layout:
-#   ./                                       -> demo/example app (floating_bottom_bar)
-#   packages/flutter_floating_bottom_bar/    -> the published Flutter package
+#   ./         -> the published Flutter package (flutter_floating_bottom_bar)
+#   example/   -> demo/example app
 #
 # Override the Flutter binary if needed, e.g.:
 #   make get FLUTTER="flutter"
@@ -11,8 +11,8 @@
 FLUTTER ?= fvm flutter
 DART    ?= fvm dart
 
-PKG_DIR := packages/flutter_floating_bottom_bar
-APP_DIR := .
+PKG_DIR := .
+APP_DIR := example
 
 .DEFAULT_GOAL := help
 

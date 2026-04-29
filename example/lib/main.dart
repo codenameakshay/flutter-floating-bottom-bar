@@ -1,4 +1,4 @@
-import 'package:floating_bottom_bar/pages/infinite_list_page.dart';
+import 'package:flutter_floating_bottom_bar_example/pages/infinite_list_page.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
