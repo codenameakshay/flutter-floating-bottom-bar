@@ -1,0 +1,22 @@
+[
+  {"query": "ok so my flutter app uses a regular BottomNavigationBar with 5 tabs and i hate how it looks, want it to be a pill that floats above content and slides away when I scroll. home page is just a ListView of articles. how do i do this", "should_trigger": true},
+  {"query": "I'm on flutter_floating_bottom_bar 1.4.0 and seeing build errors about `barColor` after I bumped to v2 — what's the right way to migrate? this is in my feed page widget", "should_trigger": true},
+  {"query": "can you swap my salomon_bottom_bar code for something that hides on scroll w/ ios style spring motion. file is `lib/screens/home_page.dart`", "should_trigger": true},
+  {"query": "my floating bar in flutter shows but the last list item is hidden behind it always. ListView.builder padding is 16 all around. using flutter_floating_bottom_bar v2", "should_trigger": true},
+  {"query": "trying to put a TabBar inside BottomBar from flutter_floating_bottom_bar but the FAB I have on top of it gets clipped. clipBehavior on the stack already none", "should_trigger": true},
+  {"query": "my flutter bottom bar uses the default cupertino spring but on slow trackpad scrolls it twitches show/hide rapidly. how do i smooth it out", "should_trigger": true},
+  {"query": "I have a NestedScrollView with a SliverAppBar and a ListView inside. The floating_bottom_bar package hides the bar when I collapse the header, but I only want it to react to the inner list scroll", "should_trigger": true},
+  {"query": "Add a Material 3 floating bottom bar with Home / Search / Profile tabs to this Flutter screen — currently it's just a ListView of cards. Make the motion feel iOS-y. (file: lib/articles_page.dart)", "should_trigger": true},
+  {"query": "convert this v1 flutter_floating_bottom_bar code to v2:\n```dart\nBottomBar(\n  body: (context, controller) => ListView(controller: controller, ...),\n  barColor: Colors.white,\n  duration: Duration(milliseconds: 280),\n  ...\n)\n```", "should_trigger": true},
+  {"query": "my BottomAppBar with a notched FAB looks dated. i want to make it float above the content like the new material 3 dock pattern", "should_trigger": true},
+  {"query": "how do I make a Cupertino-style spring animation in flutter for a card flip transition?", "should_trigger": false},
+  {"query": "what's the difference between BottomNavigationBar and NavigationBar in Flutter Material 3? trying to decide which to use", "should_trigger": false},
+  {"query": "my Flutter `TabBar` indicator color is wrong on Material 3 — the `indicatorColor` arg seems ignored", "should_trigger": false},
+  {"query": "i want to add hide-on-scroll behavior to my AppBar in Flutter — the regular one at the top, not the bottom", "should_trigger": false},
+  {"query": "in flutter how do i show a FloatingActionButton at the bottom-right of my screen and have it move out of the way when a snackbar shows", "should_trigger": false},
+  {"query": "my BottomSheet in flutter has weird animation when it dismisses, looks janky on iOS — how do i fix the curve?", "should_trigger": false},
+  {"query": "Flutter ListView.builder is performing poorly with ~3000 rows, frames are dropping when I scroll fast. should I switch to ListView.separated or use itemExtent?", "should_trigger": false},
+  {"query": "convert this NavigationBar widget to use a SegmentedButton instead — it should sit at the top under the AppBar, not at the bottom", "should_trigger": false},
+  {"query": "i'm using the motor package in flutter for spring physics on a draggable card, how do i tune the bounce", "should_trigger": false},
+  {"query": "how can i animate my tab indicator to slide smoothly between tabs in Flutter when I tap one?", "should_trigger": false}
+]
