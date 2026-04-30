@@ -1,3 +1,12 @@
+export 'package:motor/motor.dart'
+    show
+        Motion,
+        CupertinoMotion,
+        CurvedMotion,
+        LinearMotion,
+        SpringMotion,
+        MaterialSpringMotion;
+
 export 'src/bottom_bar.dart';
 export 'src/bottom_bar_controller.dart' show BottomBarController;
 export 'src/bottom_bar_scope.dart';

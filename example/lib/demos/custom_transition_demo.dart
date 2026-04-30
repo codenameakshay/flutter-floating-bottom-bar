@@ -13,18 +13,32 @@ class CustomTransitionDemoPage extends StatelessWidget {
           width: 280,
           borderRadius: BorderRadius.circular(28),
         ),
-        motion: BottomBarMotion(
+        motion: BottomBarMotion.curved(
           duration: const Duration(milliseconds: 320),
           curve: Curves.easeOutBack,
           transitionBuilder: (ctx, anim, child) {
+            final value = anim.value.clamp(0.0, 1.0);
             return Opacity(
-              opacity: anim.value,
+              opacity: value,
               child: Transform.scale(
-                scale: 0.6 + 0.4 * anim.value,
+                scale: 0.6 + 0.4 * value,
                 child: child,
               ),
             );
           },
+        ),
+        theme: BottomBarThemeData(
+          barDecoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x18000000),
+                blurRadius: 28,
+                offset: Offset(0, 16),
+              ),
+            ],
+          ),
         ),
         body: ListView.builder(
           itemCount: 200,

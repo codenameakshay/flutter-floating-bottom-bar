@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:motor/motor.dart' as motor;
 
 void main() {
   Widget buildHarness({
@@ -48,6 +49,56 @@ void main() {
     controller.show();
     await tester.pumpAndSettle();
     expect(controller.isVisible, isTrue);
+  });
+
+  testWidgets('show redirects naturally while hide animation is in flight',
+      (tester) async {
+    final controller = BottomBarController();
+    await tester.pumpWidget(buildHarness(controller: controller));
+    await tester.pumpAndSettle();
+
+    controller.hide();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 70));
+    final hiddenProgress = _barProgress(tester);
+    expect(hiddenProgress, greaterThan(0));
+    expect(hiddenProgress, lessThan(1));
+
+    controller.show();
+    await tester.pump();
+    final redirectedProgress = _barProgress(tester);
+    expect(redirectedProgress, closeTo(hiddenProgress, 0.08));
+
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isTrue);
+    expect(_barProgress(tester).clamp(0.0, 1.0), closeTo(1, 0.001));
+  });
+
+  testWidgets('hide redirects naturally while show animation is in flight',
+      (tester) async {
+    final controller = BottomBarController();
+    await tester.pumpWidget(buildHarness(controller: controller));
+    await tester.pumpAndSettle();
+
+    controller.hide();
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isFalse);
+
+    controller.show();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 70));
+    final shownProgress = _barProgress(tester);
+    expect(shownProgress, greaterThan(0));
+    expect(shownProgress, lessThan(1));
+
+    controller.hide();
+    await tester.pump();
+    final redirectedProgress = _barProgress(tester);
+    expect(redirectedProgress, closeTo(shownProgress, 0.08));
+
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isFalse);
+    expect(_barProgress(tester).clamp(0.0, 1.0), closeTo(0, 0.001));
   });
 
   testWidgets('scroll emits visibility changes', (tester) async {
@@ -138,7 +189,52 @@ void main() {
         .map((e) => e.widget)
         .cast<FadeTransition>()
         .firstWhere((widget) => widget.child is Container);
-    expect(fade.opacity.value, greaterThan(0.4));
+    expect(fade.opacity.value, greaterThan(0.1));
+  });
+
+  testWidgets('theme-provided Motor motion updates the controller',
+      (tester) async {
+    final controller = BottomBarController();
+
+    Widget appWithMotion(BottomBarMotion motion) {
+      return MaterialApp(
+        theme: ThemeData(
+          extensions: [
+            BottomBarThemeData(motion: motion),
+          ],
+        ),
+        home: Scaffold(
+          body: BottomBar(
+            controller: controller,
+            body: const SizedBox.shrink(),
+            child: const SizedBox(
+              height: 56,
+              child: Center(child: Text('Bottom Bar Child')),
+            ),
+          ),
+        ),
+      );
+    }
+
+    await tester.pumpWidget(appWithMotion(
+      const BottomBarMotion.motor(
+        motor.Motion.linear(Duration(seconds: 1)),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.pumpWidget(appWithMotion(
+      const BottomBarMotion.motor(
+        motor.Motion.linear(Duration(milliseconds: 100)),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    controller.hide();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 80));
+
+    expect(_barProgress(tester).clamp(0.0, 1.0), lessThan(0.3));
   });
 
   testWidgets('custom tooltip is attached to the icon action', (tester) async {
@@ -268,4 +364,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(controller.isVisible, isFalse);
   });
+}
+
+double _barProgress(WidgetTester tester) {
+  final slide = tester
+      .widgetList<SlideTransition>(find.byType(SlideTransition))
+      .where((widget) => widget.child is Container)
+      .first;
+  return 1 - (slide.position.value.dy / 2);
 }

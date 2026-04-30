@@ -32,6 +32,23 @@ class _BadgesDemoPageState extends State<BadgesDemoPage> {
           width: MediaQuery.of(context).size.width - 32,
           borderRadius: BorderRadius.circular(28),
         ),
+        motion: const BottomBarMotion.cupertino(
+          preset: BottomBarCupertinoMotion.bouncy,
+          extraBounce: 0.02,
+        ),
+        theme: BottomBarThemeData(
+          barDecoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x18000000),
+                blurRadius: 28,
+                offset: Offset(0, 16),
+              ),
+            ],
+          ),
+        ),
         body: ListView.builder(
           itemCount: 200,
           itemBuilder: (_, i) => ListTile(title: Text('Row $i')),

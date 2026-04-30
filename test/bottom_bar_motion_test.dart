@@ -1,24 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:motor/motor.dart' as motor;
 
 void main() {
   group('BottomBarMotion', () {
-    test('default values match the documented defaults', () {
+    test('default values resolve to Cupertino spring motion', () {
       const motion = BottomBarMotion();
-      expect(motion.duration, const Duration(milliseconds: 240));
-      expect(motion.curve, Curves.easeOutCubic);
+      expect(motion.mode, BottomBarMotionMode.cupertino);
+      expect(motion.cupertinoPreset, BottomBarCupertinoMotion.snappy);
+      expect(motion.resolveMotion(), isA<motor.CupertinoMotion>());
+      expect(motion.resolveMotion(), isNot(isA<motor.CurvedMotion>()));
       expect(motion.transition, BottomBarTransition.slide);
       expect(motion.transitionBuilder, isNull);
       expect(motion.slideStart, const Offset(0, 2));
       expect(motion.slideEnd, Offset.zero);
     });
 
+    test('duration and curve keep existing constructor calls curve-based', () {
+      const motion = BottomBarMotion(
+        duration: Duration(milliseconds: 320),
+        curve: Curves.easeOutBack,
+      );
+      final resolved = motion.resolveMotion();
+      expect(motion.mode, BottomBarMotionMode.curved);
+      expect(resolved, isA<motor.CurvedMotion>());
+      final curved = resolved as motor.CurvedMotion;
+      expect(curved.duration, const Duration(milliseconds: 320));
+      expect(curved.curve, Curves.easeOutBack);
+    });
+
+    test('explicit constructors resolve to the requested motion engine', () {
+      const cupertino = BottomBarMotion.cupertino(
+        preset: BottomBarCupertinoMotion.bouncy,
+        duration: Duration(milliseconds: 450),
+        extraBounce: 0.05,
+      );
+      expect(cupertino.resolveMotion(), isA<motor.CupertinoMotion>());
+
+      const curved = BottomBarMotion.curved(
+        duration: Duration(milliseconds: 180),
+        curve: Curves.easeInOut,
+      );
+      expect(curved.resolveMotion(), isA<motor.CurvedMotion>());
+
+      const rawMotor = BottomBarMotion.motor(motor.Motion.linear(
+        Duration(milliseconds: 90),
+      ));
+      expect(rawMotor.resolveMotion(), isA<motor.LinearMotion>());
+    });
+
     test('copyWith preserves untouched fields', () {
       const motion = BottomBarMotion();
       final updated = motion.copyWith(transition: BottomBarTransition.fade);
       expect(updated.transition, BottomBarTransition.fade);
-      expect(updated.duration, const Duration(milliseconds: 240));
+      expect(updated.mode, BottomBarMotionMode.cupertino);
     });
 
     test('equality is value-based', () {
@@ -89,6 +125,38 @@ void main() {
     ));
 
     expect(builderCalled, isTrue);
+  });
+
+  testWidgets('transitionBuilder receives live spring progress',
+      (tester) async {
+    final controller = BottomBarController();
+    final values = <double>[];
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: BottomBar(
+          controller: controller,
+          motion: BottomBarMotion(
+            transitionBuilder: (ctx, anim, child) {
+              values.add(anim.value);
+              return Transform.translate(
+                offset: Offset(0, 24 * (1 - anim.value)),
+                child: child,
+              );
+            },
+          ),
+          body: const SizedBox.shrink(),
+          child: const SizedBox(height: 56, child: Center(child: Text('c'))),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    controller.hide();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 70));
+
+    expect(values.any((value) => value > 0 && value < 1), isTrue);
   });
 
   testWidgets('overshooting curve does not produce negative icon constraints',

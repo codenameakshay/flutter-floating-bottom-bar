@@ -22,7 +22,14 @@ class VisibilityAnimator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final builder = motion.transitionBuilder;
-    if (builder != null) return builder(context, animation, child);
+    if (builder != null) {
+      return AnimatedBuilder(
+        animation: animation,
+        child: child,
+        builder: (context, child) => builder(context, animation, child!),
+      );
+    }
+    final clamped = _ClampedAnimation(animation);
 
     switch (motion.transition) {
       case BottomBarTransition.slide:
@@ -34,12 +41,13 @@ class VisibilityAnimator extends StatelessWidget {
           child: child,
         );
       case BottomBarTransition.fade:
-        return FadeTransition(opacity: animation, child: child);
+        return FadeTransition(opacity: clamped, child: child);
       case BottomBarTransition.scale:
-        return ScaleTransition(scale: animation, child: child);
+        return ScaleTransition(
+            scale: _NonNegativeAnimation(animation), child: child);
       case BottomBarTransition.slideAndFade:
         return FadeTransition(
-          opacity: animation,
+          opacity: clamped,
           child: SlideTransition(
             position: Tween<Offset>(
               begin: motion.slideStart,
@@ -50,4 +58,26 @@ class VisibilityAnimator extends StatelessWidget {
         );
     }
   }
+}
+
+class _ClampedAnimation extends Animation<double>
+    with AnimationWithParentMixin<double> {
+  _ClampedAnimation(this.parent);
+
+  @override
+  final Animation<double> parent;
+
+  @override
+  double get value => parent.value.clamp(0.0, 1.0);
+}
+
+class _NonNegativeAnimation extends Animation<double>
+    with AnimationWithParentMixin<double> {
+  _NonNegativeAnimation(this.parent);
+
+  @override
+  final Animation<double> parent;
+
+  @override
+  double get value => parent.value < 0 ? 0 : parent.value;
 }

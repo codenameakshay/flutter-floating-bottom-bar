@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:motor/motor.dart';
 
 import 'bottom_bar_controller.dart';
 import 'bottom_bar_scope.dart';
@@ -56,15 +57,12 @@ class BottomBar extends StatefulWidget {
 class _BottomBarState extends State<BottomBar>
     with SingleTickerProviderStateMixin
     implements BottomBarBindingForController {
-  late AnimationController _animationController;
-  late Animation<double> _curvedAnimation;
+  late BoundedSingleMotionController _motionController;
   late ScrollNotificationDispatcher _dispatcher;
   late BottomBarMotion _motion;
   late BottomBarScrollBehavior _scrollBehavior;
 
-  bool _isBarVisible = true;
-  bool _showIconButton = false;
-
+  bool _targetVisible = true;
   BottomBarLayout _effectiveLayout(BottomBarThemeData theme) {
     return widget.layout ?? theme.layout ?? const BottomBarLayout();
   }
@@ -92,13 +90,10 @@ class _BottomBarState extends State<BottomBar>
         widget.theme?.scrollBehavior ??
         const BottomBarScrollBehavior();
 
-    _animationController = AnimationController(
-      duration: _motion.duration,
+    _motionController = BoundedSingleMotionController(
+      motion: _motion.resolveMotion(),
       vsync: this,
-    );
-    _curvedAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: _motion.curve,
+      initialValue: 1,
     );
 
     _dispatcher = ScrollNotificationDispatcher(
@@ -109,7 +104,6 @@ class _BottomBarState extends State<BottomBar>
     );
 
     widget.controller?.attach(this);
-    _animationController.forward();
     widget.controller?.updateVisibility(true, shouldNotify: false);
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _measureBar());
@@ -147,15 +141,8 @@ class _BottomBarState extends State<BottomBar>
     final newMotion = _effectiveMotion(theme);
     final newScroll = _effectiveScrollBehavior(theme);
 
-    if (_motion.duration != newMotion.duration) {
-      _animationController.duration = newMotion.duration;
-    }
-
-    if (_motion.curve != newMotion.curve) {
-      _curvedAnimation = CurvedAnimation(
-        parent: _animationController,
-        curve: newMotion.curve,
-      );
+    if (_motion != newMotion) {
+      _motionController.motion = newMotion.resolveMotion();
     }
 
     if (_scrollBehavior != newScroll) {
@@ -179,20 +166,15 @@ class _BottomBarState extends State<BottomBar>
     if (!visible && !_scrollBehavior.hideOnScroll && !fromController) {
       return;
     }
-    if (_isBarVisible == visible) return;
+    if (_targetVisible == visible) return;
 
     setState(() {
-      _isBarVisible = visible;
-      _showIconButton = !visible;
+      _targetVisible = visible;
     });
 
     _isVisibleNotifier.value = visible;
 
-    if (visible) {
-      _animationController.forward();
-    } else {
-      _animationController.reverse();
-    }
+    _motionController.animateTo(visible ? 1 : 0, forward: visible);
 
     widget.controller?.updateVisibility(visible);
 
@@ -209,7 +191,7 @@ class _BottomBarState extends State<BottomBar>
   // -- BottomBarBindingForController -----------------------------------------
 
   @override
-  bool get isVisible => _isBarVisible;
+  bool get isVisible => _targetVisible;
 
   @override
   void requestVisible(bool visible) {
@@ -263,7 +245,7 @@ class _BottomBarState extends State<BottomBar>
   @override
   void dispose() {
     widget.controller?.detach(this);
-    _animationController.dispose();
+    _motionController.dispose();
     _barHeight.dispose();
     _isVisibleNotifier.dispose();
     super.dispose();
@@ -312,60 +294,62 @@ class _BottomBarState extends State<BottomBar>
     final iconWidth = theme.iconWidth ?? 30;
     final iconHeight = theme.iconHeight ?? 30;
 
-    // The back-to-top icon's implicit animations always use a safe monotonic
-    // curve. Sharing `motion.curve` here would let an overshooting curve
-    // (e.g. Curves.easeOutBack) drive `AnimatedContainer.width/height`
-    // through negative values, which crashes layout with negative
-    // BoxConstraints. The user's chosen curve still drives the bar's main
-    // transition via `VisibilityAnimator`.
-    const iconCurve = Curves.easeOut;
-
-    return AnimatedOpacity(
-      duration: _motion.duration,
-      curve: iconCurve,
-      opacity: _showIconButton ? 1 : 0,
-      child: AnimatedContainer(
-        duration: _motion.duration,
-        curve: iconCurve,
-        width: _showIconButton ? iconWidth : 0,
-        height: _showIconButton ? iconHeight : 0,
-        decoration: theme.iconDecoration,
-        padding: EdgeInsets.zero,
-        margin: EdgeInsets.zero,
-        child: ClipOval(
-          child: Material(
-            color: Colors.transparent,
-            child: Semantics(
-              button: true,
-              label: widget.iconSemanticLabel,
-              child: Tooltip(
-                message: widget.iconTooltip ?? 'Scroll to top',
-                child: InkWell(
-                  onTap: () => scrollToBoundary(
-                    toEnd: _scrollBehavior.scrollOpposite,
+    return AnimatedBuilder(
+      animation: _motionController,
+      builder: (context, _) {
+        final iconProgress = (1 - _motionController.value).clamp(0.0, 1.0);
+        return Opacity(
+          opacity: iconProgress,
+          child: SizedBox(
+            width: iconWidth * iconProgress,
+            height: iconHeight * iconProgress,
+            child: DecoratedBox(
+              decoration: theme.iconDecoration ?? const BoxDecoration(),
+              child: ClipOval(
+                child: Material(
+                  color: Colors.transparent,
+                  child: Semantics(
+                    button: true,
+                    label: widget.iconSemanticLabel,
+                    child: Tooltip(
+                      message: widget.iconTooltip ?? 'Scroll to top',
+                      child: InkWell(
+                        onTap: () => scrollToBoundary(
+                          toEnd: _scrollBehavior.scrollOpposite,
+                        ),
+                        child: _buildIconChild(
+                          iconWidth,
+                          iconHeight,
+                          iconProgress,
+                        ),
+                      ),
+                    ),
                   ),
-                  child: _buildIconChild(iconWidth, iconHeight),
                 ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildIconChild(double iconWidth, double iconHeight) {
+  Widget _buildIconChild(
+    double iconWidth,
+    double iconHeight,
+    double progress,
+  ) {
     if (widget.icon != null) {
       return widget.icon!(
-        _showIconButton ? iconWidth / 2 : 0,
-        _showIconButton ? iconHeight / 2 : 0,
+        iconWidth / 2 * progress,
+        iconHeight / 2 * progress,
       );
     }
     return Center(
       child: Icon(
         Icons.arrow_upward_rounded,
         color: Colors.white,
-        size: _showIconButton ? iconWidth / 2 : 0,
+        size: iconWidth / 2 * progress,
       ),
     );
   }
@@ -373,7 +357,7 @@ class _BottomBarState extends State<BottomBar>
   Widget _buildBottomBar(BottomBarThemeData theme) {
     final l = _effectiveLayout(theme);
     return VisibilityAnimator(
-      animation: _curvedAnimation,
+      animation: _motionController,
       motion: _motion,
       child: Container(
         key: _barKey,

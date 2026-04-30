@@ -48,12 +48,15 @@ and the Flutter guide for
 - **Notification-based scroll detection**: the bar listens to `ScrollNotification` from any descendant scrollable in the body subtree — `NestedScrollView`, multi-`TabBarView`, `CustomScrollView`, and user-supplied controllers all work out of the box.
 - **Material 3 themed defaults**: `barDecoration` defaults to `colorScheme.surfaceContainer`; `iconDecoration` defaults to `colorScheme.primary`. No more hardcoded `Colors.black`.
 - **Optional helpers**: `BottomBarItem` and `BottomBarItems` make the common nav-item case (icon, label, badge, selection) easy without turning the package into a full navigation widget.
+- **Cupertino motion by default**: show/hide is now backed by Motor springs, so changing scroll direction mid-animation redirects velocity instead of snapping to a new curve.
 - **Custom transitions**: choose from built-in `BottomBarTransition` enum values (`slide`, `fade`, `scale`, `slideAndFade`) or supply your own `transitionBuilder`.
 - **Config objects**: flat constructor parameters from v1 are grouped into `BottomBarLayout`, `BottomBarMotion`, and `BottomBarScrollBehavior` for better readability and app-wide theming via `BottomBarThemeData`.
 
 ---
 
 ## Installing
+
+Requires Dart `>=3.5.0` and Flutter `>=3.22.0`.
 
 Add to your `pubspec.yaml`:
 
@@ -108,7 +111,7 @@ v2.0.0 is a major release with breaking changes. Here's how to migrate from v1.x
 | `body: (context, controller) => Widget` | `body: Widget` | Drop the builder; the bar listens to scroll notifications. Pass your own `ScrollController` into your scrollable directly if you need one. |
 | `barColor` | removed | Use `BottomBarThemeData.barDecoration` or the `theme:` argument. |
 | `width`, `offset`, `borderRadius`, `barAlignment`, `fit`, `clip`, `respectSafeArea` | `BottomBarLayout` | Wrap into `layout: BottomBarLayout(...)`. `barAlignment` → `alignment`. |
-| `duration`, `curve`, `start`, `end` | `BottomBarMotion` | Wrap into `motion: BottomBarMotion(...)`. `start`/`end` (doubles) → `slideStart`/`slideEnd` (`Offset`s). |
+| `duration`, `curve`, `start`, `end` | `BottomBarMotion` | `BottomBarMotion()` now defaults to Cupertino spring motion. Existing `BottomBarMotion(duration: ..., curve: ...)` calls keep curve-based behavior. `start`/`end` (doubles) → `slideStart`/`slideEnd` (`Offset`s). |
 | `hideOnScroll`, `reverse`, `scrollOpposite`, `scrollDeltaThreshold` | `BottomBarScrollBehavior` | Wrap into `scrollBehavior: BottomBarScrollBehavior(...)`. `scrollDeltaThreshold` → `deltaThreshold`. |
 | `iconWidth`, `iconHeight`, `iconDecoration`, `barDecoration` | `BottomBarThemeData` | Move to theme. Per-instance overrides remain via the `theme:` argument. |
 | `BottomBarScrollControllerProvider` | `BottomBarScope` | Renamed. The `scrollController` field is gone. New fields: `barHeight`, `isVisible`. |
@@ -136,9 +139,9 @@ BottomBar(
     fit: StackFit.expand,
     clip: Clip.none,
   ),
-  motion: const BottomBarMotion(
-    duration: Duration(milliseconds: 500),
-    curve: Curves.decelerate,
+  motion: const BottomBarMotion.cupertino(
+    preset: BottomBarCupertinoMotion.snappy,
+    duration: Duration(milliseconds: 460),
     slideStart: Offset(0, 3),
   ),
   scrollBehavior: const BottomBarScrollBehavior(hideOnScroll: true),
@@ -222,7 +225,7 @@ The root widget. Requires `child` and `body`.
 | `body` | `Widget` | **required** | The content beneath the bar. Any descendant scrollable drives hide/show via notifications. |
 | `controller` | `BottomBarController?` | `null` | Optional imperative controller for `show()`, `hide()`, `toggle()`, scroll actions. |
 | `layout` | `BottomBarLayout` | `BottomBarLayout()` | Size, radius, alignment, and stack configuration. |
-| `motion` | `BottomBarMotion` | `BottomBarMotion()` | Animation duration, curve, transition type, and slide offsets. |
+| `motion` | `BottomBarMotion` | `BottomBarMotion()` | Motion engine, transition type, and slide offsets. |
 | `scrollBehavior` | `BottomBarScrollBehavior` | `BottomBarScrollBehavior()` | Scroll-detection thresholds and direction flags. |
 | `theme` | `BottomBarThemeData?` | `null` | Per-instance decoration overrides. Higher precedence than `Theme.of(context).extension`. |
 | `icon` | `BackToTopIconBuilder?` | `null` | Builder for the back-to-top icon shown when the bar is hidden. |
@@ -257,12 +260,36 @@ Controls how the bar animates in and out.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `duration` | `Duration` | `Duration(milliseconds: 240)` | Animation duration. |
-| `curve` | `Curve` | `Curves.easeOutCubic` | Animation curve. |
+| `mode` | `BottomBarMotionMode` | `cupertino` | Motion engine: Cupertino spring, curved, or raw Motor motion. |
+| `cupertinoPreset` | `BottomBarCupertinoMotion` | `snappy` | Cupertino preset used by the default spring mode. |
+| `duration` | `Duration` | `Duration(milliseconds: 500)` | Estimated spring duration, or fixed duration for curve mode. |
+| `curve` | `Curve` | `Curves.easeOutCubic` | Curve used by `BottomBarMotion.curved` and legacy duration/curve constructor calls. |
 | `transition` | `BottomBarTransition` | `BottomBarTransition.slide` | Built-in transition type. |
-| `transitionBuilder` | `Widget Function(BuildContext, Animation<double>, Widget)?` | `null` | Custom transition. When non-null, overrides `transition`. |
+| `transitionBuilder` | `Widget Function(BuildContext, Animation<double>, Widget)?` | `null` | Custom transition. When non-null, overrides `transition`; spring progress can overshoot, so clamp opacity/size if needed. |
 | `slideStart` | `Offset` | `Offset(0, 2)` | Starting offset for `slide` / `slideAndFade` transitions. |
 | `slideEnd` | `Offset` | `Offset.zero` | Ending offset for `slide` / `slideAndFade` transitions. |
+
+```dart
+// Default: Motor-backed Cupertino spring, velocity-preserving redirection.
+const BottomBarMotion();
+
+// Cupertino presets.
+const BottomBarMotion.cupertino(
+  preset: BottomBarCupertinoMotion.bouncy,
+  extraBounce: 0.04,
+);
+
+// Traditional deterministic duration + curve motion.
+const BottomBarMotion.curved(
+  duration: Duration(milliseconds: 280),
+  curve: Curves.easeOutCubic,
+);
+
+// Any Motor motion, re-exported by this package.
+const BottomBarMotion.motor(
+  Motion.snappySpring(),
+);
+```
 
 **`BottomBarTransition` enum values:**
 

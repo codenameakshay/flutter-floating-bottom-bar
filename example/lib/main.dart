@@ -16,7 +16,11 @@ class ExampleApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'flutter_floating_bottom_bar example',
-      theme: ThemeData(colorSchemeSeed: Colors.yellow, useMaterial3: true),
+      theme: ThemeData(
+        colorSchemeSeed: const Color(0xFF111111),
+        scaffoldBackgroundColor: const Color(0xFFFAFAF8),
+        useMaterial3: true,
+      ),
       debugShowCheckedModeBanner: false,
       home: const _DemoPicker(),
     );
@@ -29,11 +33,11 @@ class _DemoPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final demos = <(String, WidgetBuilder)>[
-      ('Tab bar', (_) => const TabBarDemoPage()),
-      ('Basic', (_) => const BasicDemoPage()),
-      ('Search bar', (_) => const SearchBarDemoPage()),
+      ('Issues dock', (_) => const TabBarDemoPage()),
+      ('AI prompt dock', (_) => const SearchBarDemoPage()),
+      ('Minimal API', (_) => const BasicDemoPage()),
       ('Nested scroll', (_) => const NestedScrollDemoPage()),
-      ('Badges', (_) => const BadgesDemoPage()),
+      ('Badged nav', (_) => const BadgesDemoPage()),
       ('Custom transition', (_) => const CustomTransitionDemoPage()),
     ];
     return Scaffold(

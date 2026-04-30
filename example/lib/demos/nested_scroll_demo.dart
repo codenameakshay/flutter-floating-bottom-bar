@@ -12,6 +12,22 @@ class NestedScrollDemoPage extends StatelessWidget {
           width: 280,
           borderRadius: BorderRadius.circular(28),
         ),
+        motion: const BottomBarMotion.cupertino(
+          preset: BottomBarCupertinoMotion.smooth,
+        ),
+        theme: BottomBarThemeData(
+          barDecoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x18000000),
+                blurRadius: 30,
+                offset: Offset(0, 16),
+              ),
+            ],
+          ),
+        ),
         body: NestedScrollView(
           headerSliverBuilder: (_, __) => const [
             SliverAppBar(

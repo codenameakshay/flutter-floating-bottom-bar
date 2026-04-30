@@ -10,7 +10,7 @@ void main() {
         home: Scaffold(
           body: BottomBar(
             controller: controller,
-            motion: BottomBarMotion(
+            motion: BottomBarMotion.curved(
               transition: t,
               duration: const Duration(milliseconds: 400),
             ),
