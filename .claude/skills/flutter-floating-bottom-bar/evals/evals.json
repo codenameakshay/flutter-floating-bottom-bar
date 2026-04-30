@@ -1,0 +1,33 @@
+{
+  "skill_name": "flutter-floating-bottom-bar",
+  "evals": [
+    {
+      "id": 0,
+      "name": "replace-bottomnavbar",
+      "prompt": "I have a Flutter page using `BottomNavigationBar`. Please replace it with `flutter_floating_bottom_bar` (v2.x). Use sensible defaults — full-width with margins, M3-style rounded corners, and motion that feels good. Preserve my `_currentIndex` state field, the deep-purple selected color, and all four tabs. Add the import and tell me what to add to my pubspec.yaml. The file is at `home_page.dart` (provided as input). Give me the complete updated file.",
+      "expected_output": "An updated home_page.dart that: (a) imports `package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart`, (b) replaces the `BottomNavigationBar` with `BottomBar` + `BottomBarItems` + four `BottomBarItem`s, (c) keeps `_currentIndex` (not renamed), (d) preserves the deep-purple selected color via `BottomBarItem.selectedColor` or theme, (e) uses sensible layout defaults (width = screen-width minus margin, borderRadius ~28), (f) does NOT pass v1 fields like `barColor`. Should also tell user to add `flutter_floating_bottom_bar: ^2.0.0` to pubspec.yaml.",
+      "files": ["evals/inputs/replace-bottomnavbar/home_page.dart"]
+    },
+    {
+      "id": 1,
+      "name": "migrate-v1-to-v2",
+      "prompt": "I'm on `flutter_floating_bottom_bar: ^1.5.0` and want to upgrade to v2.0. Please migrate the attached `feed_page.dart` to the v2 API. Keep the same visual design (white bar, 28px radius, ~280ms easeOutCubic motion, 12px scroll delta threshold, black circular icon button at 32x32). Also update the pubspec line. Give me the complete updated file.",
+      "expected_output": "An updated feed_page.dart with: (a) `body:` as a plain widget (no builder), (b) `barColor: Colors.white` moved into `theme: BottomBarThemeData(barDecoration: BoxDecoration(color: Colors.white, ...))`, (c) `width`/`borderRadius` wrapped into `BottomBarLayout`, (d) `duration`/`curve`/`start`/`end` wrapped into `BottomBarMotion.curved(duration: ..., curve: ..., slideStart: Offset(0, 2), slideEnd: Offset.zero)`, (e) `hideOnScroll`/`scrollOpposite`/`scrollDeltaThreshold` wrapped into `BottomBarScrollBehavior(deltaThreshold: 12)`, (f) `iconWidth`/`iconHeight`/`iconDecoration` moved into the theme, (g) the `controller` arg removed from the inner `ListView.builder` (or kept as a separate locally-instantiated controller). No v1 parameter names should remain. Should also tell user to update `flutter_floating_bottom_bar: ^2.0.0` in pubspec.",
+      "files": ["evals/inputs/migrate-v1-to-v2/feed_page.dart"]
+    },
+    {
+      "id": 2,
+      "name": "fix-glitches",
+      "prompt": "My `flutter_floating_bottom_bar` page has three problems: (1) when the bar shows, it briefly flickers / inverts, (2) the last list item is always hidden behind the bar, (3) the bar hides when I collapse the SliverAppBar instead of when I scroll the inner list. Please diagnose all three issues and fix them. The file is `buggy_page.dart` (attached). Give me the complete updated file.",
+      "expected_output": "An updated buggy_page.dart that: (a) clamps `anim.value.clamp(0.0, 1.0)` inside the `transitionBuilder` (fixes flicker/invert from spring overshoot), (b) adds bottom padding to the inner ListView OR uses `BottomBarScope.of(context).barHeight` to add a spacer (fixes content clipping), (c) adds a `predicate` to `BottomBarScrollBehavior` (or sets `scrollBehavior:`) to filter for inner scroll only — typically `predicate: (n) => n.depth > 0` (fixes the SliverAppBar disambiguation). Should also briefly explain each fix.",
+      "files": ["evals/inputs/fix-glitches/buggy_page.dart"]
+    },
+    {
+      "id": 3,
+      "name": "greenfield",
+      "prompt": "I have a Material 3 Flutter page with just a `ListView.separated` of 100 cards (file `articles_page.dart`, attached). I don't have a bottom bar yet. Please add a `flutter_floating_bottom_bar` with three tabs (Home, Search, Profile) that hides on scroll. Use motion that feels iOS-native. Tell me what to add to my pubspec.yaml. Give me the complete updated file.",
+      "expected_output": "An updated articles_page.dart that: (a) imports `package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart`, (b) adds `int _index = 0;` state field (file becomes a StatefulWidget), (c) wraps the existing ListView in `BottomBar.body`, (d) adds `BottomBarItems` with three `BottomBarItem`s (Home, Search, Profile), each with `selected: _index == N` and `onTap: () => setState(() => _index = N)`, (e) uses `BottomBarMotion.cupertino(...)` (or the default `BottomBarMotion()`) since user asked for iOS-native, (f) uses M3-style border radius ~28, (g) accounts for the bar height in scrollable's bottom padding so cards aren't clipped. Should also tell user to add `flutter_floating_bottom_bar: ^2.0.0` to pubspec.yaml.",
+      "files": ["evals/inputs/greenfield/articles_page.dart"]
+    }
+  ]
+}
