@@ -275,18 +275,30 @@ class _BottomBarState extends State<BottomBar>
             isVisible: _isVisibleNotifier,
             child: widget.body,
           ),
-          if (widget.showIcon) _wrapWithSafeArea(l, child: _buildIcon(theme)),
+          if (widget.showIcon)
+            _wrapWithSafeArea(
+              l,
+              translate: l.iconOffset,
+              child: _buildIcon(theme),
+            ),
           _wrapWithSafeArea(l, child: _buildBottomBar(theme)),
         ],
       ),
     );
   }
 
-  Widget _wrapWithSafeArea(BottomBarLayout l, {required Widget child}) {
+  Widget _wrapWithSafeArea(
+    BottomBarLayout l, {
+    required Widget child,
+    Offset translate = Offset.zero,
+  }) {
     final padded = Padding(padding: EdgeInsets.all(l.offset), child: child);
+    final translated = translate == Offset.zero
+        ? padded
+        : Transform.translate(offset: translate, child: padded);
     return Align(
       alignment: l.alignment,
-      child: l.respectSafeArea ? SafeArea(child: padded) : padded,
+      child: l.respectSafeArea ? SafeArea(child: translated) : translated,
     );
   }
 

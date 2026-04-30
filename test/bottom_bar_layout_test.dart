@@ -9,6 +9,7 @@ void main() {
       expect(layout.width, 300);
       expect(layout.offset, 10);
       expect(layout.borderRadius, BorderRadius.zero);
+      expect(layout.iconOffset, Offset.zero);
       expect(layout.alignment, Alignment.bottomCenter);
       expect(layout.fit, StackFit.loose);
       expect(layout.clip, Clip.hardEdge);
@@ -20,6 +21,7 @@ void main() {
       final updated = layout.copyWith(width: 200);
       expect(updated.width, 200);
       expect(updated.offset, 10);
+      expect(updated.iconOffset, Offset.zero);
       expect(updated.respectSafeArea, true);
     });
 
@@ -59,5 +61,39 @@ void main() {
     final decoration = container.decoration! as BoxDecoration;
 
     expect(decoration.borderRadius, radius);
+  });
+
+  testWidgets('iconOffset translates only the back-to-top icon',
+      (tester) async {
+    const iconOffset = Offset(0, 10);
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: BottomBar(
+          layout: const BottomBarLayout(iconOffset: iconOffset),
+          body: ListView.builder(
+            itemBuilder: (context, index) => Text('Row $index'),
+          ),
+          child: const SizedBox(
+            key: Key('bar-child'),
+            height: 56,
+            child: Text('Bottom Bar Child'),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.drag(find.byType(ListView), const Offset(0, -320));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+
+    final iconTransform = tester.widget<Transform>(
+      find.ancestor(
+        of: find.byTooltip('Scroll to top'),
+        matching: find.byType(Transform),
+      ),
+    );
+
+    expect(iconTransform.transform.getTranslation().y, iconOffset.dy);
   });
 }

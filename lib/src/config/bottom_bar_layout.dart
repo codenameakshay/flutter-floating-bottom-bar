@@ -10,6 +10,7 @@ class BottomBarLayout {
     this.width = 300,
     this.offset = 10,
     this.borderRadius = BorderRadius.zero,
+    this.iconOffset = Offset.zero,
     this.alignment = Alignment.bottomCenter,
     this.fit = StackFit.loose,
     this.clip = Clip.hardEdge,
@@ -24,6 +25,12 @@ class BottomBarLayout {
 
   /// Border radius applied to the bar's default decoration.
   final BorderRadius borderRadius;
+
+  /// Additional translation applied only to the back-to-top icon.
+  ///
+  /// For example, `Offset(0, 10)` moves the icon 10 logical pixels lower
+  /// without changing the bar position.
+  final Offset iconOffset;
 
   /// Alignment of the bar (and the back-to-top icon) within the host stack.
   final Alignment alignment;
@@ -42,6 +49,7 @@ class BottomBarLayout {
     double? width,
     double? offset,
     BorderRadius? borderRadius,
+    Offset? iconOffset,
     Alignment? alignment,
     StackFit? fit,
     Clip? clip,
@@ -51,6 +59,7 @@ class BottomBarLayout {
       width: width ?? this.width,
       offset: offset ?? this.offset,
       borderRadius: borderRadius ?? this.borderRadius,
+      iconOffset: iconOffset ?? this.iconOffset,
       alignment: alignment ?? this.alignment,
       fit: fit ?? this.fit,
       clip: clip ?? this.clip,
@@ -65,6 +74,7 @@ class BottomBarLayout {
         other.width == width &&
         other.offset == offset &&
         other.borderRadius == borderRadius &&
+        other.iconOffset == iconOffset &&
         other.alignment == alignment &&
         other.fit == fit &&
         other.clip == clip &&
@@ -76,6 +86,7 @@ class BottomBarLayout {
         width,
         offset,
         borderRadius,
+        iconOffset,
         alignment,
         fit,
         clip,

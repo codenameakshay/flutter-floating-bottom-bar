@@ -12,6 +12,7 @@ class BasicDemoPage extends StatelessWidget {
         layout: BottomBarLayout(
           width: 312,
           offset: 24,
+          iconOffset: Offset(0, 30),
           borderRadius: BorderRadius.circular(32),
         ),
         motion: const BottomBarMotion.cupertino(
@@ -33,8 +34,8 @@ class BasicDemoPage extends StatelessWidget {
             color: Colors.black,
             shape: BoxShape.circle,
           ),
-          iconWidth: 44,
-          iconHeight: 44,
+          iconWidth: 24,
+          iconHeight: 24,
         ),
         body: ListView.separated(
           padding: const EdgeInsets.fromLTRB(28, 72, 28, 140),

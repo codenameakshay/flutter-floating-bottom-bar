@@ -251,6 +251,7 @@ Controls the bar's size, shape, position, and stack behavior.
 | `width` | `double` | `300` | Width of the floating bar in logical pixels. |
 | `offset` | `double` | `10` | Padding from the bottom and sides of the screen. |
 | `borderRadius` | `BorderRadius` | `BorderRadius.zero` | Corner radius of the bar. |
+| `iconOffset` | `Offset` | `Offset.zero` | Extra translation applied only to the back-to-top icon, e.g. `Offset(0, 10)` moves it 10px lower. |
 | `alignment` | `Alignment` | `Alignment.bottomCenter` | Alignment of the bar within the stack. |
 | `fit` | `StackFit` | `StackFit.loose` | `fit` passed to the underlying `Stack`. |
 | `clip` | `Clip` | `Clip.hardEdge` | `clipBehavior` of the underlying `Stack`. Set to `Clip.none` for a FAB notch. |
