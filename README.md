@@ -58,6 +58,26 @@ and the Flutter guide for
 
 ---
 
+## Claude Code skill
+
+If you use [Claude Code](https://claude.ai/code), there's a skill that can integrate, replace, migrate, and debug this package for you — no manual API-reading required.
+
+**What the skill does:**
+- Replaces an existing `BottomNavigationBar`, `NavigationBar`, `BottomAppBar`, or third-party nav bar (salomon, GNav, convex…) with a floating bar
+- Migrates v1.x code to v2.0 (config objects, new scroll behavior, motion API)
+- Picks sensible motion defaults (Cupertino spring) and surfaces alternatives
+- Fixes common glitches: content clipped behind the bar, jumpy spring, `NestedScrollView` not triggering hide, custom transition overshoot
+
+**Install the skill:**
+
+```bash
+/install-skill https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/.claude/skills/flutter-floating-bottom-bar.skill
+```
+
+Then just describe what you want — paste your existing bottom bar code, say what feel you're after, and the skill handles the rest.
+
+---
+
 ## Installing
 
 Requires Dart `>=3.5.0` and Flutter `>=3.22.0`.
