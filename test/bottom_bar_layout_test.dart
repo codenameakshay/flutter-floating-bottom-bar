@@ -30,4 +30,34 @@ void main() {
       expect(a.hashCode, b.hashCode);
     });
   });
+
+  testWidgets('layout borderRadius shapes the visible default decoration',
+      (tester) async {
+    final radius = BorderRadius.circular(40);
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: BottomBar(
+          layout: BottomBarLayout(borderRadius: radius),
+          body: const SizedBox.shrink(),
+          child: const SizedBox(
+            key: Key('bar-child'),
+            height: 56,
+            child: Center(child: Text('Bottom Bar Child')),
+          ),
+        ),
+      ),
+    ));
+
+    final containers = find.ancestor(
+      of: find.byKey(const Key('bar-child')),
+      matching: find.byWidgetPredicate(
+        (widget) => widget is Container && widget.decoration is BoxDecoration,
+      ),
+    );
+    final container = containers.evaluate().single.widget as Container;
+    final decoration = container.decoration! as BoxDecoration;
+
+    expect(decoration.borderRadius, radius);
+  });
 }

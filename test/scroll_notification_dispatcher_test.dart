@@ -11,9 +11,20 @@ void main() {
         deltaThreshold: 50,
         onShouldHide: events.add,
       );
+      final context = _DummyBuildContext();
 
-      dispatcher.handle(_FakeUpdate(depth: 0, axis: Axis.vertical, pixels: 0));
-      dispatcher.handle(_FakeUpdate(depth: 0, axis: Axis.vertical, pixels: 30));
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 0,
+        context: context,
+      ));
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 30,
+        context: context,
+      ));
 
       expect(events, isEmpty);
     });
@@ -24,10 +35,21 @@ void main() {
         deltaThreshold: 8,
         onShouldHide: events.add,
       );
+      final context = _DummyBuildContext();
 
-      dispatcher.handle(_FakeUpdate(depth: 0, axis: Axis.vertical, pixels: 0));
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 0,
+        context: context,
+      ));
       dispatcher.handle(
-        _FakeUpdate(depth: 0, axis: Axis.vertical, pixels: 120),
+        _FakeUpdate(
+          depth: 0,
+          axis: Axis.vertical,
+          pixels: 120,
+          context: context,
+        ),
       );
 
       expect(events.last, isTrue);
@@ -40,10 +62,20 @@ void main() {
         reverse: true,
         onShouldHide: events.add,
       );
+      final context = _DummyBuildContext();
 
-      dispatcher
-          .handle(_FakeUpdate(depth: 0, axis: Axis.vertical, pixels: 100));
-      dispatcher.handle(_FakeUpdate(depth: 0, axis: Axis.vertical, pixels: 0));
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 100,
+        context: context,
+      ));
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 0,
+        context: context,
+      ));
 
       expect(events.last, isTrue);
     });
@@ -54,13 +86,61 @@ void main() {
         deltaThreshold: 50,
         onShouldHide: events.add,
       );
+      final contextA = _DummyBuildContext();
+      final contextB = _DummyBuildContext();
 
       // Scrollable A advances by 30 (below threshold).
-      dispatcher.handle(_FakeUpdate(depth: 0, axis: Axis.vertical, pixels: 0));
-      dispatcher.handle(_FakeUpdate(depth: 0, axis: Axis.vertical, pixels: 30));
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 0,
+        context: contextA,
+      ));
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 30,
+        context: contextA,
+      ));
       // Scrollable B starts at 0 — switching tabs should not register a 30→0 jump.
-      dispatcher.handle(_FakeUpdate(depth: 1, axis: Axis.vertical, pixels: 0));
-      dispatcher.handle(_FakeUpdate(depth: 1, axis: Axis.vertical, pixels: 5));
+      dispatcher.handle(_FakeUpdate(
+        depth: 1,
+        axis: Axis.vertical,
+        pixels: 0,
+        context: contextB,
+      ));
+      dispatcher.handle(_FakeUpdate(
+        depth: 1,
+        axis: Axis.vertical,
+        pixels: 5,
+        context: contextB,
+      ));
+
+      expect(events, isEmpty);
+    });
+
+    test('does not share offsets for distinct contexts at the same depth', () {
+      final events = <bool>[];
+      final dispatcher = ScrollNotificationDispatcher(
+        deltaThreshold: 50,
+        onShouldHide: events.add,
+      );
+
+      final contextA = _DummyBuildContext();
+      final contextB = _DummyBuildContext();
+
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 500,
+        context: contextA,
+      ));
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 0,
+        context: contextB,
+      ));
 
       expect(events, isEmpty);
     });
@@ -88,6 +168,7 @@ class _FakeUpdate extends ScrollUpdateNotification {
     required int depth,
     required Axis axis,
     required double pixels,
+    BuildContext? context,
   }) : super(
           metrics: FixedScrollMetrics(
             minScrollExtent: 0,
@@ -99,7 +180,7 @@ class _FakeUpdate extends ScrollUpdateNotification {
                 : AxisDirection.right,
             devicePixelRatio: 1.0,
           ),
-          context: _DummyBuildContext(),
+          context: context ?? _DummyBuildContext(),
           depth: depth,
         );
 }

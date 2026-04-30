@@ -59,6 +59,8 @@ class _BottomBarState extends State<BottomBar>
   late AnimationController _animationController;
   late Animation<double> _curvedAnimation;
   late ScrollNotificationDispatcher _dispatcher;
+  late BottomBarMotion _motion;
+  late BottomBarScrollBehavior _scrollBehavior;
 
   bool _isBarVisible = true;
   bool _showIconButton = false;
@@ -85,23 +87,24 @@ class _BottomBarState extends State<BottomBar>
   void initState() {
     super.initState();
 
-    final initialMotion = widget.motion ?? const BottomBarMotion();
-    final initialScroll =
-        widget.scrollBehavior ?? const BottomBarScrollBehavior();
+    _motion = widget.motion ?? widget.theme?.motion ?? const BottomBarMotion();
+    _scrollBehavior = widget.scrollBehavior ??
+        widget.theme?.scrollBehavior ??
+        const BottomBarScrollBehavior();
 
     _animationController = AnimationController(
-      duration: initialMotion.duration,
+      duration: _motion.duration,
       vsync: this,
     );
     _curvedAnimation = CurvedAnimation(
       parent: _animationController,
-      curve: initialMotion.curve,
+      curve: _motion.curve,
     );
 
     _dispatcher = ScrollNotificationDispatcher(
-      deltaThreshold: initialScroll.deltaThreshold,
-      reverse: initialScroll.reverse,
-      predicate: initialScroll.predicate,
+      deltaThreshold: _scrollBehavior.deltaThreshold,
+      reverse: _scrollBehavior.reverse,
+      predicate: _scrollBehavior.predicate,
       onShouldHide: (hide) => _setBarVisible(!hide, notifyCallbacks: true),
     );
 
@@ -110,6 +113,12 @@ class _BottomBarState extends State<BottomBar>
     widget.controller?.updateVisibility(true, shouldNotify: false);
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _measureBar());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncMotionAndScroll(_resolvedTheme(context));
   }
 
   void _measureBar() {
@@ -126,33 +135,37 @@ class _BottomBarState extends State<BottomBar>
   void didUpdateWidget(covariant BottomBar oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    final oldMotion = oldWidget.motion ?? const BottomBarMotion();
-    final newMotion = widget.motion ?? const BottomBarMotion();
-    final oldScroll =
-        oldWidget.scrollBehavior ?? const BottomBarScrollBehavior();
-    final newScroll = widget.scrollBehavior ?? const BottomBarScrollBehavior();
-
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller?.detach(this);
       widget.controller?.attach(this);
     }
 
-    if (oldMotion.duration != newMotion.duration) {
+    _syncMotionAndScroll(_resolvedTheme(context));
+  }
+
+  void _syncMotionAndScroll(BottomBarThemeData theme) {
+    final newMotion = _effectiveMotion(theme);
+    final newScroll = _effectiveScrollBehavior(theme);
+
+    if (_motion.duration != newMotion.duration) {
       _animationController.duration = newMotion.duration;
     }
 
-    if (oldMotion.curve != newMotion.curve) {
+    if (_motion.curve != newMotion.curve) {
       _curvedAnimation = CurvedAnimation(
         parent: _animationController,
         curve: newMotion.curve,
       );
     }
 
-    if (oldScroll != newScroll) {
+    if (_scrollBehavior != newScroll) {
       _dispatcher.deltaThreshold = newScroll.deltaThreshold;
       _dispatcher.reverse = newScroll.reverse;
       _dispatcher.predicate = newScroll.predicate;
     }
+
+    _motion = newMotion;
+    _scrollBehavior = newScroll;
   }
 
   // -- visibility plumbing ---------------------------------------------------
@@ -163,8 +176,7 @@ class _BottomBarState extends State<BottomBar>
     bool fromController = false,
   }) {
     if (!mounted) return;
-    final scroll = widget.scrollBehavior ?? const BottomBarScrollBehavior();
-    if (!visible && !scroll.hideOnScroll && !fromController) {
+    if (!visible && !_scrollBehavior.hideOnScroll && !fromController) {
       return;
     }
     if (_isBarVisible == visible) return;
@@ -220,11 +232,10 @@ class _BottomBarState extends State<BottomBar>
       }());
       return;
     }
-    final motion = widget.motion ?? const BottomBarMotion();
     await position.animateTo(
       toEnd ? position.maxScrollExtent : position.minScrollExtent,
-      duration: motion.duration,
-      curve: motion.curve,
+      duration: _motion.duration,
+      curve: _motion.curve,
     );
     _setBarVisible(true, notifyCallbacks: true, fromController: true);
   }
@@ -300,8 +311,6 @@ class _BottomBarState extends State<BottomBar>
   Widget _buildIcon(BottomBarThemeData theme) {
     final iconWidth = theme.iconWidth ?? 30;
     final iconHeight = theme.iconHeight ?? 30;
-    final motion = _effectiveMotion(theme);
-    final scroll = _effectiveScrollBehavior(theme);
 
     // The back-to-top icon's implicit animations always use a safe monotonic
     // curve. Sharing `motion.curve` here would let an overshooting curve
@@ -312,11 +321,11 @@ class _BottomBarState extends State<BottomBar>
     const iconCurve = Curves.easeOut;
 
     return AnimatedOpacity(
-      duration: motion.duration,
+      duration: _motion.duration,
       curve: iconCurve,
       opacity: _showIconButton ? 1 : 0,
       child: AnimatedContainer(
-        duration: motion.duration,
+        duration: _motion.duration,
         curve: iconCurve,
         width: _showIconButton ? iconWidth : 0,
         height: _showIconButton ? iconHeight : 0,
@@ -333,7 +342,7 @@ class _BottomBarState extends State<BottomBar>
                 message: widget.iconTooltip ?? 'Scroll to top',
                 child: InkWell(
                   onTap: () => scrollToBoundary(
-                    toEnd: scroll.scrollOpposite,
+                    toEnd: _scrollBehavior.scrollOpposite,
                   ),
                   child: _buildIconChild(iconWidth, iconHeight),
                 ),
@@ -363,20 +372,40 @@ class _BottomBarState extends State<BottomBar>
 
   Widget _buildBottomBar(BottomBarThemeData theme) {
     final l = _effectiveLayout(theme);
-    final motion = _effectiveMotion(theme);
     return VisibilityAnimator(
       animation: _curvedAnimation,
-      motion: motion,
+      motion: _motion,
       child: Container(
         key: _barKey,
         width: l.width,
-        decoration: theme.barDecoration,
+        decoration: _effectiveBarDecoration(theme, l),
         child: Material(
           color: Colors.transparent,
-          borderRadius: l.borderRadius,
+          borderRadius: _effectiveBarBorderRadius(theme, l),
           child: widget.child,
         ),
       ),
     );
+  }
+
+  BoxDecoration? _effectiveBarDecoration(
+    BottomBarThemeData theme,
+    BottomBarLayout layout,
+  ) {
+    final decoration = theme.barDecoration;
+    if (decoration == null || decoration.shape != BoxShape.rectangle) {
+      return decoration;
+    }
+    final radius = _effectiveBarBorderRadius(theme, layout);
+    return decoration.copyWith(borderRadius: radius);
+  }
+
+  BorderRadiusGeometry? _effectiveBarBorderRadius(
+    BottomBarThemeData theme,
+    BottomBarLayout layout,
+  ) {
+    final decoration = theme.barDecoration;
+    if (layout.borderRadius != BorderRadius.zero) return layout.borderRadius;
+    return decoration?.borderRadius;
   }
 }

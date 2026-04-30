@@ -29,7 +29,10 @@ class ScrollNotificationDispatcher {
   ScrollPosition? _lastActivePosition;
   ScrollPosition? get lastActivePosition => _lastActivePosition;
 
-  int _keyFor(ScrollNotification n) {
+  int _keyFor(ScrollNotification n, ScrollPosition? position) {
+    if (position != null) return identityHashCode(position);
+    final context = n.context;
+    if (context != null) return identityHashCode(context);
     return Object.hash(n.depth, n.metrics.axis);
   }
 
@@ -42,8 +45,6 @@ class ScrollNotificationDispatcher {
     // to flip visibility.
     if (notification.metrics.axis != Axis.vertical) return;
 
-    final key = _keyFor(notification);
-
     if (notification is ScrollEndNotification) {
       // Optional: keep history; do not evict here so subsequent updates from
       // the same scrollable retain their tracked offset.
@@ -55,7 +56,9 @@ class ScrollNotificationDispatcher {
       return;
     }
 
-    _lastActivePosition = _maybePositionOf(notification);
+    final position = _maybePositionOf(notification);
+    _lastActivePosition = position;
+    final key = _keyFor(notification, position);
 
     final pixels = notification.metrics.pixels;
     final previous = _lastOffsets[key];

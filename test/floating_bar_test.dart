@@ -89,6 +89,58 @@ void main() {
     expect(controller.isVisible, isFalse);
   });
 
+  testWidgets('theme extension controls motion and scroll behavior',
+      (tester) async {
+    final controller = BottomBarController();
+
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(
+        extensions: const [
+          BottomBarThemeData(
+            motion: BottomBarMotion(
+              duration: Duration(seconds: 1),
+              transition: BottomBarTransition.fade,
+            ),
+            scrollBehavior: BottomBarScrollBehavior(hideOnScroll: false),
+          ),
+        ],
+      ),
+      home: Scaffold(
+        body: BottomBar(
+          controller: controller,
+          body: ListView.builder(
+            itemCount: 200,
+            itemBuilder: (_, index) => ListTile(title: Text('Item $index')),
+          ),
+          child: const SizedBox(
+            key: Key('themed-bar-child'),
+            height: 56,
+            child: Center(child: Text('Bottom Bar Child')),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isTrue);
+
+    controller.hide();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final fades = find.ancestor(
+      of: find.byKey(const Key('themed-bar-child')),
+      matching: find.byType(FadeTransition),
+    );
+    final fade = fades
+        .evaluate()
+        .map((e) => e.widget)
+        .cast<FadeTransition>()
+        .firstWhere((widget) => widget.child is Container);
+    expect(fade.opacity.value, greaterThan(0.4));
+  });
+
   testWidgets('custom tooltip is attached to the icon action', (tester) async {
     final controller = BottomBarController();
     await tester.pumpWidget(
@@ -170,5 +222,50 @@ void main() {
 
     // The bar should still be visible (no false hide on tab switch).
     expect(controller.isVisible, isTrue);
+  });
+
+  testWidgets('sibling scrollables keep independent scroll offsets',
+      (tester) async {
+    final controller = BottomBarController();
+    final tabController = TabController(length: 2, vsync: const TestVSync());
+    addTearDown(tabController.dispose);
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: BottomBar(
+          controller: controller,
+          body: TabBarView(
+            controller: tabController,
+            children: [
+              ListView.builder(
+                key: const Key('list-a'),
+                itemCount: 200,
+                itemBuilder: (_, i) => ListTile(title: Text('A $i')),
+              ),
+              ListView.builder(
+                key: const Key('list-b'),
+                itemCount: 200,
+                itemBuilder: (_, i) => ListTile(title: Text('B $i')),
+              ),
+            ],
+          ),
+          child: const SizedBox(
+            height: 56,
+            child: Center(child: Text('child')),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.drag(find.byKey(const Key('list-a')), const Offset(0, -500));
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isFalse);
+
+    tabController.animateTo(1);
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byKey(const Key('list-b')), const Offset(0, -5));
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isFalse);
   });
 }

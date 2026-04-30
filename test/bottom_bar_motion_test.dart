@@ -91,8 +91,7 @@ void main() {
     expect(builderCalled, isTrue);
   });
 
-  testWidgets(
-      'overshooting curve does not produce negative icon constraints',
+  testWidgets('overshooting curve does not produce negative icon constraints',
       (tester) async {
     final controller = BottomBarController();
 
