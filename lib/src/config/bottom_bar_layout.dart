@@ -45,6 +45,8 @@ class BottomBarLayout {
   /// extend into system UI areas.
   final bool respectSafeArea;
 
+  /// Returns a copy of this layout with the given fields replaced by
+  /// non-null values. Null arguments leave the corresponding field unchanged.
   BottomBarLayout copyWith({
     double? width,
     double? offset,

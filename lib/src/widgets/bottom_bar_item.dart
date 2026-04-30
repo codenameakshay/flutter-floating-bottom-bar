@@ -23,14 +23,46 @@ class BottomBarItem extends StatelessWidget {
     this.selectedColor,
   });
 
+  /// The icon displayed when [selected] is `false`.
   final Widget icon;
+
+  /// The icon displayed when [selected] is `true`.
+  ///
+  /// Falls back to [icon] when null.
   final Widget? selectedIcon;
+
+  /// Optional label rendered below the icon.
+  ///
+  /// Styled with `textTheme.labelSmall` tinted to [color] or [selectedColor].
   final Widget? label;
+
+  /// Optional badge rendered in the top-right corner of the icon.
+  ///
+  /// Typically a [Badge] widget. Use for notification counts or dot indicators.
   final Widget? badge;
+
+  /// Whether this item is currently the active/selected tab.
+  ///
+  /// Does not maintain state internally — pass from your own state and update
+  /// in [onTap].
   final bool selected;
+
+  /// Called when the item is tapped.
   final VoidCallback? onTap;
+
+  /// Tooltip shown on long-press.
+  ///
+  /// When null no tooltip is rendered.
   final String? tooltip;
+
+  /// Icon and label colour when [selected] is `false`.
+  ///
+  /// Defaults to `colorScheme.onSurfaceVariant`.
   final Color? color;
+
+  /// Icon and label colour when [selected] is `true`.
+  ///
+  /// Defaults to `colorScheme.primary`.
   final Color? selectedColor;
 
   @override

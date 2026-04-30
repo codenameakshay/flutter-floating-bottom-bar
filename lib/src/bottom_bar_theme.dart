@@ -35,12 +35,34 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
     this.scrollBehavior,
   });
 
+  /// Decoration applied to the floating bar's outer container.
+  ///
+  /// Defaults to `BoxDecoration(color: colorScheme.surfaceContainer,
+  /// borderRadius: BorderRadius.circular(28))` when unset.
   final BoxDecoration? barDecoration;
+
+  /// Decoration applied to the back-to-top icon's container.
+  ///
+  /// Defaults to `BoxDecoration(color: colorScheme.primary,
+  /// shape: BoxShape.circle)` when unset.
   final BoxDecoration? iconDecoration;
+
+  /// Width of the back-to-top icon in logical pixels. Defaults to `30`.
   final double? iconWidth;
+
+  /// Height of the back-to-top icon in logical pixels. Defaults to `30`.
   final double? iconHeight;
+
+  /// Theme-level layout defaults. Overridden by the `layout:` argument on
+  /// the individual [BottomBar] widget.
   final BottomBarLayout? layout;
+
+  /// Theme-level motion defaults. Overridden by the `motion:` argument on
+  /// the individual [BottomBar] widget.
   final BottomBarMotion? motion;
+
+  /// Theme-level scroll behaviour defaults. Overridden by the
+  /// `scrollBehavior:` argument on the individual [BottomBar] widget.
   final BottomBarScrollBehavior? scrollBehavior;
 
   /// Returns a new theme where non-null fields of [other] override fields of
@@ -58,6 +80,8 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
     );
   }
 
+  /// Returns a copy of this theme with the given fields replaced by
+  /// non-null values. Null arguments leave the corresponding field unchanged.
   @override
   BottomBarThemeData copyWith({
     BoxDecoration? barDecoration,
@@ -79,6 +103,11 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
     );
   }
 
+  /// Linearly interpolates between this theme and [other] at fraction [t].
+  ///
+  /// Decoration fields use [BoxDecoration.lerp]. Numeric fields use standard
+  /// linear interpolation. Config objects ([layout], [motion], [scrollBehavior])
+  /// step at `t == 0.5` — `this` for `t < 0.5`, [other] for `t >= 0.5`.
   @override
   BottomBarThemeData lerp(
     covariant ThemeExtension<BottomBarThemeData>? other,

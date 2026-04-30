@@ -21,6 +21,13 @@ class BottomBarScope extends InheritedWidget {
   /// but available without owning a controller.
   final ValueListenable<bool> isVisible;
 
+  /// Returns the nearest [BottomBarScope] ancestor.
+  ///
+  /// The widget returned is the one inserted by [BottomBar] around [BottomBar.body],
+  /// so this must only be called from within the [BottomBar.body] subtree.
+  ///
+  /// Throws a [FlutterError] in debug mode if called outside a [BottomBar.body]
+  /// subtree. Use [maybeOf] for a null-safe variant.
   static BottomBarScope of(BuildContext context) {
     final scope = maybeOf(context);
     assert(
@@ -30,6 +37,9 @@ class BottomBarScope extends InheritedWidget {
     return scope!;
   }
 
+  /// Returns the nearest [BottomBarScope] ancestor, or `null` if there is none.
+  ///
+  /// Prefer [of] inside [BottomBar.body] where the scope is guaranteed to exist.
   static BottomBarScope? maybeOf(BuildContext context) {
     return context.dependOnInheritedWidgetOfExactType<BottomBarScope>();
   }

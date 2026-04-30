@@ -32,20 +32,65 @@ enum BottomBarMotionMode {
 }
 
 /// Built-in Cupertino spring presets for [BottomBarMotion.cupertino].
+///
+/// Each preset maps to the corresponding [motor.CupertinoMotion] factory.
 enum BottomBarCupertinoMotion {
+  /// A gentle, slower spring — good for large panels or decorative transitions.
   smooth,
+
+  /// A crisp, fast spring. The default preset; works well for tab bars.
   snappy,
+
+  /// A spring with noticeable overshoot, similar to iOS app icon launches.
   bouncy,
+
+  /// A highly responsive spring tuned for drag-following interactions.
   interactive,
 }
 
 /// Animation configuration for [BottomBar] show/hide.
+///
+/// Three named constructors cover the common cases:
+///
+/// ```dart
+/// // Default: Motor-backed Cupertino spring (snappy preset).
+/// const BottomBarMotion()
+///
+/// // Explicit spring preset.
+/// const BottomBarMotion.cupertino(preset: BottomBarCupertinoMotion.bouncy)
+///
+/// // Traditional duration + curve animation.
+/// const BottomBarMotion.curved(
+///   duration: Duration(milliseconds: 280),
+///   curve: Curves.easeOutCubic,
+/// )
+///
+/// // Any Motor motion.
+/// const BottomBarMotion.motor(Motion.snappySpring())
+/// ```
+///
+/// When using a [transitionBuilder] with a spring-based motion, clamp
+/// `animation.value` to `[0, 1]` before using it for opacity or scale — springs
+/// can overshoot:
+///
+/// ```dart
+/// transitionBuilder: (context, animation, child) {
+///   final v = animation.value.clamp(0.0, 1.0);
+///   return Opacity(opacity: v, child: child);
+/// },
+/// ```
 @immutable
 class BottomBarMotion {
   static const Duration _defaultCupertinoDuration = Duration(milliseconds: 500);
   static const Duration _defaultCurvedDuration = Duration(milliseconds: 240);
   static const Curve _defaultCurve = Curves.easeOutCubic;
 
+  /// Creates a [BottomBarMotion] with sensible defaults.
+  ///
+  /// When neither [duration] nor [curve] is supplied the bar uses a
+  /// Motor-backed Cupertino spring ([BottomBarCupertinoMotion.snappy]) for a
+  /// native-feeling hide/show. Pass either parameter to switch to
+  /// [BottomBarMotionMode.curved] mode.
   const BottomBarMotion({
     Duration? duration,
     Curve? curve,
@@ -66,6 +111,13 @@ class BottomBarMotion {
         snapToEnd = true,
         motorMotion = null;
 
+  /// Creates a Cupertino spring motion using one of the built-in presets.
+  ///
+  /// The spring redirects velocity when scroll direction reverses mid-animation,
+  /// matching iOS native bottom bar behaviour.
+  ///
+  /// [preset] defaults to [BottomBarCupertinoMotion.snappy].
+  /// Increase [extraBounce] (e.g. `0.04`) for more dramatic overshoot.
   const BottomBarMotion.cupertino({
     BottomBarCupertinoMotion preset = BottomBarCupertinoMotion.snappy,
     this.duration = _defaultCupertinoDuration,
@@ -80,6 +132,11 @@ class BottomBarMotion {
         cupertinoPreset = preset,
         motorMotion = null;
 
+  /// Creates a deterministic duration + curve animation.
+  ///
+  /// Use this when you need a predictable, fixed-duration transition — e.g. to
+  /// match an existing animation in your app. For a more iOS-native feel prefer
+  /// [BottomBarMotion.cupertino].
   const BottomBarMotion.curved({
     this.duration = _defaultCurvedDuration,
     this.curve = _defaultCurve,
@@ -93,6 +150,12 @@ class BottomBarMotion {
         snapToEnd = true,
         motorMotion = null;
 
+  /// Creates a motion driven by a caller-supplied [motor.Motion].
+  ///
+  /// Use this to pass any Motion from the `motor` package directly —
+  /// e.g. `Motion.snappySpring()` or a fully customised spring. The
+  /// [duration] and [curve] parameters are only used for the
+  /// scroll-to-boundary animation, not for show/hide.
   const BottomBarMotion.motor(
     this.motorMotion, {
     this.duration = _defaultCurvedDuration,
@@ -143,6 +206,11 @@ class BottomBarMotion {
   /// Slide rest offset (the visible position).
   final Offset slideEnd;
 
+  /// Returns a copy of this motion with the given fields replaced by
+  /// non-null values. Null arguments leave the corresponding field unchanged.
+  ///
+  /// The [mode] of the returned object matches the [mode] argument (or the
+  /// current mode if null), so the correct named constructor is used internally.
   BottomBarMotion copyWith({
     BottomBarMotionMode? mode,
     Duration? duration,

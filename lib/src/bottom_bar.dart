@@ -10,13 +10,47 @@ import 'config/bottom_bar_scroll_behavior.dart';
 import 'internal/scroll_notification_dispatcher.dart';
 import 'internal/visibility_animator.dart';
 
-/// Builds the back-to-top icon child. `width` and `height` reflect the
-/// animated size at the moment of build; ignore them to keep a constant size.
+/// Builds the back-to-top icon child.
+///
+/// [width] and [height] reflect the animated size at the moment of build
+/// (they shrink to zero as the bar becomes fully visible). Ignore them to keep
+/// a constant icon size, or use them to scale the icon along with the container.
 typedef BackToTopIconBuilder = Widget Function(double width, double height);
 
-/// A floating bar widget that hosts a child (tab bar, search bar, custom row,
-/// anything) over a body, and can react to scrolling in the body's subtree.
+/// A floating bar widget that hosts any child widget above scrollable content
+/// and automatically hides/shows in response to scroll events.
+///
+/// The bar listens to [ScrollNotification]s bubbled up from any descendant
+/// scrollable in [body] — no [ScrollController] wiring is required. It can
+/// host a [TabBar], search bar, custom [Row], [BottomBarItems], or any widget.
+///
+/// Basic usage:
+///
+/// ```dart
+/// BottomBar(
+///   body: ListView.builder(
+///     itemCount: 200,
+///     itemBuilder: (_, i) => ListTile(title: Text('Item $i')),
+///   ),
+///   child: const Padding(
+///     padding: EdgeInsets.all(16),
+///     child: Text('Floating content'),
+///   ),
+/// )
+/// ```
+///
+/// See also:
+/// * [BottomBarLayout] — size, shape, and position configuration.
+/// * [BottomBarMotion] — show/hide animation configuration.
+/// * [BottomBarScrollBehavior] — scroll detection configuration.
+/// * [BottomBarThemeData] — app-wide defaults via [ThemeExtension].
+/// * [BottomBarController] — imperative show/hide/scroll API.
+/// * [BottomBarScope] — read bar height and visibility from descendants.
 class BottomBar extends StatefulWidget {
+  /// Creates a [BottomBar].
+  ///
+  /// Both [child] and [body] are required. All other parameters are optional
+  /// and fall back to [BottomBarThemeData] or built-in Material 3 defaults.
   const BottomBar({
     required this.child,
     required this.body,
@@ -35,19 +69,77 @@ class BottomBar extends StatefulWidget {
     super.key,
   });
 
+  /// The widget shown as the floating bar — typically a [TabBar],
+  /// [BottomBarItems], or a custom [Row].
   final Widget child;
+
+  /// The scrollable content placed beneath (and behind) the bar.
+  ///
+  /// Any [ScrollNotification] bubbled from a descendant scrollable here drives
+  /// the bar's hide/show behaviour without requiring a [ScrollController].
   final Widget body;
+
+  /// Optional imperative controller for the bar.
+  ///
+  /// Attach a [BottomBarController] to programmatically [BottomBarController.show],
+  /// [BottomBarController.hide], [BottomBarController.toggle], or scroll the
+  /// body to its start/end. A controller can be attached to only one bar at a time.
   final BottomBarController? controller;
+
+  /// Size, shape, and positioning configuration.
+  ///
+  /// Falls back to [BottomBarThemeData.layout], then to [BottomBarLayout]
+  /// defaults when null.
   final BottomBarLayout? layout;
+
+  /// Show/hide animation configuration.
+  ///
+  /// Falls back to [BottomBarThemeData.motion], then to [BottomBarMotion]
+  /// defaults (Cupertino spring) when null.
   final BottomBarMotion? motion;
+
+  /// Scroll-detection configuration.
+  ///
+  /// Falls back to [BottomBarThemeData.scrollBehavior], then to
+  /// [BottomBarScrollBehavior] defaults when null.
   final BottomBarScrollBehavior? scrollBehavior;
+
+  /// Per-instance decoration overrides.
+  ///
+  /// Applied after [ThemeExtension] defaults but before per-widget config
+  /// arguments ([layout], [motion], [scrollBehavior]).
   final BottomBarThemeData? theme;
+
+  /// Builder for a custom back-to-top icon shown while the bar is hidden.
+  ///
+  /// When null a default up-arrow icon is used. The builder receives the
+  /// current animated width and height of the icon container.
   final BackToTopIconBuilder? icon;
+
+  /// Whether the back-to-top icon is rendered at all.
+  ///
+  /// Defaults to `true`. Set to `false` to suppress the icon entirely.
   final bool showIcon;
+
+  /// Accessibility label for the back-to-top icon.
+  ///
+  /// Passed to [Semantics.label]. Defaults to null (no label announced).
   final String? iconSemanticLabel;
+
+  /// Tooltip text shown on long-press of the back-to-top icon.
+  ///
+  /// Defaults to `'Scroll to top'` when null.
   final String? iconTooltip;
+
+  /// Called every time bar visibility changes.
+  ///
+  /// The argument is `true` when the bar becomes visible, `false` when hidden.
   final ValueChanged<bool>? onVisibilityChanged;
+
+  /// Called when the bar transitions from hidden to visible.
   final VoidCallback? onBottomBarShown;
+
+  /// Called when the bar transitions from visible to hidden.
   final VoidCallback? onBottomBarHidden;
 
   @override

@@ -31,6 +31,8 @@ class BottomBarScrollBehavior {
   /// entirely (no offset tracking, no visibility change).
   final bool Function(ScrollNotification notification)? predicate;
 
+  /// Returns a copy of this scroll behaviour with the given fields replaced by
+  /// non-null values. Null arguments leave the corresponding field unchanged.
   BottomBarScrollBehavior copyWith({
     bool? hideOnScroll,
     bool? reverse,
