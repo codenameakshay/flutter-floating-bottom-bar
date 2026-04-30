@@ -10,9 +10,9 @@ class SearchBarDemoPage extends StatelessWidget {
       backgroundColor: const Color(0xFFFAFAF8),
       body: BottomBar(
         layout: BottomBarLayout(
-          width: MediaQuery.of(context).size.width - 32,
-          offset: 18,
-          borderRadius: BorderRadius.circular(34),
+          width: MediaQuery.of(context).size.width - 48,
+          offset: 20,
+          borderRadius: BorderRadius.circular(28),
           alignment: Alignment.bottomCenter,
         ),
         motion: const BottomBarMotion.cupertino(
@@ -22,12 +22,12 @@ class SearchBarDemoPage extends StatelessWidget {
         theme: BottomBarThemeData(
           barDecoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(34),
+            borderRadius: BorderRadius.circular(28),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x1A000000),
-                blurRadius: 38,
-                offset: Offset(0, 20),
+                blurRadius: 30,
+                offset: Offset(0, 16),
               ),
             ],
           ),
@@ -35,13 +35,13 @@ class SearchBarDemoPage extends StatelessWidget {
             color: Colors.black,
             shape: BoxShape.circle,
           ),
-          iconWidth: 48,
-          iconHeight: 48,
+          iconWidth: 40,
+          iconHeight: 40,
         ),
         body: CustomScrollView(
           slivers: [
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(28, 64, 28, 0),
+              padding: const EdgeInsets.fromLTRB(24, 54, 24, 0),
               sliver: SliverToBoxAdapter(child: _PromptHeader()),
             ),
             const SliverFillRemaining(
@@ -49,7 +49,7 @@ class SearchBarDemoPage extends StatelessWidget {
               child: Center(
                 child: Icon(
                   Icons.explore_rounded,
-                  size: 88,
+                  size: 64,
                   color: Color(0x22000000),
                 ),
               ),
@@ -101,7 +101,7 @@ class _PromptDock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 18, 14, 14),
+      padding: const EdgeInsets.fromLTRB(16, 14, 12, 12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,31 +110,34 @@ class _PromptDock extends StatelessWidget {
             'Ask Anything',
             style: TextStyle(
               color: Colors.black.withValues(alpha: 0.42),
-              fontSize: 22,
+              fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
           Row(
             children: [
               const _CircleAction(icon: Icons.attach_file_rounded),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               const _PillAction(icon: Icons.lightbulb_outline, label: 'Expert'),
               const Spacer(),
               const _CircleAction(icon: Icons.mic_none_rounded),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               FilledButton.icon(
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.black,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 13,
+                    horizontal: 14,
+                    vertical: 10,
                   ),
                 ),
                 onPressed: () {},
-                icon: const Icon(Icons.graphic_eq_rounded),
-                label: const Text('Speak'),
+                icon: const Icon(Icons.graphic_eq_rounded, size: 18),
+                label: const Text(
+                  'Speak',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                ),
               ),
             ],
           ),
@@ -152,20 +155,20 @@ class _RoundButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 64,
-      height: 64,
+      height: 50,
+      width: 50,
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
         boxShadow: const [
           BoxShadow(
             color: Color(0x12000000),
-            blurRadius: 22,
-            offset: Offset(0, 12),
+            blurRadius: 16,
+            offset: Offset(0, 8),
           ),
         ],
       ),
-      child: Icon(icon, size: 30),
+      child: Icon(icon, size: 24),
     );
   }
 }
@@ -179,7 +182,7 @@ class _Segment extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: selected ? const Color(0xFFF6F6F3) : Colors.transparent,
         borderRadius: BorderRadius.circular(999),
@@ -187,7 +190,7 @@ class _Segment extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 18,
+          fontSize: 15,
           fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
         ),
       ),
@@ -203,13 +206,13 @@ class _CircleAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 46,
-      height: 46,
+      width: 38,
+      height: 38,
       decoration: const BoxDecoration(
         color: Color(0xFFF4F4F2),
         shape: BoxShape.circle,
       ),
-      child: Icon(icon),
+      child: Icon(icon, size: 20),
     );
   }
 }
@@ -223,16 +226,19 @@ class _PillAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
         color: const Color(0xFFF4F4F2),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         children: [
-          Icon(icon),
-          const SizedBox(width: 8),
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+          Icon(icon, size: 18),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          ),
         ],
       ),
     );

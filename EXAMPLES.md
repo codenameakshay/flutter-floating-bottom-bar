@@ -13,6 +13,7 @@ The examples now focus on motion. `BottomBarMotion()` defaults to Motor-backed C
 
 - **Issues dock** (`example/lib/demos/tab_bar_demo.dart`): reference-inspired issue list with a floating icon dock and search puck. Scroll quickly up/down to see the Cupertino spring redirect mid-flight.
 - **AI prompt dock** (`example/lib/demos/search_bar_demo.dart`): large prompt composer with pill actions, a speak button, and interactive Cupertino motion.
+- **Basic TabBar** (`example/lib/demos/basic_tab_bar_demo.dart`): direct five-tab bottom bar with a floating center action, colored pages, hide-on-scroll, and the default Cupertino-style spring.
 - **Minimal API** (`example/lib/demos/basic_demo.dart`): compact example showing the default spring behavior with the smallest useful `BottomBar` setup.
 
 ## Supporting Recipes

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'demos/badges_demo.dart';
 import 'demos/basic_demo.dart';
+import 'demos/basic_tab_bar_demo.dart';
 import 'demos/custom_transition_demo.dart';
 import 'demos/nested_scroll_demo.dart';
 import 'demos/search_bar_demo.dart';
@@ -35,6 +36,7 @@ class _DemoPicker extends StatelessWidget {
     final demos = <(String, WidgetBuilder)>[
       ('Issues dock', (_) => const TabBarDemoPage()),
       ('AI prompt dock', (_) => const SearchBarDemoPage()),
+      ('Basic TabBar', (_) => const BasicTabBarDemoPage()),
       ('Minimal API', (_) => const BasicDemoPage()),
       ('Nested scroll', (_) => const NestedScrollDemoPage()),
       ('Badged nav', (_) => const BadgesDemoPage()),

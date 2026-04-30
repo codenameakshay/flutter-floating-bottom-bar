@@ -17,9 +17,9 @@ class _TabBarDemoPageState extends State<TabBarDemoPage> {
       backgroundColor: const Color(0xFFFAFAF8),
       body: BottomBar(
         layout: BottomBarLayout(
-          width: MediaQuery.of(context).size.width - 48,
-          offset: 24,
-          borderRadius: BorderRadius.circular(38),
+          width: MediaQuery.of(context).size.width - 64,
+          offset: 20,
+          borderRadius: BorderRadius.circular(32),
           clip: Clip.none,
         ),
         motion: const BottomBarMotion.cupertino(
@@ -30,12 +30,12 @@ class _TabBarDemoPageState extends State<TabBarDemoPage> {
         theme: BottomBarThemeData(
           barDecoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(38),
+            borderRadius: BorderRadius.circular(32),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x1A000000),
-                blurRadius: 40,
-                offset: Offset(0, 22),
+                blurRadius: 30,
+                offset: Offset(0, 16),
               ),
             ],
           ),
@@ -43,16 +43,16 @@ class _TabBarDemoPageState extends State<TabBarDemoPage> {
             color: Colors.black,
             shape: BoxShape.circle,
           ),
-          iconWidth: 48,
-          iconHeight: 48,
+          iconWidth: 40,
+          iconHeight: 40,
         ),
         body: ListView(
-          padding: const EdgeInsets.fromLTRB(32, 70, 32, 150),
+          padding: const EdgeInsets.fromLTRB(24, 58, 24, 128),
           children: const [
             _Header(),
-            SizedBox(height: 34),
+            SizedBox(height: 26),
             _FilterRow(),
-            SizedBox(height: 34),
+            SizedBox(height: 28),
             _SectionLabel(label: 'In Progress'),
             _IssueRow(
               icon: Icons.signal_cellular_alt_rounded,
@@ -64,7 +64,7 @@ class _TabBarDemoPageState extends State<TabBarDemoPage> {
               accent: Color(0xFFFF8A5B),
               text: 'HBT-4: Design daily habit list UI',
             ),
-            SizedBox(height: 32),
+            SizedBox(height: 26),
             _SectionLabel(label: 'Todo'),
             _IssueRow(
               icon: Icons.more_horiz_rounded,
@@ -79,7 +79,7 @@ class _TabBarDemoPageState extends State<TabBarDemoPage> {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             children: [
               Expanded(
@@ -110,7 +110,7 @@ class _TabBarDemoPageState extends State<TabBarDemoPage> {
                   onTap: () => setState(() => _index = 3),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               _SearchPuck(onTap: () => setState(() => _index = 4)),
             ],
           ),
@@ -132,7 +132,7 @@ class _Header extends StatelessWidget {
           child: Text(
             'My issues',
             style: TextStyle(
-              fontSize: 38,
+              fontSize: 30,
               height: 1,
               fontWeight: FontWeight.w800,
               letterSpacing: 0,
@@ -140,23 +140,23 @@ class _Header extends StatelessWidget {
           ),
         ),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(999),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x12000000),
-                blurRadius: 24,
-                offset: Offset(0, 14),
+                blurRadius: 18,
+                offset: Offset(0, 10),
               ),
             ],
           ),
           child: const Row(
             children: [
-              Icon(Icons.edit_square, size: 28),
-              SizedBox(width: 24),
-              Icon(Icons.more_horiz_rounded, size: 30),
+              Icon(Icons.edit_square, size: 22),
+              SizedBox(width: 18),
+              Icon(Icons.more_horiz_rounded, size: 24),
             ],
           ),
         ),
@@ -170,14 +170,18 @@ class _FilterRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
-      children: [
-        _FilterPill(label: 'Assigned', selected: true),
-        SizedBox(width: 20),
-        _FilterPill(label: 'Created'),
-        SizedBox(width: 20),
-        _FilterPill(label: 'Subscribed'),
-      ],
+    return const SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: BouncingScrollPhysics(),
+      child: Row(
+        children: [
+          _FilterPill(label: 'Assigned', selected: true),
+          SizedBox(width: 12),
+          _FilterPill(label: 'Created'),
+          SizedBox(width: 12),
+          _FilterPill(label: 'Subscribed'),
+        ],
+      ),
     );
   }
 }
@@ -191,7 +195,7 @@ class _FilterPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
         color: selected ? Colors.white : Colors.transparent,
         borderRadius: BorderRadius.circular(999),
@@ -199,7 +203,7 @@ class _FilterPill extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 18,
+          fontSize: 15,
           color: selected ? Colors.black : Colors.black.withValues(alpha: 0.62),
           fontWeight: FontWeight.w700,
         ),
@@ -216,7 +220,7 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         children: [
           Expanded(
@@ -224,7 +228,7 @@ class _SectionLabel extends StatelessWidget {
               label,
               style: TextStyle(
                 color: Colors.black.withValues(alpha: 0.38),
-                fontSize: 20,
+                fontSize: 16,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -250,19 +254,19 @@ class _IssueRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 28),
+      padding: const EdgeInsets.only(bottom: 22),
       child: Row(
         children: [
-          Icon(icon, color: accent, size: 30),
-          const SizedBox(width: 14),
-          Icon(Icons.circle_outlined, color: accent, size: 30),
-          const SizedBox(width: 16),
+          Icon(icon, color: accent, size: 23),
+          const SizedBox(width: 10),
+          Icon(Icons.circle_outlined, color: accent, size: 23),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               text,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontSize: 24,
+                fontSize: 18,
                 height: 1.05,
                 fontWeight: FontWeight.w600,
               ),
@@ -292,12 +296,12 @@ class _DockButton extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        height: 58,
+        height: 46,
         decoration: BoxDecoration(
           color: selected ? const Color(0xFFF1F1EF) : Colors.transparent,
           borderRadius: BorderRadius.circular(32),
         ),
-        child: Icon(icon, size: 30),
+        child: Icon(icon, size: 24),
       ),
     );
   }
@@ -314,13 +318,13 @@ class _SearchPuck extends StatelessWidget {
       customBorder: const CircleBorder(),
       onTap: onTap,
       child: Container(
-        width: 62,
-        height: 62,
+        width: 50,
+        height: 50,
         decoration: const BoxDecoration(
           color: Color(0xFFF8F8F6),
           shape: BoxShape.circle,
         ),
-        child: const Icon(Icons.search_rounded, size: 32),
+        child: const Icon(Icons.search_rounded, size: 26),
       ),
     );
   }
