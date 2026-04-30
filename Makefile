@@ -105,6 +105,19 @@ run-macos: ## Run the example app on macOS
 	cd $(APP_DIR) && $(FLUTTER) run -d macos
 
 # ---------------------------------------------------------------------------
+# Recording demo gifs (iOS Simulator)
+# ---------------------------------------------------------------------------
+
+.PHONY: record
+record: ## Record booted iOS sim -> screenshots/$(NAME).gif (Ctrl+C to stop)
+	@if [ -z "$(NAME)" ]; then \
+		echo "usage: make record NAME=<slug>"; \
+		echo "  e.g. make record NAME=1-issues-dock"; \
+		exit 64; \
+	fi
+	./tool/record_gif.sh $(NAME)
+
+# ---------------------------------------------------------------------------
 # Build example app
 # ---------------------------------------------------------------------------
 
