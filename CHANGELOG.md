@@ -1,3 +1,7 @@
+## 2.0.1
+
+- Fix: the back-to-top icon became unclickable when a large `iconOffset` was set. The icon was painted at the offset position but its `SafeArea` ancestor still hit-tested against the original (untranslated) rect, so a large offset moved the visible icon outside its tappable area. The offset now wraps the icon's `SafeArea` so hit-testing follows the painted position. ([#19](https://github.com/codenameakshay/flutter-floating-bottom-bar/issues/19))
+
 ## 2.0.0
 
 Major release. Breaking changes — see the migration table in README.md and EXAMPLES.md.

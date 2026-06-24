@@ -46,7 +46,7 @@ and the Flutter guide for
 
 ## Features
 
-`flutter_floating_bottom_bar` v2.0.0 is a floating widget host that sits above your scrollable content and responds to scroll events automatically — no `ScrollController` wiring required.
+`flutter_floating_bottom_bar` v2.0.1 is a floating widget host that sits above your scrollable content and responds to scroll events automatically — no `ScrollController` wiring required.
 
 - **Host anything**: pass a `TabBar`, search bar, custom `Row`, or `BottomBarItems` widget as the floating `child`.
 - **Notification-based scroll detection**: the bar listens to `ScrollNotification` from any descendant scrollable in the body subtree — `NestedScrollView`, multi-`TabBarView`, `CustomScrollView`, and user-supplied controllers all work out of the box.
@@ -86,7 +86,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_floating_bottom_bar: ^2.0.0
+  flutter_floating_bottom_bar: ^2.0.1
 ```
 
 Or use the Flutter CLI:
