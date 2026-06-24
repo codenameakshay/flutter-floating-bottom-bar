@@ -384,14 +384,19 @@ class _BottomBarState extends State<BottomBar>
     required Widget child,
     Offset translate = Offset.zero,
   }) {
-    final padded = Padding(padding: EdgeInsets.all(l.offset), child: child);
-    final translated = translate == Offset.zero
-        ? padded
-        : Transform.translate(offset: translate, child: padded);
-    return Align(
-      alignment: l.alignment,
-      child: l.respectSafeArea ? SafeArea(child: translated) : translated,
-    );
+    Widget content = Padding(padding: EdgeInsets.all(l.offset), child: child);
+    if (l.respectSafeArea) {
+      content = SafeArea(child: content);
+    }
+    // Translate outside the SafeArea/Padding so the offset wraps everything
+    // below it. Transform keeps hit-testing aligned with the painted position
+    // for its own subtree, so any size-checking ancestor (the SafeArea's
+    // RenderPadding) must sit beneath the Transform — otherwise large offsets
+    // move the icon outside its untranslated hit rect and taps stop landing.
+    if (translate != Offset.zero) {
+      content = Transform.translate(offset: translate, child: content);
+    }
+    return Align(alignment: l.alignment, child: content);
   }
 
   Widget _buildIcon(BottomBarThemeData theme) {
