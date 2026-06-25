@@ -292,6 +292,27 @@ class _BottomBarState extends State<BottomBar>
 
   @override
   Future<void> scrollToBoundary({required bool toEnd}) async {
+    // A NestedScrollView splits scrolling across two coordinated positions —
+    // an outer one driving the header slivers (e.g. SliverAppBar/
+    // FlexibleSpaceBar) and an inner one driving the body. Animating the single
+    // last-active position only resets one of them, leaving the header
+    // collapsed.
+    //
+    // The two positions are not independent: NestedScrollView routes every
+    // `animateTo` through a shared coordinator, so a single call already drives
+    // both. Driving the *outer* controller to its top expands the header and
+    // pulls the inner body to the top with it; driving the *inner* controller
+    // to its bottom collapses the header and scrolls the body to the end. We
+    // therefore issue exactly one call — animating both controllers at once
+    // would have them fight over the coordinator and land at the wrong offset.
+    final nested = _nestedScrollViewOf(_dispatcher.lastActiveContext);
+    if (nested != null) {
+      final controller = toEnd ? nested.innerController : nested.outerController;
+      await _animateControllerToBoundary(controller, toEnd: toEnd);
+      _setBarVisible(true, notifyCallbacks: true, fromController: true);
+      return;
+    }
+
     final position = _dispatcher.lastActivePosition;
     if (position == null) {
       assert(() {
@@ -312,6 +333,34 @@ class _BottomBarState extends State<BottomBar>
       curve: _motion.curve,
     );
     _setBarVisible(true, notifyCallbacks: true, fromController: true);
+  }
+
+  /// Returns the [NestedScrollViewState] enclosing [context], or `null` if the
+  /// active scrollable is not inside a [NestedScrollView] (or the context is no
+  /// longer mounted).
+  NestedScrollViewState? _nestedScrollViewOf(BuildContext? context) {
+    if (context == null || !context.mounted) return null;
+    try {
+      return context.findAncestorStateOfType<NestedScrollViewState>();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Animates every position attached to [controller] to its boundary.
+  Future<void> _animateControllerToBoundary(
+    ScrollController controller, {
+    required bool toEnd,
+  }) {
+    if (!controller.hasClients) return Future<void>.value();
+    return Future.wait([
+      for (final position in controller.positions)
+        position.animateTo(
+          toEnd ? position.maxScrollExtent : position.minScrollExtent,
+          duration: _motion.duration,
+          curve: _motion.curve,
+        ),
+    ]);
   }
 
   // -- theme resolution ------------------------------------------------------

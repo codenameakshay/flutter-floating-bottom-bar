@@ -29,6 +29,16 @@ class ScrollNotificationDispatcher {
   ScrollPosition? _lastActivePosition;
   ScrollPosition? get lastActivePosition => _lastActivePosition;
 
+  BuildContext? _lastActiveContext;
+
+  /// The [BuildContext] of the most recently active scrollable.
+  ///
+  /// Used by `BottomBarController.scrollToStart`/`scrollToEnd` to locate an
+  /// enclosing [NestedScrollView], whose header and body scroll on two
+  /// coordinated [ScrollPosition]s that must both be animated to fully return
+  /// to the top.
+  BuildContext? get lastActiveContext => _lastActiveContext;
+
   int _keyFor(ScrollNotification n, ScrollPosition? position) {
     if (position != null) return identityHashCode(position);
     final context = n.context;
@@ -58,6 +68,7 @@ class ScrollNotificationDispatcher {
 
     final position = _maybePositionOf(notification);
     _lastActivePosition = position;
+    _lastActiveContext = notification.context;
     final key = _keyFor(notification, position);
 
     final pixels = notification.metrics.pixels;
