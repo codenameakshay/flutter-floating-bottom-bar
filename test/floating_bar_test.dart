@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -364,7 +366,109 @@ void main() {
     await tester.pumpAndSettle();
     expect(controller.isVisible, isFalse);
   });
+
+  testWidgets(
+      'scrollToStart fully resets both header and body of a NestedScrollView',
+      (tester) async {
+    final controller = BottomBarController();
+    final nestedKey = GlobalKey<NestedScrollViewState>();
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: BottomBar(
+          controller: controller,
+          body: NestedScrollView(
+            key: nestedKey,
+            headerSliverBuilder: (_, __) => const [
+              SliverAppBar(
+                expandedHeight: 200,
+                pinned: true,
+                flexibleSpace: FlexibleSpaceBar(title: Text('Nested')),
+              ),
+            ],
+            body: ListView.builder(
+              itemCount: 200,
+              itemBuilder: (_, i) => ListTile(title: Text('I $i')),
+            ),
+          ),
+          child: const SizedBox(
+            height: 56,
+            child: Center(child: Text('child')),
+          ),
+        ),
+      ),
+    ));
+
+    // Scroll far enough to collapse the header (outer) and move the list
+    // (inner) past its top.
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -400));
+    await tester.pumpAndSettle();
+
+    final outer = nestedKey.currentState!.outerController.position;
+    final inner = nestedKey.currentState!.innerController.position;
+    // Sanity: both positions are scrolled away from the top.
+    expect(outer.pixels, greaterThan(0));
+    expect(inner.pixels, greaterThan(0));
+
+    // Not awaited: the animation only advances as the test pumps.
+    unawaited(controller.scrollToStart());
+    await tester.pumpAndSettle();
+
+    // Both the collapsed header and the list must return to the very top so
+    // the FlexibleSpaceBar is fully expanded again.
+    expect(outer.pixels, morePreciselyEquals(outer.minScrollExtent));
+    expect(inner.pixels, morePreciselyEquals(inner.minScrollExtent));
+  });
+
+  testWidgets('scrollToEnd collapses the header and scrolls the body to bottom',
+      (tester) async {
+    final controller = BottomBarController();
+    final nestedKey = GlobalKey<NestedScrollViewState>();
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: BottomBar(
+          controller: controller,
+          body: NestedScrollView(
+            key: nestedKey,
+            headerSliverBuilder: (_, __) => const [
+              SliverAppBar(
+                expandedHeight: 200,
+                pinned: true,
+                flexibleSpace: FlexibleSpaceBar(title: Text('Nested')),
+              ),
+            ],
+            body: ListView.builder(
+              itemCount: 200,
+              itemBuilder: (_, i) => ListTile(title: Text('I $i')),
+            ),
+          ),
+          child: const SizedBox(
+            height: 56,
+            child: Center(child: Text('child')),
+          ),
+        ),
+      ),
+    ));
+
+    // A small scroll registers the active scrollable's context without
+    // reaching either boundary.
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -50));
+    await tester.pumpAndSettle();
+
+    final outer = nestedKey.currentState!.outerController.position;
+    final inner = nestedKey.currentState!.innerController.position;
+
+    unawaited(controller.scrollToEnd());
+    await tester.pumpAndSettle();
+
+    // Header fully collapsed and body scrolled to its bottom.
+    expect(outer.pixels, morePreciselyEquals(outer.maxScrollExtent));
+    expect(inner.pixels, morePreciselyEquals(inner.maxScrollExtent));
+  });
 }
+
+Matcher morePreciselyEquals(double value) => closeTo(value, 0.5);
 
 double _barProgress(WidgetTester tester) {
   final slide = tester

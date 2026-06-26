@@ -1,0 +1,6 @@
+{
+  "last_turn_at": "2026-04-30T08:22:39.604Z",
+  "turn_count": 12,
+  "last_progress_at": "2026-04-30T08:22:39.604Z",
+  "last_agent_output": "Added it as a proper API:\n\n```dart\nBottomBar(\n  layout: const BottomBarLayout(\n    iconOffset: Offse"
+}

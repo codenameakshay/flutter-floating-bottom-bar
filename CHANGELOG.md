@@ -1,3 +1,7 @@
+## 2.0.2
+
+- Fix: `BottomBarController.scrollToStart()` (and the back-to-top icon) did not fully reset a `NestedScrollView` — the collapsed `SliverAppBar`/`FlexibleSpaceBar` stayed collapsed and the list landed below its true top. A `NestedScrollView` scrolls on two coordinated positions (an outer header and an inner body), but the bar only animated the most-recently-active one. The controller now detects an enclosing `NestedScrollView` and drives its shared scroll coordinator with a single call — animating the outer controller to the top (which pulls the inner body up with it) for `scrollToStart`, and the inner controller to the bottom (which collapses the header) for `scrollToEnd`. ([#21](https://github.com/codenameakshay/flutter-floating-bottom-bar/issues/21))
+
 ## 2.0.1
 
 - Fix: the back-to-top icon became unclickable when a large `iconOffset` was set. The icon was painted at the offset position but its `SafeArea` ancestor still hit-tested against the original (untranslated) rect, so a large offset moved the visible icon outside its tappable area. The offset now wraps the icon's `SafeArea` so hit-testing follows the painted position. ([#19](https://github.com/codenameakshay/flutter-floating-bottom-bar/issues/19))
