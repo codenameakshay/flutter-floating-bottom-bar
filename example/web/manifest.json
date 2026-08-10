@@ -1,12 +1,11 @@
 {
-    "name": "floating_bottom_bar",
-    "short_name": "floating_bottom_bar",
+    "name": "Flutter Floating Bottom Bar",
+    "short_name": "Floating Bar",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "description": "Interactive demos for the Flutter Floating Bottom Bar package.",
     "prefer_related_applications": false,
     "icons": [
         {
