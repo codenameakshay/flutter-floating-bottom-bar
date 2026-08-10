@@ -157,7 +157,7 @@ class BottomBar extends StatefulWidget {
 class _BottomBarState extends State<BottomBar>
     with SingleTickerProviderStateMixin
     implements BottomBarBindingForController {
-  late AnimationController _motionController;
+  late BoundedSingleMotionController _motionController;
   late ScrollNotificationDispatcher _dispatcher;
   late BottomBarMotion _motion;
   late BottomBarScrollBehavior _scrollBehavior;
@@ -189,10 +189,10 @@ class _BottomBarState extends State<BottomBar>
         widget.theme?.scrollBehavior ??
         const BottomBarScrollBehavior();
 
-    _motionController = AnimationController.unbounded(
+    _motionController = BoundedSingleMotionController(
+      motion: _motion.resolveMotion(),
       vsync: this,
-      value: 1,
-      animationBehavior: AnimationBehavior.normal,
+      initialValue: 1,
     );
 
     _dispatcher = ScrollNotificationDispatcher(
@@ -228,6 +228,10 @@ class _BottomBarState extends State<BottomBar>
   void _syncMotionAndScroll(BottomBarThemeData theme) {
     final newMotion = _effectiveMotion(theme);
     final newScroll = _effectiveScrollBehavior(theme);
+
+    if (_motion != newMotion) {
+      _motionController.motion = newMotion.resolveMotion();
+    }
 
     if (_scrollBehavior != newScroll) {
       _dispatcher.deltaThreshold = newScroll.deltaThreshold;
@@ -514,25 +518,11 @@ class _BottomBarState extends State<BottomBar>
   void _animateBarTo(bool visible) {
     final target = visible ? 1.0 : 0.0;
     if (_disableAnimations) {
+      _motionController.stop(canceled: true);
       _motionController.value = target;
       return;
     }
-    final resolved = _motion.resolveMotion();
-    if (resolved
-        case CurvedMotion(duration: final duration, curve: final curve)) {
-      _motionController.animateTo(
-        target,
-        duration: duration,
-        curve: curve,
-      );
-      return;
-    }
-
-    _motionController.animateTo(
-      target,
-      duration: _motion.duration,
-      curve: resolved.toCurveWithVelocity(_motionController.velocity),
-    );
+    _motionController.animateTo(target, forward: visible);
   }
 
   bool get _disableAnimations {
