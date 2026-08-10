@@ -79,6 +79,14 @@ enum BottomBarCupertinoMotion {
 ///   return Opacity(opacity: v, child: child);
 /// },
 /// ```
+///
+/// Custom transitions must preserve the child's layout footprint. Use
+/// paint-only wrappers such as [Opacity], [Transform], or other effects that
+/// do not change layout size. Layout-affecting wrappers such as
+/// [SizeTransition], [Align] with `heightFactor`, or similar size-changing
+/// widgets are unsupported because [BottomBarScope.barHeight] and
+/// [BottomBarBodyPadding] guarantee stable reserved footprint while the bar
+/// animates in and out.
 @immutable
 class BottomBarMotion {
   static const Duration _defaultCupertinoDuration = Duration(milliseconds: 500);
@@ -195,6 +203,13 @@ class BottomBarMotion {
 
   /// When non-null, takes precedence over [transition]; receives the bar's
   /// `Animation<double>` (from 0 hidden → 1 shown) and the bar child.
+  ///
+  /// The returned widget must preserve the child's layout footprint. Restrict
+  /// custom transitions to paint-only effects such as [Opacity],
+  /// [Transform.translate], or [Transform.scale]. Layout-affecting wrappers
+  /// such as [SizeTransition] or [Align] with a non-null `heightFactor` are
+  /// unsupported because they break the stable footprint contract used by
+  /// [BottomBarScope.barHeight] and [BottomBarBodyPadding].
   final Widget Function(BuildContext, Animation<double>, Widget)?
       transitionBuilder;
 

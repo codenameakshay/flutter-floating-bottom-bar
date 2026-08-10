@@ -8,6 +8,10 @@ import '../bottom_bar_scope.dart';
 /// still layering the bar above the scrollable. The reserved space stays in
 /// place while the bar is hidden because [BottomBarScope.barHeight] reports the
 /// bar's layout footprint, not its animated transform.
+///
+/// This widget is intentionally bottom-edge clearance for bottom-aligned bars.
+/// It does not inspect [BottomBarLayout.alignment] or try to reserve space on
+/// any other edge.
 class BottomBarBodyPadding extends StatelessWidget {
   const BottomBarBodyPadding({
     required this.child,
