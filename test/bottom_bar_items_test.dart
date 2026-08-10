@@ -41,7 +41,7 @@ void main() {
     });
 
     testWidgets(
-        'exposes selected enabled button semantics without tooltip duplication',
+        'uses the explicit tooltip name once when label and tooltip are both present',
         (tester) async {
       final semantics = tester.ensureSemantics();
       try {
@@ -56,17 +56,20 @@ void main() {
           ),
         ));
 
-        final data = tester.getSemantics(find.text('Home')).getSemanticsData();
+        final data = tester
+            .getSemantics(find.bySemanticsLabel('Go home'))
+            .getSemanticsData();
 
-        expect(data.label, 'Home');
+        expect(data.label, 'Go home');
         expect(data.flagsCollection.isButton, isTrue);
         expect(data.flagsCollection.isSelected, ui.Tristate.isTrue);
         expect(data.flagsCollection.isEnabled, ui.Tristate.isTrue);
         expect(data.hasAction(SemanticsAction.tap), isTrue);
         expect(
-          _semanticsLabels(tester).where((label) => label == 'Home'),
+          _semanticsLabels(tester).where((label) => label == 'Go home'),
           hasLength(1),
         );
+        expect(_semanticsLabels(tester), isNot(contains('Home')));
         expect(find.byTooltip('Go home'), findsOneWidget);
       } finally {
         semantics.dispose();
@@ -120,31 +123,43 @@ void main() {
       }
     });
 
-    testWidgets('uses tooltip as the only accessible name for icon-only items',
+    testWidgets(
+        'uses semanticLabel as the only accessible name and semantics activation triggers onTap once',
         (tester) async {
       final semantics = tester.ensureSemantics();
+      var taps = 0;
       try {
         await tester.pumpWidget(_buildItemHarness(
           item: BottomBarItem(
             icon: const Icon(Icons.info_outline),
+            label: const ExcludeSemantics(
+              child: Text('Visual only'),
+            ),
+            semanticLabel: 'Open info',
             tooltip: 'More info',
-            onTap: () {},
+            onTap: () => taps++,
           ),
         ));
 
         final data = tester
-            .getSemantics(find.bySemanticsLabel('More info'))
+            .getSemantics(find.bySemanticsLabel('Open info'))
             .getSemanticsData();
 
-        expect(data.label, 'More info');
+        expect(data.label, 'Open info');
         expect(data.flagsCollection.isButton, isTrue);
         expect(data.flagsCollection.isEnabled, ui.Tristate.isTrue);
         expect(data.hasAction(SemanticsAction.tap), isTrue);
         expect(
-          _semanticsLabels(tester).where((label) => label == 'More info'),
+          _semanticsLabels(tester).where((label) => label == 'Open info'),
           hasLength(1),
         );
+        expect(_semanticsLabels(tester), isNot(contains('More info')));
+        expect(_semanticsLabels(tester), isNot(contains('Visual only')));
         expect(find.byTooltip('More info'), findsOneWidget);
+
+        tester.semantics.tap(find.semantics.byLabel('Open info'));
+        await tester.pump();
+        expect(taps, 1);
       } finally {
         semantics.dispose();
       }

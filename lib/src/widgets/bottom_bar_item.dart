@@ -7,6 +7,12 @@ import 'package:flutter/material.dart';
 /// Wraps the whole thing in an [InkWell] with an explicit 48 by 48 minimum
 /// interactive target, button semantics, and an optional [Tooltip].
 ///
+/// Use [semanticLabel] to provide a deterministic accessible name when the
+/// visible [label] is decorative, custom, or otherwise unsuitable for
+/// accessibility. When [semanticLabel] is null, [tooltip] becomes the explicit
+/// accessible name fallback. If neither is provided, the child's own semantics
+/// remain visible.
+///
 /// No internal selection state — pass [selected] from your own state and
 /// handle [onTap].
 class BottomBarItem extends StatelessWidget {
@@ -18,6 +24,7 @@ class BottomBarItem extends StatelessWidget {
     this.badge,
     this.selected = false,
     this.onTap,
+    this.semanticLabel,
     this.tooltip,
     this.color,
     this.selectedColor,
@@ -50,9 +57,18 @@ class BottomBarItem extends StatelessWidget {
   /// Called when the item is tapped.
   final VoidCallback? onTap;
 
+  /// Explicit accessible name for this item.
+  ///
+  /// When non-null, this name is exposed as the only semantics label for the
+  /// item and descendant semantics are excluded to prevent duplicate
+  /// announcements. When null, [tooltip] becomes the explicit accessible name
+  /// fallback. If both are null, descendant semantics remain visible.
+  final String? semanticLabel;
+
   /// Tooltip shown on long-press.
   ///
-  /// When null no tooltip is rendered.
+  /// When [semanticLabel] is null, this also becomes the explicit accessible
+  /// name fallback. When null no tooltip is rendered.
   final String? tooltip;
 
   /// Icon and label colour when [selected] is `false`.
@@ -71,7 +87,7 @@ class BottomBarItem extends StatelessWidget {
     final effectiveColor = selected
         ? (selectedColor ?? cs.primary)
         : (color ?? cs.onSurfaceVariant);
-    final semanticLabel = label == null ? tooltip : null;
+    final explicitSemanticLabel = semanticLabel ?? tooltip;
 
     final iconWidget = selected ? (selectedIcon ?? icon) : icon;
 
@@ -126,11 +142,16 @@ class BottomBarItem extends StatelessWidget {
       );
     }
 
+    if (explicitSemanticLabel != null) {
+      child = ExcludeSemantics(child: child);
+    }
+
     return Semantics(
       button: true,
       enabled: onTap != null,
       selected: selected,
-      label: semanticLabel,
+      label: explicitSemanticLabel,
+      onTap: explicitSemanticLabel != null ? onTap : null,
       child: child,
     );
   }
