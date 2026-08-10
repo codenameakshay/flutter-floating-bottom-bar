@@ -8,8 +8,9 @@ import 'bottom_bar.dart';
 /// most-recently-active scrollable inside [BottomBar.body] to its start or end.
 ///
 /// Attach the controller to a [BottomBar] via [BottomBar.controller]. A single
-/// controller may only be attached to one bar at a time — double-attaching
-/// asserts in debug mode.
+/// controller may only be attached to one live bar at a time. A second
+/// attachment throws a [FlutterError] and leaves the original bar binding in
+/// place.
 ///
 /// Remember to [dispose] the controller when it is no longer needed.
 ///
@@ -83,13 +84,17 @@ class BottomBarController extends ChangeNotifier {
 
   /// @nodoc — called by [BottomBar] when it mounts or the controller changes.
   void attach(BottomBarBindingForController binding) {
-    assert(
-      _binding == null || _binding == binding,
-      'BottomBarController is already attached to a BottomBar. '
-      'A controller may only drive one BottomBar at a time.',
-    );
+    if (_binding == binding) {
+      return;
+    }
+    if (_binding != null) {
+      throw FlutterError(
+        'BottomBarController is already attached to a BottomBar. '
+        'A controller may only drive one BottomBar at a time.',
+      );
+    }
     _binding = binding;
-    updateVisibility(binding.isVisible, shouldNotify: false);
+    updateVisibility(binding, binding.isVisible, shouldNotify: false);
   }
 
   /// @nodoc — called by [BottomBar] when it unmounts or the controller changes.
@@ -102,7 +107,12 @@ class BottomBarController extends ChangeNotifier {
   /// @nodoc — called by [BottomBar] to keep [isVisible] in sync with actual
   /// bar state; notifies listeners so external [AnimatedBuilder]s / [ListenableBuilder]s
   /// react automatically.
-  void updateVisibility(bool value, {bool shouldNotify = true}) {
+  void updateVisibility(
+    BottomBarBindingForController binding,
+    bool value, {
+    bool shouldNotify = true,
+  }) {
+    if (_binding != binding) return;
     if (_isVisible == value) return;
     _isVisible = value;
     if (shouldNotify) notifyListeners();

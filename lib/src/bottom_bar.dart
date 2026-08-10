@@ -198,7 +198,6 @@ class _BottomBarState extends State<BottomBar>
     );
 
     widget.controller?.attach(this);
-    widget.controller?.updateVisibility(true, shouldNotify: false);
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _measureBar());
   }
@@ -224,8 +223,8 @@ class _BottomBarState extends State<BottomBar>
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.controller != widget.controller) {
-      oldWidget.controller?.detach(this);
       widget.controller?.attach(this);
+      oldWidget.controller?.detach(this);
     }
 
     _syncMotionAndScroll(_resolvedTheme(context));
@@ -272,7 +271,7 @@ class _BottomBarState extends State<BottomBar>
 
     _motionController.animateTo(visible ? 1 : 0, forward: visible);
 
-    widget.controller?.updateVisibility(visible);
+    widget.controller?.updateVisibility(this, visible);
 
     if (notifyCallbacks) {
       widget.onVisibilityChanged?.call(visible);
@@ -309,15 +308,6 @@ class _BottomBarState extends State<BottomBar>
     // to its bottom collapses the header and scrolls the body to the end. We
     // therefore issue exactly one call — animating both controllers at once
     // would have them fight over the coordinator and land at the wrong offset.
-    final nested = _nestedScrollViewOf(_dispatcher.lastActiveContext);
-    if (nested != null) {
-      final controller =
-          toEnd ? nested.innerController : nested.outerController;
-      await _animateControllerToBoundary(controller, toEnd: toEnd);
-      _setBarVisible(true, notifyCallbacks: true, fromController: true);
-      return;
-    }
-
     final position = _dispatcher.lastActivePosition;
     if (position == null) {
       assert(() {
@@ -330,6 +320,20 @@ class _BottomBarState extends State<BottomBar>
         ));
         return true;
       }());
+      return;
+    }
+
+    final nested = _nestedScrollViewOf(_dispatcher.lastActiveContext);
+    final controller = nested == null
+        ? null
+        : _nestedBoundaryControllerForPosition(
+            nested,
+            position: position,
+            toEnd: toEnd,
+          );
+    if (controller != null) {
+      await _animateControllerToBoundary(controller, toEnd: toEnd);
+      _setBarVisible(true, notifyCallbacks: true, fromController: true);
       return;
     }
     await position.animateTo(
@@ -350,6 +354,29 @@ class _BottomBarState extends State<BottomBar>
     } catch (_) {
       return null;
     }
+  }
+
+  ScrollController? _nestedBoundaryControllerForPosition(
+    NestedScrollViewState nested, {
+    required ScrollPosition position,
+    required bool toEnd,
+  }) {
+    if (_controllerOwnsPosition(nested.outerController, position) ||
+        _controllerOwnsPosition(nested.innerController, position)) {
+      return toEnd ? nested.innerController : nested.outerController;
+    }
+    return null;
+  }
+
+  bool _controllerOwnsPosition(
+    ScrollController controller,
+    ScrollPosition position,
+  ) {
+    if (!controller.hasClients) return false;
+    for (final candidate in controller.positions) {
+      if (identical(candidate, position)) return true;
+    }
+    return false;
   }
 
   /// Animates every position attached to [controller] to its boundary.

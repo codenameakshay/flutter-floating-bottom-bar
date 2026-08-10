@@ -617,6 +617,92 @@ void main() {
     expect(outer.pixels, morePreciselyEquals(outer.maxScrollExtent));
     expect(inner.pixels, morePreciselyEquals(inner.maxScrollExtent));
   });
+
+  testWidgets(
+      'independent descendant list inside NestedScrollView stays the scroll target',
+      (tester) async {
+    final controller = BottomBarController();
+    final nestedKey = GlobalKey<NestedScrollViewState>();
+    final descendantController = ScrollController();
+    addTearDown(descendantController.dispose);
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: BottomBar(
+          controller: controller,
+          body: NestedScrollView(
+            key: nestedKey,
+            headerSliverBuilder: (_, __) => const [
+              SliverAppBar(
+                expandedHeight: 160,
+                pinned: true,
+                flexibleSpace: FlexibleSpaceBar(title: Text('Nested')),
+              ),
+            ],
+            body: ListView(
+              key: const Key('nested-body-list'),
+              children: [
+                const SizedBox(height: 200),
+                SizedBox(
+                  height: 220,
+                  child: Material(
+                    child: ListView.builder(
+                      key: const Key('descendant-list'),
+                      controller: descendantController,
+                      itemCount: 60,
+                      itemBuilder: (_, i) => SizedBox(
+                        height: 48,
+                        child: Center(child: Text('Inner $i')),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 800),
+              ],
+            ),
+          ),
+          child: const SizedBox(
+            height: 56,
+            child: Center(child: Text('child')),
+          ),
+        ),
+      ),
+    ));
+
+    final outer = nestedKey.currentState!.outerController.position;
+    final inner = nestedKey.currentState!.innerController.position;
+    expect(outer.pixels, morePreciselyEquals(outer.minScrollExtent));
+    expect(inner.pixels, morePreciselyEquals(inner.minScrollExtent));
+
+    await tester.drag(find.byKey(const Key('descendant-list')), const Offset(0, -180));
+    await tester.pumpAndSettle();
+
+    final outerBeforeStart = outer.pixels;
+    final innerBeforeStart = inner.pixels;
+    expect(descendantController.offset, greaterThan(0));
+
+    unawaited(controller.scrollToStart());
+    await tester.pumpAndSettle();
+
+    expect(descendantController.offset, morePreciselyEquals(0));
+    expect(outer.pixels, morePreciselyEquals(outerBeforeStart));
+    expect(inner.pixels, morePreciselyEquals(innerBeforeStart));
+
+    await tester.drag(find.byKey(const Key('descendant-list')), const Offset(0, -180));
+    await tester.pumpAndSettle();
+
+    final outerBeforeEnd = outer.pixels;
+    final innerBeforeEnd = inner.pixels;
+    final descendantMax = descendantController.position.maxScrollExtent;
+    expect(descendantController.offset, lessThan(descendantMax));
+
+    unawaited(controller.scrollToEnd());
+    await tester.pumpAndSettle();
+
+    expect(descendantController.offset, morePreciselyEquals(descendantMax));
+    expect(outer.pixels, morePreciselyEquals(outerBeforeEnd));
+    expect(inner.pixels, morePreciselyEquals(innerBeforeEnd));
+  });
 }
 
 Matcher morePreciselyEquals(double value) => closeTo(value, 0.5);
