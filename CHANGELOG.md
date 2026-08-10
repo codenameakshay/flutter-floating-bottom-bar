@@ -16,7 +16,9 @@
   by the bar, including configured offset and bottom safe-area when enabled.
 - `BottomBarItem` accessible naming is now deterministic:
   `semanticLabel` wins, otherwise `tooltip`, otherwise descendant semantics.
-  Explicit names exclude descendant semantics to avoid duplicate announcements.
+  Explicit names exclude descendant semantics to avoid duplicate announcements;
+  items also expose selected/enabled button state, keep a 48x48 minimum target,
+  and place badges at the directional top-end in both LTR and RTL layouts.
 - Custom `BottomBarMotion.transitionBuilder` usage is documented as a
   paint-only contract that must preserve layout footprint.
 - The hidden action is direction-aware by default: glyph, tooltip, and
@@ -40,6 +42,8 @@
   controller so start/end actions reset both header and body as expected.
 - Large `iconOffset` values keep the hidden action tappable because hit testing
   now follows the translated visual position.
+- The example web app now uses Flutter's current generated bootstrap and
+  package-specific, orientation-neutral PWA metadata.
 
 ## 2.0.2
 
