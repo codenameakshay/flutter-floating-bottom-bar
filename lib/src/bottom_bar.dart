@@ -307,7 +307,8 @@ class _BottomBarState extends State<BottomBar>
     // would have them fight over the coordinator and land at the wrong offset.
     final nested = _nestedScrollViewOf(_dispatcher.lastActiveContext);
     if (nested != null) {
-      final controller = toEnd ? nested.innerController : nested.outerController;
+      final controller =
+          toEnd ? nested.innerController : nested.outerController;
       await _animateControllerToBoundary(controller, toEnd: toEnd);
       _setBarVisible(true, notifyCallbacks: true, fromController: true);
       return;
@@ -401,31 +402,44 @@ class _BottomBarState extends State<BottomBar>
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _measureBar());
 
-    return NotificationListener<ScrollNotification>(
-      onNotification: (n) {
-        _dispatcher.handle(n);
-        return false; // do not absorb
-      },
-      child: Stack(
-        fit: l.fit,
-        alignment: l.alignment,
-        clipBehavior: l.clip,
-        children: [
-          BottomBarScope(
+    return Stack(
+      fit: l.fit,
+      alignment: l.alignment,
+      clipBehavior: l.clip,
+      children: [
+        NotificationListener<ScrollNotification>(
+          onNotification: _handleBodyScrollNotification,
+          child: BottomBarScope(
             barHeight: _barHeight,
             isVisible: _isVisibleNotifier,
             child: widget.body,
           ),
-          if (widget.showIcon)
-            _wrapWithSafeArea(
-              l,
-              translate: l.iconOffset,
-              child: _buildIcon(theme),
-            ),
-          _wrapWithSafeArea(l, child: _buildBottomBar(theme)),
-        ],
-      ),
+        ),
+        if (widget.showIcon)
+          _wrapWithSafeArea(
+            l,
+            translate: l.iconOffset,
+            child: _buildIcon(theme),
+          ),
+        _wrapWithSafeArea(l, child: _buildBottomBar(theme)),
+      ],
     );
+  }
+
+  bool _handleBodyScrollNotification(ScrollNotification notification) {
+    _dispatcher.handle(notification);
+
+    if (notification.metrics.axis == Axis.vertical) {
+      if (_scrollBehavior.showAtStart &&
+          notification.metrics.pixels <= notification.metrics.minScrollExtent) {
+        _setBarVisible(true, notifyCallbacks: true);
+      } else if (_scrollBehavior.showOnScrollEnd &&
+          notification is ScrollEndNotification) {
+        _setBarVisible(true, notifyCallbacks: true);
+      }
+    }
+
+    return false;
   }
 
   Widget _wrapWithSafeArea(

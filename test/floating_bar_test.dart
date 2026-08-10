@@ -142,6 +142,64 @@ void main() {
     expect(controller.isVisible, isFalse);
   });
 
+  testWidgets('showAtStart forces the bar visible at the top boundary',
+      (tester) async {
+    final controller = BottomBarController();
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        scrollBehavior: const BottomBarScrollBehavior(
+          reverse: true,
+          showAtStart: true,
+        ),
+      ),
+    );
+
+    final scrollable = find.byType(Scrollable).first;
+
+    await tester.drag(scrollable, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isTrue);
+
+    controller.hide();
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isFalse);
+
+    await tester.drag(scrollable, const Offset(0, 300));
+    await tester.pumpAndSettle();
+
+    expect(controller.isVisible, isTrue);
+  });
+
+  testWidgets('showOnScrollEnd forces the bar visible when scrolling settles',
+      (tester) async {
+    final controller = BottomBarController();
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        scrollBehavior: const BottomBarScrollBehavior(
+          reverse: true,
+          showOnScrollEnd: true,
+        ),
+      ),
+    );
+
+    final scrollable = find.byType(Scrollable).first;
+
+    await tester.drag(scrollable, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isTrue);
+
+    controller.hide();
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isFalse);
+
+    await tester.drag(scrollable, const Offset(0, 120));
+    await tester.pumpAndSettle();
+
+    expect(controller.isVisible, isTrue);
+  });
+
   testWidgets('theme extension controls motion and scroll behavior',
       (tester) async {
     final controller = BottomBarController();
@@ -365,6 +423,68 @@ void main() {
     await tester.drag(find.byKey(const Key('list-b')), const Offset(0, -5));
     await tester.pumpAndSettle();
     expect(controller.isVisible, isFalse);
+  });
+
+  testWidgets(
+      'scrollables inside the floating child do not drive visibility '
+      'or scroll target', (tester) async {
+    final controller = BottomBarController();
+    final bodyScrollController = ScrollController();
+    final childScrollController = ScrollController();
+    addTearDown(bodyScrollController.dispose);
+    addTearDown(childScrollController.dispose);
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: BottomBar(
+          controller: controller,
+          body: ListView.builder(
+            key: const Key('body-list'),
+            controller: bodyScrollController,
+            itemCount: 200,
+            itemBuilder: (_, i) => ListTile(title: Text('Body $i')),
+          ),
+          child: SizedBox(
+            height: 120,
+            child: Material(
+              child: ListView.builder(
+                key: const Key('child-list'),
+                controller: childScrollController,
+                itemCount: 50,
+                itemBuilder: (_, i) => SizedBox(
+                  height: 40,
+                  child: Center(child: Text('Child $i')),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.drag(
+        find.byKey(const Key('body-list')), const Offset(0, -400));
+    await tester.pumpAndSettle();
+
+    expect(controller.isVisible, isFalse);
+    expect(bodyScrollController.offset, greaterThan(0));
+
+    controller.show();
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isTrue);
+
+    await tester.drag(
+        find.byKey(const Key('child-list')), const Offset(0, -80));
+    await tester.pumpAndSettle();
+
+    expect(controller.isVisible, isTrue);
+    expect(childScrollController.offset, greaterThan(0));
+
+    unawaited(controller.scrollToStart());
+    await tester.pumpAndSettle();
+
+    expect(bodyScrollController.offset, morePreciselyEquals(0));
+    expect(childScrollController.offset, greaterThan(0));
   });
 
   testWidgets(

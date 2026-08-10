@@ -8,6 +8,8 @@ class BottomBarScrollBehavior {
     this.reverse = false,
     this.scrollOpposite = false,
     this.deltaThreshold = 8,
+    this.showAtStart = false,
+    this.showOnScrollEnd = false,
     this.predicate,
   }) : assert(deltaThreshold >= 0, 'deltaThreshold must be >= 0');
 
@@ -27,6 +29,12 @@ class BottomBarScrollBehavior {
   /// `ScrollNotification` is allowed to flip visibility. Suppresses jitter.
   final double deltaThreshold;
 
+  /// When true, reaching `minScrollExtent` forces the bar visible.
+  final bool showAtStart;
+
+  /// When true, [ScrollEndNotification] forces the bar visible.
+  final bool showOnScrollEnd;
+
   /// Optional filter. When non-null, returning false skips the notification
   /// entirely (no offset tracking, no visibility change).
   final bool Function(ScrollNotification notification)? predicate;
@@ -38,6 +46,8 @@ class BottomBarScrollBehavior {
     bool? reverse,
     bool? scrollOpposite,
     double? deltaThreshold,
+    bool? showAtStart,
+    bool? showOnScrollEnd,
     bool Function(ScrollNotification notification)? predicate,
   }) {
     return BottomBarScrollBehavior(
@@ -45,6 +55,8 @@ class BottomBarScrollBehavior {
       reverse: reverse ?? this.reverse,
       scrollOpposite: scrollOpposite ?? this.scrollOpposite,
       deltaThreshold: deltaThreshold ?? this.deltaThreshold,
+      showAtStart: showAtStart ?? this.showAtStart,
+      showOnScrollEnd: showOnScrollEnd ?? this.showOnScrollEnd,
       predicate: predicate ?? this.predicate,
     );
   }
@@ -57,6 +69,8 @@ class BottomBarScrollBehavior {
         other.reverse == reverse &&
         other.scrollOpposite == scrollOpposite &&
         other.deltaThreshold == deltaThreshold &&
+        other.showAtStart == showAtStart &&
+        other.showOnScrollEnd == showOnScrollEnd &&
         other.predicate == predicate;
   }
 
@@ -66,6 +80,8 @@ class BottomBarScrollBehavior {
         reverse,
         scrollOpposite,
         deltaThreshold,
+        showAtStart,
+        showOnScrollEnd,
         predicate,
       );
 }

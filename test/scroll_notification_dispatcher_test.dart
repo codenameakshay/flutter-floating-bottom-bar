@@ -29,6 +29,153 @@ void main() {
       expect(events, isEmpty);
     });
 
+    test('accumulates small deltas until the threshold is reached', () {
+      final events = <bool>[];
+      final dispatcher = ScrollNotificationDispatcher(
+        deltaThreshold: 8,
+        onShouldHide: events.add,
+      );
+      final context = _DummyBuildContext();
+
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 0,
+        context: context,
+      ));
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 3,
+        context: context,
+      ));
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 6,
+        context: context,
+      ));
+
+      expect(events, isEmpty);
+
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 9,
+        context: context,
+      ));
+
+      expect(events, [isTrue]);
+    });
+
+    test('resets accumulation after crossing the threshold', () {
+      final events = <bool>[];
+      final dispatcher = ScrollNotificationDispatcher(
+        deltaThreshold: 8,
+        onShouldHide: events.add,
+      );
+      final context = _DummyBuildContext();
+
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 0,
+        context: context,
+      ));
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 3,
+        context: context,
+      ));
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 6,
+        context: context,
+      ));
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 9,
+        context: context,
+      ));
+
+      expect(events, [isTrue]);
+
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 12,
+        context: context,
+      ));
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 15,
+        context: context,
+      ));
+
+      expect(events, [isTrue]);
+
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 18,
+        context: context,
+      ));
+
+      expect(events, [isTrue, isTrue]);
+    });
+
+    test('direction reversal resets the accumulated distance', () {
+      final events = <bool>[];
+      final dispatcher = ScrollNotificationDispatcher(
+        deltaThreshold: 8,
+        onShouldHide: events.add,
+      );
+      final context = _DummyBuildContext();
+
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 0,
+        context: context,
+      ));
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 3,
+        context: context,
+      ));
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 6,
+        context: context,
+      ));
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 4,
+        context: context,
+      ));
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 7,
+        context: context,
+      ));
+      dispatcher.handle(_FakeUpdate(
+        depth: 0,
+        axis: Axis.vertical,
+        pixels: 10,
+        context: context,
+      ));
+
+      expect(events, isEmpty);
+    });
+
     test('emits hide when delta exceeds threshold scrolling forward', () {
       final events = <bool>[];
       final dispatcher = ScrollNotificationDispatcher(
