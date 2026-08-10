@@ -48,13 +48,29 @@ void main() {
       expect(a.hashCode, b.hashCode);
     });
 
-    test('negative maxWidth is rejected', () {
+    test('negative, infinite, and NaN maxWidth values are rejected', () {
       expect(
         () => BottomBarLayout(maxWidth: -1),
         throwsA(isA<AssertionError>()),
       );
       expect(
         () => BottomBarLayout.adaptive(maxWidth: -1),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => BottomBarLayout(maxWidth: double.infinity),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => BottomBarLayout.adaptive(maxWidth: double.infinity),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => BottomBarLayout(maxWidth: double.nan),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => BottomBarLayout.adaptive(maxWidth: double.nan),
         throwsA(isA<AssertionError>()),
       );
     });

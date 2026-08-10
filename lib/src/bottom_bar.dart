@@ -571,8 +571,19 @@ class _BottomBarState extends State<BottomBar>
 
   double _effectiveBarWidth(
       BoxConstraints constraints, BottomBarLayout layout) {
-    final maxWidth = layout.maxWidth ?? double.infinity;
-    return math.min(constraints.maxWidth, math.min(layout.width, maxWidth));
+    final maxWidth = layout.maxWidth;
+    if (maxWidth != null &&
+        (maxWidth.isNaN || maxWidth.isInfinite || maxWidth < 0)) {
+      throw ArgumentError.value(
+        maxWidth,
+        'layout.maxWidth',
+        'BottomBarLayout.maxWidth must be finite and non-negative.',
+      );
+    }
+    return math.min(
+      constraints.maxWidth,
+      math.min(layout.width, maxWidth ?? double.infinity),
+    );
   }
 
   BoxDecoration? _effectiveBarDecoration(

@@ -16,13 +16,15 @@ class BottomBarLayout {
     this.fit = StackFit.loose,
     this.clip = Clip.hardEdge,
     this.respectSafeArea = true,
-  }) : assert(maxWidth == null || maxWidth >= 0);
+  }) : assert(
+          maxWidth == null || (maxWidth >= 0 && maxWidth < double.infinity),
+        );
 
   /// Creates a layout that fills the available host width up to [maxWidth].
   ///
   /// This is equivalent to setting [width] to `double.infinity` while keeping
   /// the regular constructor's other defaults intact. [maxWidth] must be
-  /// non-negative.
+  /// finite and non-negative.
   const BottomBarLayout.adaptive({
     required double maxWidth,
     this.offset = 10,
@@ -32,7 +34,7 @@ class BottomBarLayout {
     this.fit = StackFit.loose,
     this.clip = Clip.hardEdge,
     this.respectSafeArea = true,
-  })  : assert(maxWidth >= 0),
+  })  : assert(maxWidth >= 0 && maxWidth < double.infinity),
         maxWidth = maxWidth,
         width = double.infinity;
 
@@ -41,8 +43,8 @@ class BottomBarLayout {
 
   /// Maximum width of the bar after host padding and safe-area constraints.
   ///
-  /// When null, [width] is the only explicit width cap. Must be non-negative
-  /// when provided.
+  /// When null, [width] is the only explicit width cap. Must be finite and
+  /// non-negative when provided.
   final double? maxWidth;
 
   /// Padding/offset from all sides of the host stack.
