@@ -12,7 +12,7 @@ fvm flutter run
 
 ## Minimal bar
 
-Corresponds to `example/lib/demos/basic_demo.dart`.
+Related runnable demo: `example/lib/demos/basic_demo.dart`.
 
 ```dart
 import 'package:flutter/material.dart';
@@ -44,7 +44,7 @@ class MinimalBottomBarExample extends StatelessWidget {
 
 ## `BottomBarItems` navigation row
 
-Corresponds to `example/lib/demos/badges_demo.dart`.
+Related runnable demo: `example/lib/demos/badges_demo.dart`.
 
 ```dart
 import 'package:flutter/material.dart';
@@ -106,7 +106,7 @@ descendant semantics remain visible.
 
 ## Nested scroll + controller
 
-Corresponds to `example/lib/demos/nested_scroll_demo.dart`.
+Related runnable demo: `example/lib/demos/nested_scroll_demo.dart`.
 
 ```dart
 import 'package:flutter/material.dart';
@@ -167,7 +167,7 @@ class _NestedScrollExampleState extends State<NestedScrollExample> {
 
 ## Paint-only custom transition
 
-Corresponds to `example/lib/demos/custom_transition_demo.dart`.
+Related runnable demo: `example/lib/demos/custom_transition_demo.dart`.
 
 ```dart
 import 'package:flutter/material.dart';
