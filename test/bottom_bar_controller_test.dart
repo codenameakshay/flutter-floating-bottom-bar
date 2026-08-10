@@ -4,7 +4,7 @@ import 'package:flutter_floating_bottom_bar/src/bottom_bar_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('controller rejects a second binding and keeps the first owner',
+  test('controller asserts on a second binding and keeps the first owner',
       () async {
     final controller = BottomBarController();
     final first = _FakeBinding(isVisible: true);
@@ -16,13 +16,7 @@ void main() {
 
     expect(
       () => controller.attach(second),
-      throwsA(
-        isA<FlutterError>().having(
-          (error) => error.message,
-          'message',
-          contains('already attached'),
-        ),
-      ),
+      throwsA(isA<AssertionError>()),
     );
 
     controller.hide();
@@ -48,7 +42,7 @@ void main() {
     expect(second.lastScrollToEnd, isNull);
   });
 
-  testWidgets('controller reports a runtime error for double attachment',
+  testWidgets('controller asserts on double attachment in debug mode',
       (tester) async {
     final controller = BottomBarController();
 
@@ -77,11 +71,7 @@ void main() {
 
     expect(
       tester.takeException(),
-      isA<FlutterError>().having(
-        (error) => error.message,
-        'message',
-        contains('already attached'),
-      ),
+      isA<AssertionError>(),
     );
   });
 

@@ -87,6 +87,11 @@ class BottomBarController extends ChangeNotifier {
     if (_binding == binding) {
       return;
     }
+    assert(
+      _binding == null,
+      'BottomBarController is already attached to a BottomBar. '
+      'A controller may only drive one BottomBar at a time.',
+    );
     if (_binding != null) {
       throw FlutterError(
         'BottomBarController is already attached to a BottomBar. '
