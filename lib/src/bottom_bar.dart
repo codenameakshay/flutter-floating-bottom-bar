@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:motor/motor.dart';
 
@@ -548,19 +550,29 @@ class _BottomBarState extends State<BottomBar>
 
   Widget _buildBottomBar(BottomBarThemeData theme) {
     final l = _effectiveLayout(theme);
-    return VisibilityAnimator(
-      animation: _motionController,
-      motion: _motion,
-      child: Container(
-        width: l.width,
-        decoration: _effectiveBarDecoration(theme, l),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: _effectiveBarBorderRadius(theme, l),
-          child: widget.child,
-        ),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return VisibilityAnimator(
+          animation: _motionController,
+          motion: _motion,
+          child: Container(
+            width: _effectiveBarWidth(constraints, l),
+            decoration: _effectiveBarDecoration(theme, l),
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: _effectiveBarBorderRadius(theme, l),
+              child: widget.child,
+            ),
+          ),
+        );
+      },
     );
+  }
+
+  double _effectiveBarWidth(
+      BoxConstraints constraints, BottomBarLayout layout) {
+    final maxWidth = layout.maxWidth ?? double.infinity;
+    return math.min(constraints.maxWidth, math.min(layout.width, maxWidth));
   }
 
   BoxDecoration? _effectiveBarDecoration(
@@ -580,7 +592,9 @@ class _BottomBarState extends State<BottomBar>
     BottomBarLayout layout,
   ) {
     final decoration = theme.barDecoration;
-    if (layout.borderRadius != BorderRadius.zero) return layout.borderRadius;
+    final hasExplicitLayoutOverride =
+        widget.layout != null || theme.layout != null;
+    if (hasExplicitLayoutOverride) return layout.borderRadius;
     return decoration?.borderRadius;
   }
 }

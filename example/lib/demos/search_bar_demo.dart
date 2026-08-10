@@ -9,10 +9,10 @@ class SearchBarDemoPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAF8),
       body: BottomBar(
-        layout: BottomBarLayout(
-          width: MediaQuery.of(context).size.width - 48,
-          offset: 20,
-          borderRadius: BorderRadius.circular(28),
+        layout: const BottomBarLayout.adaptive(
+          maxWidth: 440,
+          offset: 24,
+          borderRadius: BorderRadius.all(Radius.circular(28)),
           alignment: Alignment.bottomCenter,
         ),
         motion: const BottomBarMotion.cupertino(

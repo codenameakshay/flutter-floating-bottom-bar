@@ -28,9 +28,10 @@ class _BadgesDemoPageState extends State<BadgesDemoPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Badges demo')),
       body: BottomBar(
-        layout: BottomBarLayout(
-          width: MediaQuery.of(context).size.width - 32,
-          borderRadius: BorderRadius.circular(28),
+        layout: const BottomBarLayout.adaptive(
+          maxWidth: 420,
+          offset: 16,
+          borderRadius: BorderRadius.all(Radius.circular(28)),
         ),
         motion: const BottomBarMotion.cupertino(
           preset: BottomBarCupertinoMotion.bouncy,

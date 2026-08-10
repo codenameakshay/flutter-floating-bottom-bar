@@ -16,10 +16,10 @@ class _TabBarDemoPageState extends State<TabBarDemoPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAF8),
       body: BottomBar(
-        layout: BottomBarLayout(
-          width: MediaQuery.of(context).size.width - 64,
-          offset: 20,
-          borderRadius: BorderRadius.circular(32),
+        layout: const BottomBarLayout.adaptive(
+          maxWidth: 400,
+          offset: 32,
+          borderRadius: BorderRadius.all(Radius.circular(32)),
           clip: Clip.none,
         ),
         motion: const BottomBarMotion.cupertino(

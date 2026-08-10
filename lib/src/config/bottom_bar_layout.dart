@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 class BottomBarLayout {
   const BottomBarLayout({
     this.width = 300,
+    this.maxWidth,
     this.offset = 10,
     this.borderRadius = BorderRadius.zero,
     this.iconOffset = Offset.zero,
@@ -15,10 +16,34 @@ class BottomBarLayout {
     this.fit = StackFit.loose,
     this.clip = Clip.hardEdge,
     this.respectSafeArea = true,
-  });
+  }) : assert(maxWidth == null || maxWidth >= 0);
+
+  /// Creates a layout that fills the available host width up to [maxWidth].
+  ///
+  /// This is equivalent to setting [width] to `double.infinity` while keeping
+  /// the regular constructor's other defaults intact. [maxWidth] must be
+  /// non-negative.
+  const BottomBarLayout.adaptive({
+    required double maxWidth,
+    this.offset = 10,
+    this.borderRadius = BorderRadius.zero,
+    this.iconOffset = Offset.zero,
+    this.alignment = Alignment.bottomCenter,
+    this.fit = StackFit.loose,
+    this.clip = Clip.hardEdge,
+    this.respectSafeArea = true,
+  })  : assert(maxWidth >= 0),
+        maxWidth = maxWidth,
+        width = double.infinity;
 
   /// Width of the bar.
   final double width;
+
+  /// Maximum width of the bar after host padding and safe-area constraints.
+  ///
+  /// When null, [width] is the only explicit width cap. Must be non-negative
+  /// when provided.
+  final double? maxWidth;
 
   /// Padding/offset from all sides of the host stack.
   final double offset;
@@ -49,6 +74,7 @@ class BottomBarLayout {
   /// non-null values. Null arguments leave the corresponding field unchanged.
   BottomBarLayout copyWith({
     double? width,
+    double? maxWidth,
     double? offset,
     BorderRadius? borderRadius,
     Offset? iconOffset,
@@ -59,6 +85,7 @@ class BottomBarLayout {
   }) {
     return BottomBarLayout(
       width: width ?? this.width,
+      maxWidth: maxWidth ?? this.maxWidth,
       offset: offset ?? this.offset,
       borderRadius: borderRadius ?? this.borderRadius,
       iconOffset: iconOffset ?? this.iconOffset,
@@ -74,6 +101,7 @@ class BottomBarLayout {
     if (identical(this, other)) return true;
     return other is BottomBarLayout &&
         other.width == width &&
+        other.maxWidth == maxWidth &&
         other.offset == offset &&
         other.borderRadius == borderRadius &&
         other.iconOffset == iconOffset &&
@@ -86,6 +114,7 @@ class BottomBarLayout {
   @override
   int get hashCode => Object.hash(
         width,
+        maxWidth,
         offset,
         borderRadius,
         iconOffset,
