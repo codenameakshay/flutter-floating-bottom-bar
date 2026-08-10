@@ -15,12 +15,16 @@ class ScrollNotificationDispatcher {
     required this.onShouldHide,
     this.deltaThreshold = 8,
     this.reverse = false,
+    this.showAtStart = false,
+    this.showOnScrollEnd = false,
     this.predicate,
   });
 
   final ValueChanged<bool> onShouldHide;
   double deltaThreshold;
   bool reverse;
+  bool showAtStart;
+  bool showOnScrollEnd;
   bool Function(ScrollNotification)? predicate;
 
   static const int _maxTracked = 16;
@@ -57,6 +61,9 @@ class ScrollNotificationDispatcher {
     if (notification.metrics.axis != Axis.vertical) return;
 
     if (notification is ScrollEndNotification) {
+      if (showOnScrollEnd) {
+        onShouldHide(false);
+      }
       // Optional: keep history; do not evict here so subsequent updates from
       // the same scrollable retain their tracked offset.
       return;
@@ -84,10 +91,17 @@ class ScrollNotificationDispatcher {
     }
 
     if (notification is ScrollStartNotification) {
-      state
-        ..anchorPixels = pixels
-        ..lastPixels = pixels
-        ..direction = null;
+      _resetState(state, pixels);
+
+      if (showAtStart && pixels <= notification.metrics.minScrollExtent) {
+        onShouldHide(false);
+      }
+      return;
+    }
+
+    if (showAtStart && pixels <= notification.metrics.minScrollExtent) {
+      _resetState(state, pixels);
+      onShouldHide(false);
       return;
     }
 
@@ -118,6 +132,13 @@ class ScrollNotificationDispatcher {
     } catch (_) {
       return _lastActivePosition;
     }
+  }
+
+  void _resetState(_TrackedScrollState state, double pixels) {
+    state
+      ..anchorPixels = pixels
+      ..lastPixels = pixels
+      ..direction = null;
   }
 }
 

@@ -191,6 +191,8 @@ class _BottomBarState extends State<BottomBar>
     _dispatcher = ScrollNotificationDispatcher(
       deltaThreshold: _scrollBehavior.deltaThreshold,
       reverse: _scrollBehavior.reverse,
+      showAtStart: _scrollBehavior.showAtStart,
+      showOnScrollEnd: _scrollBehavior.showOnScrollEnd,
       predicate: _scrollBehavior.predicate,
       onShouldHide: (hide) => _setBarVisible(!hide, notifyCallbacks: true),
     );
@@ -240,6 +242,8 @@ class _BottomBarState extends State<BottomBar>
     if (_scrollBehavior != newScroll) {
       _dispatcher.deltaThreshold = newScroll.deltaThreshold;
       _dispatcher.reverse = newScroll.reverse;
+      _dispatcher.showAtStart = newScroll.showAtStart;
+      _dispatcher.showOnScrollEnd = newScroll.showOnScrollEnd;
       _dispatcher.predicate = newScroll.predicate;
     }
 
@@ -428,17 +432,6 @@ class _BottomBarState extends State<BottomBar>
 
   bool _handleBodyScrollNotification(ScrollNotification notification) {
     _dispatcher.handle(notification);
-
-    if (notification.metrics.axis == Axis.vertical) {
-      if (_scrollBehavior.showAtStart &&
-          notification.metrics.pixels <= notification.metrics.minScrollExtent) {
-        _setBarVisible(true, notifyCallbacks: true);
-      } else if (_scrollBehavior.showOnScrollEnd &&
-          notification is ScrollEndNotification) {
-        _setBarVisible(true, notifyCallbacks: true);
-      }
-    }
-
     return false;
   }
 

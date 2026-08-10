@@ -200,6 +200,37 @@ void main() {
     expect(controller.isVisible, isTrue);
   });
 
+  testWidgets(
+      'predicate false suppresses showAtStart and showOnScrollEnd settling',
+      (tester) async {
+    final controller = BottomBarController();
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        scrollBehavior: BottomBarScrollBehavior(
+          reverse: true,
+          showAtStart: true,
+          showOnScrollEnd: true,
+          predicate: (_) => false,
+        ),
+      ),
+    );
+
+    final scrollable = find.byType(Scrollable).first;
+
+    controller.hide();
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isFalse);
+
+    await tester.drag(scrollable, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isFalse);
+
+    await tester.drag(scrollable, const Offset(0, 300));
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isFalse);
+  });
+
   testWidgets('theme extension controls motion and scroll behavior',
       (tester) async {
     final controller = BottomBarController();
