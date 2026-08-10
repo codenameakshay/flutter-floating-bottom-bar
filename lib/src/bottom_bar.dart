@@ -8,6 +8,7 @@ import 'config/bottom_bar_layout.dart';
 import 'config/bottom_bar_motion.dart';
 import 'config/bottom_bar_scroll_behavior.dart';
 import 'internal/scroll_notification_dispatcher.dart';
+import 'internal/size_observer.dart';
 import 'internal/visibility_animator.dart';
 
 /// Builds the back-to-top icon child.
@@ -46,6 +47,7 @@ typedef BackToTopIconBuilder = Widget Function(double width, double height);
 /// * [BottomBarThemeData] — app-wide defaults via [ThemeExtension].
 /// * [BottomBarController] — imperative show/hide/scroll API.
 /// * [BottomBarScope] — read bar height and visibility from descendants.
+/// * [BottomBarBodyPadding] — reserve body space equal to the bar footprint.
 class BottomBar extends StatefulWidget {
   /// Creates a [BottomBar].
   ///
@@ -171,7 +173,6 @@ class _BottomBarState extends State<BottomBar>
 
   final ValueNotifier<double> _barHeight = ValueNotifier<double>(0);
   final ValueNotifier<bool> _isVisibleNotifier = ValueNotifier<bool>(true);
-  final GlobalKey _barKey = GlobalKey();
 
   @override
   void initState() {
@@ -198,24 +199,12 @@ class _BottomBarState extends State<BottomBar>
     );
 
     widget.controller?.attach(this);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) => _measureBar());
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _syncMotionAndScroll(_resolvedTheme(context));
-  }
-
-  void _measureBar() {
-    final ctx = _barKey.currentContext;
-    if (ctx == null) return;
-    final renderBox = ctx.findRenderObject();
-    if (renderBox is RenderBox && renderBox.hasSize) {
-      final h = renderBox.size.height;
-      if (_barHeight.value != h) _barHeight.value = h;
-    }
   }
 
   @override
@@ -431,8 +420,6 @@ class _BottomBarState extends State<BottomBar>
     final theme = _resolvedTheme(context);
     final l = _effectiveLayout(theme);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => _measureBar());
-
     return Stack(
       fit: l.fit,
       alignment: l.alignment,
@@ -452,7 +439,11 @@ class _BottomBarState extends State<BottomBar>
             translate: l.iconOffset,
             child: _buildIcon(theme),
           ),
-        _wrapWithSafeArea(l, child: _buildBottomBar(theme)),
+        _wrapWithSafeArea(
+          l,
+          onSizeChanged: _handleBarFootprintChanged,
+          child: _buildBottomBar(theme),
+        ),
       ],
     );
   }
@@ -466,10 +457,14 @@ class _BottomBarState extends State<BottomBar>
     BottomBarLayout l, {
     required Widget child,
     Offset translate = Offset.zero,
+    ValueChanged<Size>? onSizeChanged,
   }) {
     Widget content = Padding(padding: EdgeInsets.all(l.offset), child: child);
     if (l.respectSafeArea) {
       content = SafeArea(child: content);
+    }
+    if (onSizeChanged != null) {
+      content = SizeObserver(onSizeChanged: onSizeChanged, child: content);
     }
     // Translate outside the SafeArea/Padding so the offset wraps everything
     // below it. Transform keeps hit-testing aligned with the painted position
@@ -480,6 +475,11 @@ class _BottomBarState extends State<BottomBar>
       content = Transform.translate(offset: translate, child: content);
     }
     return Align(alignment: l.alignment, child: content);
+  }
+
+  void _handleBarFootprintChanged(Size size) {
+    if (!mounted || _barHeight.value == size.height) return;
+    _barHeight.value = size.height;
   }
 
   Widget _buildIcon(BottomBarThemeData theme) {
@@ -552,7 +552,6 @@ class _BottomBarState extends State<BottomBar>
       animation: _motionController,
       motion: _motion,
       child: Container(
-        key: _barKey,
         width: l.width,
         decoration: _effectiveBarDecoration(theme, l),
         child: Material(
