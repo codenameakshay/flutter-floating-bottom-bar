@@ -53,7 +53,7 @@ format: ## Format all Dart code
 
 .PHONY: format-check
 format-check: ## Check formatting without writing changes
-	$(DART) format --set-exit-if-changed .
+	$(DART) format --output=none --set-exit-if-changed .
 
 .PHONY: analyze
 analyze: analyze-pkg analyze-app ## Run static analysis on package and app

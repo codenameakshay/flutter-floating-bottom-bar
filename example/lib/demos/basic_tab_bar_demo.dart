@@ -55,10 +55,10 @@ class _BasicTabBarDemoPageState extends State<BasicTabBarDemoPage>
     return Scaffold(
       appBar: AppBar(title: const Text('Basic TabBar bottom bar')),
       body: BottomBar(
-        layout: BottomBarLayout(
-          width: MediaQuery.of(context).size.width * 0.82,
-          offset: 18,
-          borderRadius: BorderRadius.circular(500),
+        layout: const BottomBarLayout.adaptive(
+          maxWidth: 420,
+          offset: 32,
+          borderRadius: BorderRadius.all(Radius.circular(500)),
           clip: Clip.none,
           fit: StackFit.expand,
         ),

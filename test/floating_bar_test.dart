@@ -10,24 +10,33 @@ void main() {
     BottomBarController? controller,
     ValueChanged<bool>? onVisibilityChanged,
     BottomBarScrollBehavior scrollBehavior = const BottomBarScrollBehavior(),
+    BottomBarMotion motion = const BottomBarMotion(),
+    BottomBarThemeData? theme,
     String? iconTooltip,
+    String? iconSemanticLabel,
+    BackToTopIconBuilder? icon,
+    Widget child = const SizedBox(
+      height: 56,
+      child: Center(child: Text('Bottom Bar Child')),
+    ),
   }) {
     return MaterialApp(
       home: Scaffold(
         body: BottomBar(
           controller: controller,
           scrollBehavior: scrollBehavior,
+          motion: motion,
+          theme: theme,
           iconTooltip: iconTooltip,
+          iconSemanticLabel: iconSemanticLabel,
+          icon: icon,
           onVisibilityChanged: onVisibilityChanged,
           body: ListView.builder(
             itemCount: 200,
             itemBuilder: (context, index) =>
                 ListTile(title: Text('Item $index')),
           ),
-          child: const SizedBox(
-            height: 56,
-            child: Center(child: Text('Bottom Bar Child')),
-          ),
+          child: child,
         ),
       ),
     );
@@ -142,6 +151,95 @@ void main() {
     expect(controller.isVisible, isFalse);
   });
 
+  testWidgets('showAtStart forces the bar visible at the top boundary',
+      (tester) async {
+    final controller = BottomBarController();
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        scrollBehavior: const BottomBarScrollBehavior(
+          reverse: true,
+          showAtStart: true,
+        ),
+      ),
+    );
+
+    final scrollable = find.byType(Scrollable).first;
+
+    await tester.drag(scrollable, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isTrue);
+
+    controller.hide();
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isFalse);
+
+    await tester.drag(scrollable, const Offset(0, 300));
+    await tester.pumpAndSettle();
+
+    expect(controller.isVisible, isTrue);
+  });
+
+  testWidgets('showOnScrollEnd forces the bar visible when scrolling settles',
+      (tester) async {
+    final controller = BottomBarController();
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        scrollBehavior: const BottomBarScrollBehavior(
+          reverse: true,
+          showOnScrollEnd: true,
+        ),
+      ),
+    );
+
+    final scrollable = find.byType(Scrollable).first;
+
+    await tester.drag(scrollable, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isTrue);
+
+    controller.hide();
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isFalse);
+
+    await tester.drag(scrollable, const Offset(0, 120));
+    await tester.pumpAndSettle();
+
+    expect(controller.isVisible, isTrue);
+  });
+
+  testWidgets(
+      'predicate false suppresses showAtStart and showOnScrollEnd settling',
+      (tester) async {
+    final controller = BottomBarController();
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        scrollBehavior: BottomBarScrollBehavior(
+          reverse: true,
+          showAtStart: true,
+          showOnScrollEnd: true,
+          predicate: (_) => false,
+        ),
+      ),
+    );
+
+    final scrollable = find.byType(Scrollable).first;
+
+    controller.hide();
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isFalse);
+
+    await tester.drag(scrollable, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isFalse);
+
+    await tester.drag(scrollable, const Offset(0, 300));
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isFalse);
+  });
+
   testWidgets('theme extension controls motion and scroll behavior',
       (tester) async {
     final controller = BottomBarController();
@@ -248,6 +346,319 @@ void main() {
     controller.hide();
     await tester.pumpAndSettle();
     expect(find.byTooltip('Go to top'), findsOneWidget);
+  });
+
+  testWidgets(
+      'fade transition hides the floating bar from hit testing immediately',
+      (tester) async {
+    final controller = BottomBarController();
+    var bodyTaps = 0;
+    var barTaps = 0;
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: BottomBar(
+          controller: controller,
+          motion: const BottomBarMotion(
+            duration: Duration(milliseconds: 240),
+            transition: BottomBarTransition.fade,
+          ),
+          body: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => bodyTaps++,
+            child: ListView(
+              children: const [
+                SizedBox(height: 600),
+              ],
+            ),
+          ),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => barTaps++,
+            child: const SizedBox(height: 56, width: 200),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final barCenter = tester.getCenter(find.byType(GestureDetector).last);
+    final overlapPoint = barCenter + const Offset(80, 0);
+
+    await tester.tapAt(barCenter);
+    await tester.pump();
+    expect(barTaps, 1);
+    expect(bodyTaps, 0);
+
+    controller.hide();
+    await tester.pump();
+
+    await tester.tapAt(overlapPoint);
+    await tester.pump();
+
+    expect(barTaps, 1);
+    expect(bodyTaps, 1);
+  });
+
+  testWidgets(
+      'custom transition hides the floating bar from semantics immediately',
+      (tester) async {
+    final controller = BottomBarController();
+    final semantics = tester.ensureSemantics();
+    try {
+      await tester.pumpWidget(
+        buildHarness(
+          controller: controller,
+          motion: BottomBarMotion(
+            transitionBuilder: (context, animation, child) {
+              return Opacity(opacity: animation.value, child: child);
+            },
+          ),
+          child: Semantics(
+            container: true,
+            label: 'Floating bar content',
+            child: SizedBox(height: 56, width: 200),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(_semanticsLabels(tester), contains('Floating bar content'));
+
+      controller.hide();
+      await tester.pump();
+
+      expect(_semanticsLabels(tester), isNot(contains('Floating bar content')));
+    } finally {
+      semantics.dispose();
+    }
+  });
+
+  testWidgets(
+      'back action is excluded while the bar is visible and appears when hidden',
+      (tester) async {
+    final controller = BottomBarController();
+    final semantics = tester.ensureSemantics();
+    try {
+      await tester.pumpWidget(
+        buildHarness(
+          controller: controller,
+          iconSemanticLabel: 'Scroll to top',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(_semanticsLabels(tester), isNot(contains('Scroll to top')));
+
+      controller.hide();
+      await tester.pumpAndSettle();
+
+      expect(find.byTooltip('Scroll to top'), findsOneWidget);
+      expect(
+        _semanticsLabels(tester).where((label) => label == 'Scroll to top'),
+        hasLength(1),
+      );
+    } finally {
+      semantics.dispose();
+    }
+  });
+
+  testWidgets('back action keeps a fixed minimum 48 pixel target while hidden',
+      (tester) async {
+    final controller = BottomBarController();
+
+    await tester.pumpWidget(buildHarness(controller: controller));
+    await tester.pumpAndSettle();
+
+    controller.hide();
+    await tester.pumpAndSettle();
+
+    final tooltip = find.byTooltip('Scroll to top');
+    expect(tooltip, findsOneWidget);
+
+    final targetRect = tester.getRect(tooltip);
+    expect(targetRect.width, greaterThanOrEqualTo(48));
+    expect(targetRect.height, greaterThanOrEqualTo(48));
+  });
+
+  testWidgets('back action accepts taps in the corners of its 48 pixel target',
+      (tester) async {
+    await tester.pumpWidget(buildHarness());
+    await tester.pumpAndSettle();
+
+    final scrollable = find.byType(Scrollable).first;
+    await tester.drag(scrollable, const Offset(0, -300));
+    await tester.pumpAndSettle();
+
+    final position = tester.state<ScrollableState>(scrollable).position;
+    expect(position.pixels, greaterThan(0));
+
+    final targetRect = tester.getRect(find.byTooltip('Scroll to top'));
+    await tester.tapAt(targetRect.topLeft + const Offset(2, 2));
+    await tester.pumpAndSettle();
+
+    expect(position.pixels, morePreciselyEquals(position.minScrollExtent));
+  });
+
+  testWidgets(
+      'scrollOpposite flips the default action direction, tooltip, and semantics',
+      (tester) async {
+    final controller = BottomBarController();
+    final semantics = tester.ensureSemantics();
+    try {
+      await tester.pumpWidget(
+        buildHarness(
+          controller: controller,
+          scrollBehavior: const BottomBarScrollBehavior(scrollOpposite: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      controller.hide();
+      await tester.pumpAndSettle();
+
+      expect(find.byTooltip('Scroll to bottom'), findsOneWidget);
+      expect(find.byIcon(Icons.arrow_downward_rounded), findsOneWidget);
+      expect(_semanticsLabels(tester), contains('Scroll to bottom'));
+    } finally {
+      semantics.dispose();
+    }
+  });
+
+  testWidgets('user tooltip and semantics labels override directional defaults',
+      (tester) async {
+    final controller = BottomBarController();
+    final semantics = tester.ensureSemantics();
+    try {
+      await tester.pumpWidget(
+        buildHarness(
+          controller: controller,
+          scrollBehavior: const BottomBarScrollBehavior(scrollOpposite: true),
+          iconTooltip: 'Jump to end',
+          iconSemanticLabel: 'Jump to the bottom',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      controller.hide();
+      await tester.pumpAndSettle();
+
+      expect(find.byTooltip('Jump to end'), findsOneWidget);
+      expect(_semanticsLabels(tester), contains('Jump to the bottom'));
+      expect(find.byTooltip('Scroll to bottom'), findsNothing);
+      expect(_semanticsLabels(tester), isNot(contains('Scroll to bottom')));
+    } finally {
+      semantics.dispose();
+    }
+  });
+
+  testWidgets('default glyph color follows colorScheme.onPrimary',
+      (tester) async {
+    final controller = BottomBarController();
+    const onPrimary = Color(0xFF123456);
+
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(
+        colorScheme: const ColorScheme.light(
+          primary: Color(0xFFABCDEF),
+          onPrimary: onPrimary,
+        ),
+      ),
+      home: Scaffold(
+        body: BottomBar(
+          controller: controller,
+          body: ListView(
+            children: const [
+              SizedBox(height: 1200),
+            ],
+          ),
+          child: const SizedBox(
+            height: 56,
+            child: Center(child: Text('Bottom Bar Child')),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    controller.hide();
+    await tester.pumpAndSettle();
+
+    final icon = tester.widget<Icon>(find.byIcon(Icons.arrow_upward_rounded));
+    expect(icon.color, onPrimary);
+  });
+
+  testWidgets('custom icon builder receives the animated visual dimensions',
+      (tester) async {
+    final controller = BottomBarController();
+    final dimensions = <Size>[];
+
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        theme: const BottomBarThemeData(iconWidth: 40, iconHeight: 36),
+        icon: (width, height) {
+          dimensions.add(Size(width, height));
+          return SizedBox(
+            key: const Key('custom-icon'),
+            width: width,
+            height: height,
+          );
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    controller.hide();
+    await tester.pumpAndSettle();
+
+    final iconRect = tester.getRect(find.byKey(const Key('custom-icon')));
+    final animated = dimensions.last;
+    expect(animated.width, moreOrLessEquals(40, epsilon: 0.01));
+    expect(animated.height, moreOrLessEquals(36, epsilon: 0.01));
+    expect(iconRect.width, moreOrLessEquals(40, epsilon: 0.01));
+    expect(iconRect.height, moreOrLessEquals(36, epsilon: 0.01));
+  });
+
+  testWidgets('visibility callbacks fire exactly once per target state change',
+      (tester) async {
+    final controller = BottomBarController();
+    final visibilityEvents = <bool>[];
+    var shownCount = 0;
+    var hiddenCount = 0;
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: BottomBar(
+          controller: controller,
+          onVisibilityChanged: visibilityEvents.add,
+          onBottomBarShown: () => shownCount++,
+          onBottomBarHidden: () => hiddenCount++,
+          body: ListView(
+            children: const [
+              SizedBox(height: 1200),
+            ],
+          ),
+          child: const SizedBox(
+            height: 56,
+            child: Center(child: Text('Bottom Bar Child')),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    controller.hide();
+    controller.hide();
+    await tester.pumpAndSettle();
+
+    controller.show();
+    controller.show();
+    await tester.pumpAndSettle();
+
+    expect(visibilityEvents, <bool>[false, true]);
+    expect(hiddenCount, 1);
+    expect(shownCount, 1);
   });
 
   testWidgets('hide-on-scroll works with NestedScrollView', (tester) async {
@@ -368,6 +779,68 @@ void main() {
   });
 
   testWidgets(
+      'scrollables inside the floating child do not drive visibility '
+      'or scroll target', (tester) async {
+    final controller = BottomBarController();
+    final bodyScrollController = ScrollController();
+    final childScrollController = ScrollController();
+    addTearDown(bodyScrollController.dispose);
+    addTearDown(childScrollController.dispose);
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: BottomBar(
+          controller: controller,
+          body: ListView.builder(
+            key: const Key('body-list'),
+            controller: bodyScrollController,
+            itemCount: 200,
+            itemBuilder: (_, i) => ListTile(title: Text('Body $i')),
+          ),
+          child: SizedBox(
+            height: 120,
+            child: Material(
+              child: ListView.builder(
+                key: const Key('child-list'),
+                controller: childScrollController,
+                itemCount: 50,
+                itemBuilder: (_, i) => SizedBox(
+                  height: 40,
+                  child: Center(child: Text('Child $i')),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.drag(
+        find.byKey(const Key('body-list')), const Offset(0, -400));
+    await tester.pumpAndSettle();
+
+    expect(controller.isVisible, isFalse);
+    expect(bodyScrollController.offset, greaterThan(0));
+
+    controller.show();
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isTrue);
+
+    await tester.drag(
+        find.byKey(const Key('child-list')), const Offset(0, -80));
+    await tester.pumpAndSettle();
+
+    expect(controller.isVisible, isTrue);
+    expect(childScrollController.offset, greaterThan(0));
+
+    unawaited(controller.scrollToStart());
+    await tester.pumpAndSettle();
+
+    expect(bodyScrollController.offset, morePreciselyEquals(0));
+    expect(childScrollController.offset, greaterThan(0));
+  });
+
+  testWidgets(
       'scrollToStart fully resets both header and body of a NestedScrollView',
       (tester) async {
     final controller = BottomBarController();
@@ -466,9 +939,104 @@ void main() {
     expect(outer.pixels, morePreciselyEquals(outer.maxScrollExtent));
     expect(inner.pixels, morePreciselyEquals(inner.maxScrollExtent));
   });
+
+  testWidgets(
+      'independent descendant list inside NestedScrollView stays the scroll target',
+      (tester) async {
+    final controller = BottomBarController();
+    final nestedKey = GlobalKey<NestedScrollViewState>();
+    final descendantController = ScrollController();
+    addTearDown(descendantController.dispose);
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: BottomBar(
+          controller: controller,
+          body: NestedScrollView(
+            key: nestedKey,
+            headerSliverBuilder: (_, __) => const [
+              SliverAppBar(
+                expandedHeight: 160,
+                pinned: true,
+                flexibleSpace: FlexibleSpaceBar(title: Text('Nested')),
+              ),
+            ],
+            body: ListView(
+              key: const Key('nested-body-list'),
+              children: [
+                const SizedBox(height: 200),
+                SizedBox(
+                  height: 220,
+                  child: Material(
+                    child: ListView.builder(
+                      key: const Key('descendant-list'),
+                      controller: descendantController,
+                      itemCount: 60,
+                      itemBuilder: (_, i) => SizedBox(
+                        height: 48,
+                        child: Center(child: Text('Inner $i')),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 800),
+              ],
+            ),
+          ),
+          child: const SizedBox(
+            height: 56,
+            child: Center(child: Text('child')),
+          ),
+        ),
+      ),
+    ));
+
+    final outer = nestedKey.currentState!.outerController.position;
+    final inner = nestedKey.currentState!.innerController.position;
+    expect(outer.pixels, morePreciselyEquals(outer.minScrollExtent));
+    expect(inner.pixels, morePreciselyEquals(inner.minScrollExtent));
+
+    await tester.drag(
+        find.byKey(const Key('descendant-list')), const Offset(0, -180));
+    await tester.pumpAndSettle();
+
+    final outerBeforeStart = outer.pixels;
+    final innerBeforeStart = inner.pixels;
+    expect(descendantController.offset, greaterThan(0));
+
+    unawaited(controller.scrollToStart());
+    await tester.pumpAndSettle();
+
+    expect(descendantController.offset, morePreciselyEquals(0));
+    expect(outer.pixels, morePreciselyEquals(outerBeforeStart));
+    expect(inner.pixels, morePreciselyEquals(innerBeforeStart));
+
+    await tester.drag(
+        find.byKey(const Key('descendant-list')), const Offset(0, -180));
+    await tester.pumpAndSettle();
+
+    final outerBeforeEnd = outer.pixels;
+    final innerBeforeEnd = inner.pixels;
+    final descendantMax = descendantController.position.maxScrollExtent;
+    expect(descendantController.offset, lessThan(descendantMax));
+
+    unawaited(controller.scrollToEnd());
+    await tester.pumpAndSettle();
+
+    expect(descendantController.offset, morePreciselyEquals(descendantMax));
+    expect(outer.pixels, morePreciselyEquals(outerBeforeEnd));
+    expect(inner.pixels, morePreciselyEquals(innerBeforeEnd));
+  });
 }
 
 Matcher morePreciselyEquals(double value) => closeTo(value, 0.5);
+
+Iterable<String> _semanticsLabels(WidgetTester tester) {
+  return tester.semantics
+      .simulatedAccessibilityTraversal()
+      .map((node) => node.label)
+      .where((label) => label.isNotEmpty);
+}
 
 double _barProgress(WidgetTester tester) {
   final slide = tester

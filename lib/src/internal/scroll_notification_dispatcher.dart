@@ -15,16 +15,21 @@ class ScrollNotificationDispatcher {
     required this.onShouldHide,
     this.deltaThreshold = 8,
     this.reverse = false,
+    this.showAtStart = false,
+    this.showOnScrollEnd = false,
     this.predicate,
   });
 
   final ValueChanged<bool> onShouldHide;
   double deltaThreshold;
   bool reverse;
+  bool showAtStart;
+  bool showOnScrollEnd;
   bool Function(ScrollNotification)? predicate;
 
   static const int _maxTracked = 16;
-  final LinkedHashMap<int, double> _lastOffsets = LinkedHashMap<int, double>();
+  final LinkedHashMap<int, _TrackedScrollState> _trackedScrollables =
+      LinkedHashMap<int, _TrackedScrollState>();
 
   ScrollPosition? _lastActivePosition;
   ScrollPosition? get lastActivePosition => _lastActivePosition;
@@ -56,6 +61,9 @@ class ScrollNotificationDispatcher {
     if (notification.metrics.axis != Axis.vertical) return;
 
     if (notification is ScrollEndNotification) {
+      if (showOnScrollEnd) {
+        onShouldHide(false);
+      }
       // Optional: keep history; do not evict here so subsequent updates from
       // the same scrollable retain their tracked offset.
       return;
@@ -70,25 +78,49 @@ class ScrollNotificationDispatcher {
     _lastActivePosition = position;
     _lastActiveContext = notification.context;
     final key = _keyFor(notification, position);
-
     final pixels = notification.metrics.pixels;
-    final previous = _lastOffsets[key];
 
     // LRU touch.
-    _lastOffsets.remove(key);
-    _lastOffsets[key] = pixels;
+    final state = _trackedScrollables.remove(key) ??
+        _TrackedScrollState(anchorPixels: pixels, lastPixels: pixels);
+    _trackedScrollables[key] = state;
 
     // Evict oldest if over capacity.
-    while (_lastOffsets.length > _maxTracked) {
-      _lastOffsets.remove(_lastOffsets.keys.first);
+    while (_trackedScrollables.length > _maxTracked) {
+      _trackedScrollables.remove(_trackedScrollables.keys.first);
     }
 
-    if (previous == null) return; // first sample, no decision yet.
+    if (notification is ScrollStartNotification) {
+      _resetState(state, pixels);
 
-    final delta = pixels - previous;
-    if (delta.abs() < deltaThreshold) return;
+      if (showAtStart && pixels <= notification.metrics.minScrollExtent) {
+        onShouldHide(false);
+      }
+      return;
+    }
 
-    final shouldHide = reverse ? delta < 0 : delta > 0;
+    if (showAtStart && pixels <= notification.metrics.minScrollExtent) {
+      _resetState(state, pixels);
+      onShouldHide(false);
+      return;
+    }
+
+    final delta = pixels - state.lastPixels;
+    state.lastPixels = pixels;
+    if (delta == 0) return;
+
+    final direction = delta.sign;
+    if (state.direction != direction) {
+      state
+        ..anchorPixels = state.lastPixels - delta
+        ..direction = direction;
+    }
+
+    final accumulatedDelta = pixels - state.anchorPixels;
+    if (accumulatedDelta.abs() < deltaThreshold) return;
+
+    final shouldHide = reverse ? accumulatedDelta < 0 : accumulatedDelta > 0;
+    state.anchorPixels = pixels;
     onShouldHide(shouldHide);
   }
 
@@ -101,4 +133,22 @@ class ScrollNotificationDispatcher {
       return _lastActivePosition;
     }
   }
+
+  void _resetState(_TrackedScrollState state, double pixels) {
+    state
+      ..anchorPixels = pixels
+      ..lastPixels = pixels
+      ..direction = null;
+  }
+}
+
+class _TrackedScrollState {
+  _TrackedScrollState({
+    required this.anchorPixels,
+    required this.lastPixels,
+  });
+
+  double anchorPixels;
+  double lastPixels;
+  double? direction;
 }

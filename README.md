@@ -1,27 +1,16 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# Floating Bottom Bar
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/guides/libraries/writing-package-pages).
-
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-library-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/developing-packages).
--->
-
-<h1 align="center">Floating Bottom Bar</h1>
-
-<p align="center">A Flutter package that floats any widget above your content and reacts to scrolling. Use it as a tab bar, bottom navigation bar, search bar, or any custom child.</p><br>
+A Flutter package that floats any widget above your content and reacts to
+scrolling. Use it as a tab bar, bottom navigation bar, search bar, command
+surface, or any custom child.
 
 <p align="center">
   <a href="https://flutter.dev">
     <img src="https://img.shields.io/badge/Platform-Flutter-02569B?logo=flutter"
       alt="Platform" />
   </a>
-  <a href="https://pub.dartlang.org/packages/flutter_floating_bottom_bar">
-    <img src="https://img.shields.io/pub/v/flutter-floating-bottom-bar.svg"
+  <a href="https://pub.dev/packages/flutter_floating_bottom_bar">
+    <img src="https://img.shields.io/pub/v/flutter_floating_bottom_bar.svg"
       alt="Pub Package" />
   </a>
   <a href="https://opensource.org/licenses/MIT">
@@ -32,414 +21,351 @@ and the Flutter guide for
     <img src="https://img.shields.io/badge/Donate-PayPal-00457C?logo=paypal"
       alt="Donate" />
   </a>
-</p><br>
+</p>
 
 | ![Issues dock](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/1-issues-dock.gif) | ![AI prompt dock](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/2-ai-prompt-dock.gif) | ![Basic TabBar](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/3-basic-tab-bar.gif) |
 | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | **Issues dock**                                                                                                                 | **AI prompt dock**                                                                                                                    | **Basic TabBar**                                                                                                                    |
-| ![Minimal API](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/4-minimal-api.gif) | ![Nested scroll](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/5-nested-scroll.gif)   | ![Badged nav](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/6-badged-nav.gif)       |
+| ![Minimal API](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/4-minimal-api.gif) | ![Nested scroll](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/5-nested-scroll.gif) | ![Badged nav](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/6-badged-nav.gif) |
 | **Minimal API**                                                                                                                 | **Nested scroll**                                                                                                                     | **Badged nav**                                                                                                                      |
 | ![Custom transition](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/7-custom-transition.gif) |                                                                                                                                       |                                                                                                                                     |
 | **Custom transition**                                                                                                           |                                                                                                                                       |                                                                                                                                     |
 
----
+## Why this package
 
-## Features
+- Host any widget as the floating bar: `TabBar`, `BottomBarItems`, a search
+  composer, or a custom `Row`.
+- Scroll detection is notification-based. Most setups need no
+  `ScrollController` plumbing.
+- `BottomBarLayout.adaptive(maxWidth: ...)` fills the host width while keeping
+  a hard cap for tablets, desktop, and wide layouts.
+- `BottomBarBodyPadding` reserves the bar's full measured footprint, including
+  configured offset and bottom safe-area, so body content stays clear even
+  while the bar is hidden.
+- `BottomBarMotion()` defaults to Motor-backed Cupertino spring motion with
+  velocity-preserving redirects when scroll direction changes mid-animation.
+- Custom transitions are supported, but they must stay paint-only and preserve
+  the child's layout footprint.
+- The hidden action is accessibility-safe by default: it is non-interactive and
+  excluded from semantics while the bar is visible, keeps at least a 48x48 hit
+  target when active, uses direction-aware icon/tooltip text, and defaults its
+  glyph color to `ColorScheme.onPrimary`.
+- Reduced-motion environments snap directly to the final shown/hidden state.
+- `BottomBarController` supports imperative show/hide plus
+  `scrollToStart()`/`scrollToEnd()`, including correct `NestedScrollView`
+  boundary targeting.
+- `Motion` from the `motor` package is re-exported intentionally for
+  `BottomBarMotion.motor(...)`.
 
-`flutter_floating_bottom_bar` v2.0.1 is a floating widget host that sits above your scrollable content and responds to scroll events automatically — no `ScrollController` wiring required.
-
-- **Host anything**: pass a `TabBar`, search bar, custom `Row`, or `BottomBarItems` widget as the floating `child`.
-- **Notification-based scroll detection**: the bar listens to `ScrollNotification` from any descendant scrollable in the body subtree — `NestedScrollView`, multi-`TabBarView`, `CustomScrollView`, and user-supplied controllers all work out of the box.
-- **Material 3 themed defaults**: `barDecoration` defaults to `colorScheme.surfaceContainer`; `iconDecoration` defaults to `colorScheme.primary`. No more hardcoded `Colors.black`.
-- **Optional helpers**: `BottomBarItem` and `BottomBarItems` make the common nav-item case (icon, label, badge, selection) easy without turning the package into a full navigation widget.
-- **Cupertino motion by default**: show/hide is now backed by Motor springs, so changing scroll direction mid-animation redirects velocity instead of snapping to a new curve.
-- **Custom transitions**: choose from built-in `BottomBarTransition` enum values (`slide`, `fade`, `scale`, `slideAndFade`) or supply your own `transitionBuilder`.
-- **Config objects**: flat constructor parameters from v1 are grouped into `BottomBarLayout`, `BottomBarMotion`, and `BottomBarScrollBehavior` for better readability and app-wide theming via `BottomBarThemeData`.
-
----
-
-## Claude Code skill
-
-If you use [Claude Code](https://claude.ai/code), there's a skill that can integrate, replace, migrate, and debug this package for you — no manual API-reading required.
-
-**What the skill does:**
-- Replaces an existing `BottomNavigationBar`, `NavigationBar`, `BottomAppBar`, or third-party nav bar (salomon, GNav, convex…) with a floating bar
-- Migrates v1.x code to v2.0 (config objects, new scroll behavior, motion API)
-- Picks sensible motion defaults (Cupertino spring) and surfaces alternatives
-- Fixes common glitches: content clipped behind the bar, jumpy spring, `NestedScrollView` not triggering hide, custom transition overshoot
-
-**Install the skill:**
-
-```bash
-/install-skill https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/.claude/skills/flutter-floating-bottom-bar.skill
-```
-
-Then just describe what you want — paste your existing bottom bar code, say what feel you're after, and the skill handles the rest.
-
----
-
-## Installing
+## Install
 
 Requires Dart `>=3.5.0` and Flutter `>=3.22.0`.
 
-Add to your `pubspec.yaml`:
-
-```yaml
-dependencies:
-  flutter_floating_bottom_bar: ^2.0.1
-```
-
-Or use the Flutter CLI:
+See the [2.1.0 release notes](./CHANGELOG.md#210) for the complete list of new
+layout, scrolling, accessibility, and reliability improvements.
 
 ```bash
 flutter pub add flutter_floating_bottom_bar
 ```
 
-Then import:
-
 ```dart
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 ```
 
----
+## Claude Code skill
+
+If you use [Claude Code](https://claude.ai/code), this repo ships a skill for
+integration, migration, and debugging help around this package.
+
+Install:
+
+```bash
+/install-skill https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/.claude/skills/flutter-floating-bottom-bar.skill
+```
 
 ## Basic usage
 
 ```dart
 BottomBar(
-  layout: BottomBarLayout(
-    width: 280,
-    borderRadius: BorderRadius.circular(28),
-  ),
-  body: ListView.builder(
-    itemCount: 200,
-    itemBuilder: (_, i) => ListTile(title: Text('Item $i')),
-  ),
-  child: const Padding(
-    padding: EdgeInsets.all(16),
-    child: Text('This is the floating widget'),
-  ),
-)
-```
-
-`BottomBar` requires exactly two arguments: `child` (the floating widget) and `body` (the scrollable content beneath it). No `ScrollController` needs to be passed; the bar observes `ScrollNotification` automatically.
-
----
-
-## Migrating from v1.x
-
-v2.0.0 is a major release with breaking changes. Here's how to migrate from v1.x:
-
-| v1.x | v2.0 | Migration |
-|---|---|---|
-| `body: (context, controller) => Widget` | `body: Widget` | Drop the builder; the bar listens to scroll notifications. Pass your own `ScrollController` into your scrollable directly if you need one. |
-| `barColor` | removed | Use `BottomBarThemeData.barDecoration` or the `theme:` argument. |
-| `width`, `offset`, `borderRadius`, `barAlignment`, `fit`, `clip`, `respectSafeArea` | `BottomBarLayout` | Wrap into `layout: BottomBarLayout(...)`. `barAlignment` → `alignment`. |
-| `duration`, `curve`, `start`, `end` | `BottomBarMotion` | `BottomBarMotion()` now defaults to Cupertino spring motion. Existing `BottomBarMotion(duration: ..., curve: ...)` calls keep curve-based behavior. `start`/`end` (doubles) → `slideStart`/`slideEnd` (`Offset`s). |
-| `hideOnScroll`, `reverse`, `scrollOpposite`, `scrollDeltaThreshold` | `BottomBarScrollBehavior` | Wrap into `scrollBehavior: BottomBarScrollBehavior(...)`. `scrollDeltaThreshold` → `deltaThreshold`. |
-| `iconWidth`, `iconHeight`, `iconDecoration`, `barDecoration` | `BottomBarThemeData` | Move to theme. Per-instance overrides remain via the `theme:` argument. |
-| `BottomBarScrollControllerProvider` | `BottomBarScope` | Renamed. The `scrollController` field is gone. New fields: `barHeight`, `isVisible`. |
-
-No compatibility shim ships with v2.
-
----
-
-## Recipes
-
-### Basic floating bar
-
-The minimal setup — see the [Basic usage](#basic-usage) section above.
-The full runnable demo is at `example/lib/demos/basic_demo.dart`.
-
-### Tab bar with FAB notch
-
-Wrap a `TabBar` (with an optional overlapping `FloatingActionButton`) as the floating `child`. Pass the `TabBarView` as `body`.
-
-```dart
-BottomBar(
-  layout: BottomBarLayout(
-    width: MediaQuery.of(context).size.width * 0.8,
-    borderRadius: BorderRadius.circular(500),
-    fit: StackFit.expand,
-    clip: Clip.none,
-  ),
-  motion: const BottomBarMotion.cupertino(
-    preset: BottomBarCupertinoMotion.snappy,
-    duration: Duration(milliseconds: 460),
-    slideStart: Offset(0, 3),
-  ),
-  scrollBehavior: const BottomBarScrollBehavior(hideOnScroll: true),
-  theme: BottomBarThemeData(
-    barDecoration: BoxDecoration(
-      color: Colors.blue,
-      borderRadius: BorderRadius.circular(500),
+  layout: const BottomBarLayout.adaptive(maxWidth: 420),
+  body: BottomBarBodyPadding(
+    padding: const EdgeInsets.only(top: 24),
+    child: ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: 50,
+      itemBuilder: (_, index) => ListTile(title: Text('Item $index')),
     ),
   ),
-  body: TabBarView(controller: tabController, children: pages),
-  child: Stack(
-    alignment: Alignment.center,
-    clipBehavior: Clip.none,
-    children: [
-      TabBar(controller: tabController, tabs: tabs),
-      Positioned(
-        top: -20,
-        child: FloatingActionButton(onPressed: () {}, child: const Icon(Icons.add)),
-      ),
-    ],
-  ),
-)
-```
-
-See `example/lib/demos/tab_bar_demo.dart` for the full color-driven demo.
-
-### Badges with `BottomBarItems`
-
-Use `BottomBarItems` + `BottomBarItem` for a ready-made icon/label/badge row without writing layout code:
-
-```dart
-BottomBar(
-  layout: BottomBarLayout(
-    width: MediaQuery.of(context).size.width - 32,
-    borderRadius: BorderRadius.circular(28),
-  ),
-  body: ListView.builder(
-    itemCount: 200,
-    itemBuilder: (_, i) => ListTile(title: Text('Row $i')),
-  ),
-  child: Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-    child: BottomBarItems(
+  child: const Padding(
+    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        BottomBarItem(
-          icon: const Icon(Icons.home_outlined),
-          selectedIcon: const Icon(Icons.home),
-          label: const Text('Home'),
-          selected: _index == 0,
-          onTap: () => setState(() => _index = 0),
-        ),
-        BottomBarItem(
-          icon: const Icon(Icons.inbox_outlined),
-          selectedIcon: const Icon(Icons.inbox),
-          label: const Text('Inbox'),
-          badge: Badge(label: const Text('3')),
-          selected: _index == 1,
-          onTap: () => setState(() => _index = 1),
-        ),
+        Icon(Icons.home_rounded),
+        Text('Floating bar'),
+        Icon(Icons.search_rounded),
       ],
     ),
   ),
 )
 ```
 
-See `example/lib/demos/badges_demo.dart` for the full runnable version.
+`BottomBar` needs two required arguments:
 
-For the full recipe catalogue, see [EXAMPLES.md](./EXAMPLES.md). Each recipe has a runnable counterpart in `example/lib/demos/`.
+- `body`: the subtree that emits `ScrollNotification`s.
+- `child`: the floating widget shown above that body.
 
----
+The bar is stacked above the body, so use `BottomBarBodyPadding` when your body
+should reserve enough bottom space to stay clear of the bar.
 
-## API Reference
+## Common recipes
 
-### `BottomBar`
+### Adaptive width + stable body padding
 
-The root widget. Requires `child` and `body`.
-
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `child` | `Widget` | **required** | The floating widget shown above `body`. |
-| `body` | `Widget` | **required** | The content beneath the bar. Any descendant scrollable drives hide/show via notifications. |
-| `controller` | `BottomBarController?` | `null` | Optional imperative controller for `show()`, `hide()`, `toggle()`, scroll actions. |
-| `layout` | `BottomBarLayout` | `BottomBarLayout()` | Size, radius, alignment, and stack configuration. |
-| `motion` | `BottomBarMotion` | `BottomBarMotion()` | Motion engine, transition type, and slide offsets. |
-| `scrollBehavior` | `BottomBarScrollBehavior` | `BottomBarScrollBehavior()` | Scroll-detection thresholds and direction flags. |
-| `theme` | `BottomBarThemeData?` | `null` | Per-instance decoration overrides. Higher precedence than `Theme.of(context).extension`. |
-| `icon` | `BackToTopIconBuilder?` | `null` | Builder for the back-to-top icon shown when the bar is hidden. |
-| `showIcon` | `bool` | `true` | Whether to show the back-to-top icon. |
-| `iconSemanticLabel` | `String?` | `null` | Semantic label for the back-to-top icon. |
-| `iconTooltip` | `String?` | `null` | Tooltip for the back-to-top icon. |
-| `onVisibilityChanged` | `ValueChanged<bool>?` | `null` | Called whenever bar visibility changes. `true` = now visible. |
-| `onBottomBarShown` | `VoidCallback?` | `null` | Called when the bar becomes visible. |
-| `onBottomBarHidden` | `VoidCallback?` | `null` | Called when the bar becomes hidden. |
-
----
-
-### `BottomBarLayout`
-
-Controls the bar's size, shape, position, and stack behavior.
-
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `width` | `double` | `300` | Width of the floating bar in logical pixels. |
-| `offset` | `double` | `10` | Padding from the bottom and sides of the screen. |
-| `borderRadius` | `BorderRadius` | `BorderRadius.zero` | Corner radius of the bar. |
-| `iconOffset` | `Offset` | `Offset.zero` | Extra translation applied only to the back-to-top icon, e.g. `Offset(0, 10)` moves it 10px lower. |
-| `alignment` | `Alignment` | `Alignment.bottomCenter` | Alignment of the bar within the stack. |
-| `fit` | `StackFit` | `StackFit.loose` | `fit` passed to the underlying `Stack`. |
-| `clip` | `Clip` | `Clip.hardEdge` | `clipBehavior` of the underlying `Stack`. Set to `Clip.none` for a FAB notch. |
-| `respectSafeArea` | `bool` | `true` | Whether the bar respects system safe-area insets (e.g. iOS home indicator). |
-
----
-
-### `BottomBarMotion`
-
-Controls how the bar animates in and out.
-
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `mode` | `BottomBarMotionMode` | `cupertino` | Motion engine: Cupertino spring, curved, or raw Motor motion. |
-| `cupertinoPreset` | `BottomBarCupertinoMotion` | `snappy` | Cupertino preset used by the default spring mode. |
-| `duration` | `Duration` | `Duration(milliseconds: 500)` | Estimated spring duration, or fixed duration for curve mode. |
-| `curve` | `Curve` | `Curves.easeOutCubic` | Curve used by `BottomBarMotion.curved` and legacy duration/curve constructor calls. |
-| `transition` | `BottomBarTransition` | `BottomBarTransition.slide` | Built-in transition type. |
-| `transitionBuilder` | `Widget Function(BuildContext, Animation<double>, Widget)?` | `null` | Custom transition. When non-null, overrides `transition`; spring progress can overshoot, so clamp opacity/size if needed. |
-| `slideStart` | `Offset` | `Offset(0, 2)` | Starting offset for `slide` / `slideAndFade` transitions. |
-| `slideEnd` | `Offset` | `Offset.zero` | Ending offset for `slide` / `slideAndFade` transitions. |
+Use `BottomBarLayout.adaptive(maxWidth: ...)` to span narrow screens while
+stopping at a defined maximum on wide screens. Pair it with
+`BottomBarBodyPadding` when the body should reserve the full footprint.
 
 ```dart
-// Default: Motor-backed Cupertino spring, velocity-preserving redirection.
-const BottomBarMotion();
-
-// Cupertino presets.
-const BottomBarMotion.cupertino(
-  preset: BottomBarCupertinoMotion.bouncy,
-  extraBounce: 0.04,
-);
-
-// Traditional deterministic duration + curve motion.
-const BottomBarMotion.curved(
-  duration: Duration(milliseconds: 280),
-  curve: Curves.easeOutCubic,
-);
-
-// Any Motor motion, re-exported by this package.
-const BottomBarMotion.motor(
-  Motion.snappySpring(),
-);
-```
-
-**`BottomBarTransition` enum values:**
-
-| Value | Effect |
-|---|---|
-| `slide` | `SlideTransition` from `slideStart` to `slideEnd`. |
-| `fade` | `FadeTransition`. |
-| `scale` | `ScaleTransition`. |
-| `slideAndFade` | `SlideTransition` composed with `FadeTransition`. |
-
----
-
-### `BottomBarScrollBehavior`
-
-Controls how the bar reacts to scroll events.
-
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `hideOnScroll` | `bool` | `true` | When `false`, scroll events never hide the bar (imperative `controller.hide()` still works). |
-| `reverse` | `bool` | `false` | When `true`, the bar hides on upward scroll and shows on downward scroll (inverted). |
-| `scrollOpposite` | `bool` | `false` | When `true`, the back-to-top icon scrolls to the end instead of the start. |
-| `deltaThreshold` | `double` | `8` | Minimum scroll delta (in pixels) required to trigger a visibility change. |
-| `predicate` | `bool Function(ScrollNotification)?` | `null` | Custom filter; return `false` to ignore a notification entirely. Useful for `NestedScrollView` disambiguation. |
-
----
-
-### `BottomBarThemeData`
-
-A `ThemeExtension<BottomBarThemeData>` for app-wide styling. Install via `Theme(data: theme.copyWith(extensions: [myTheme]), ...)` or pass directly as `BottomBar(theme: ...)`.
-
-**Resolution order (low → high precedence):**
-1. Built-in Material 3 defaults.
-2. `Theme.of(context).extension<BottomBarThemeData>()`.
-3. The `theme` argument on `BottomBar`.
-4. Per-widget config arguments (`layout`, `motion`, `scrollBehavior`).
-
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `barDecoration` | `BoxDecoration?` | `BoxDecoration(color: colorScheme.surfaceContainer, borderRadius: BorderRadius.circular(28))` | Decoration applied to the floating bar container. |
-| `iconDecoration` | `BoxDecoration?` | `BoxDecoration(color: colorScheme.primary, shape: BoxShape.circle)` | Decoration for the back-to-top icon container. |
-| `iconWidth` | `double?` | `30` | Width of the back-to-top icon. |
-| `iconHeight` | `double?` | `30` | Height of the back-to-top icon. |
-| `layout` | `BottomBarLayout?` | `null` | Theme-level layout defaults. |
-| `motion` | `BottomBarMotion?` | `null` | Theme-level motion defaults. |
-| `scrollBehavior` | `BottomBarScrollBehavior?` | `null` | Theme-level scroll behavior defaults. |
-
-Methods: `copyWith(...)`, `lerp(other, t)`, `merge(other)` (other wins on conflict).
-
----
-
-### `BottomBarController`
-
-Extends `ChangeNotifier`. Provides imperative control over bar visibility and scroll position.
-
-| Member | Description |
-|---|---|
-| `bool isVisible` | Current visibility state. |
-| `bool isAttached` | Whether the controller is attached to a live `BottomBar`. |
-| `void show()` | Show the bar. Fires `onBottomBarShown`. |
-| `void hide()` | Hide the bar. Fires `onBottomBarHidden`. |
-| `void toggle()` | Toggle visibility. |
-| `Future<void> scrollToStart()` | Scroll the most recently active scrollable to the start. No-op if no scrollable has been observed. |
-| `Future<void> scrollToEnd()` | Scroll the most recently active scrollable to the end. No-op if no scrollable has been observed. |
-
-A controller cannot be attached to two `BottomBar` instances simultaneously; double-attach asserts in debug mode.
-
----
-
-### `BottomBarScope`
-
-An `InheritedWidget` that exposes the bar's measured height and current visibility to descendants anywhere in the subtree. Replaces `BottomBarScrollControllerProvider` from v1.
-
-| Member | Description |
-|---|---|
-| `ValueListenable<double> barHeight` | Rendered height of the floating bar in logical pixels. Starts at `0` before the first frame; update post-layout. |
-| `ValueListenable<bool> isVisible` | Current visibility as a listenable. |
-| `static BottomBarScope of(BuildContext context)` | Returns the nearest `BottomBarScope`; throws if none found. |
-| `static BottomBarScope? maybeOf(BuildContext context)` | Returns the nearest `BottomBarScope`, or `null` if none found. |
-
-Usage pattern:
-
-```dart
-ValueListenableBuilder<double>(
-  valueListenable: BottomBarScope.of(context).barHeight,
-  builder: (context, height, _) {
-    return SizedBox(height: height); // spacer to avoid content clipping
-  },
+BottomBar(
+  layout: const BottomBarLayout.adaptive(maxWidth: 440),
+  body: const BottomBarBodyPadding(
+    child: CustomScrollView(
+      slivers: [
+        SliverAppBar(title: Text('Inbox')),
+        SliverList.list(
+          children: [
+            ListTile(title: Text('Message 1')),
+            ListTile(title: Text('Message 2')),
+          ],
+        ),
+      ],
+    ),
+  ),
+  child: const SizedBox(
+    height: 56,
+    child: Center(child: Text('Compose')),
+  ),
 )
 ```
 
----
+`BottomBarScope.barHeight` and `BottomBarBodyPadding` use the bar's measured
+layout footprint, not its animated transform. The reported value includes the
+bar height plus configured `layout.offset` and bottom safe-area when
+`respectSafeArea` is enabled.
 
-### `BottomBarItem`
+### Nested scroll views
 
-A ready-made navigation item widget: icon, optional selected icon, optional label, optional badge, tap handler.
+`BottomBarController.scrollToStart()` always targets the minimum extent and
+`scrollToEnd()` always targets the maximum extent. In a `NestedScrollView`, the
+controller automatically chooses the correct coordinated boundary controller:
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `icon` | `Widget` | **required** | Icon shown when unselected. |
-| `selectedIcon` | `Widget?` | `null` | Icon shown when `selected` is `true`. Falls back to `icon` if not provided. |
-| `label` | `Widget?` | `null` | Label below the icon. |
-| `badge` | `Widget?` | `null` | Badge overlay (e.g. notification count). |
-| `selected` | `bool` | `false` | Whether this item is currently selected. |
-| `onTap` | `VoidCallback?` | `null` | Called when the item is tapped. |
-| `tooltip` | `String?` | `null` | Tooltip on long-press. |
-| `color` | `Color?` | `null` | Icon/label color when unselected. |
-| `selectedColor` | `Color?` | `null` | Icon/label color when selected. |
+- `scrollToStart()` drives the outer controller so pinned/expanded header
+  slivers return to their true top state.
+- `scrollToEnd()` drives the inner controller so the body scrolls to the end
+  and the header collapses naturally.
 
-`BottomBarItem` does not maintain its own selection state; pass `selected: index == currentIndex` and update state in `onTap`.
+If your body emits unrelated notifications, use
+`BottomBarScrollBehavior.predicate` to filter them.
 
----
+```dart
+BottomBar(
+  controller: controller,
+  scrollBehavior: BottomBarScrollBehavior(
+    predicate: (notification) => notification.depth == 0,
+    showAtStart: true,
+    showOnScrollEnd: true,
+  ),
+  body: NestedScrollView(
+    headerSliverBuilder: (_, __) => const [
+      SliverAppBar(
+        pinned: true,
+        expandedHeight: 180,
+        flexibleSpace: FlexibleSpaceBar(title: Text('Nested scroll')),
+      ),
+    ],
+    body: ListView.builder(
+      itemCount: 100,
+      itemBuilder: (_, index) => ListTile(title: Text('Row $index')),
+    ),
+  ),
+  child: const SizedBox(
+    height: 56,
+    child: Center(child: Text('Scroll-aware')),
+  ),
+)
+```
 
-### `BottomBarItems`
+### Custom transitions
 
-A thin row layout helper that arranges `BottomBarItem`s (or any widgets) horizontally.
+Custom transition builders must preserve the child's layout footprint. Use
+paint-only wrappers such as `Opacity`, `Transform.translate`, or
+`Transform.scale`.
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `children` | `List<Widget>` | **required** | Items to lay out in the row. |
-| `spacing` | `MainAxisAlignment` | `MainAxisAlignment.spaceAround` | Main-axis alignment applied to the row. |
+Do not use layout-changing widgets such as `SizeTransition` or `Align` with a
+`heightFactor`; those break the stable footprint contract used by
+`BottomBarScope.barHeight` and `BottomBarBodyPadding`.
 
----
+```dart
+BottomBar(
+  motion: BottomBarMotion(
+    transitionBuilder: (context, animation, child) {
+      final value = animation.value.clamp(0.0, 1.0);
+      return Opacity(
+        opacity: value,
+        child: Transform.scale(
+          scale: 0.92 + (0.08 * value),
+          child: child,
+        ),
+      );
+    },
+  ),
+  body: ListView.builder(
+    itemCount: 100,
+    itemBuilder: (_, index) => ListTile(title: Text('Row $index')),
+  ),
+  child: const SizedBox(
+    height: 56,
+    child: Center(child: Text('Paint-only transition')),
+  ),
+)
+```
 
-## Bugs or Requests
+Spring progress can overshoot. Clamp `animation.value` before using it for
+opacity or scale.
 
-If you encounter any problems feel free to open an [issue](https://github.com/codenameakshay/flutter-floating-bottom-bar/issues/new?template=bug_report.md). If you feel the library is missing a feature, please raise a [ticket](https://github.com/codenameakshay/flutter-floating-bottom-bar/issues/new?template=feature_request.md) on GitHub and I'll look into it. Pull requests are also welcome.
+### `BottomBarItems` and `BottomBarItem`
 
-See [Contributing.md](https://github.com/codenameakshay/flutter-floating-bottom-bar/blob/master/CONTRIBUTING.md).
+`BottomBarItems` is a row helper. `BottomBarItem` is an opinionated item widget
+with built-in accessibility and RTL-aware badge placement.
+
+- The badge uses `PositionedDirectional`, so it follows the top-end corner in
+  both LTR and RTL layouts.
+- The item exposes button semantics, selection state, and enabled state.
+- The tappable surface keeps at least a 48x48 target.
+- Accessible naming is deterministic: `semanticLabel` wins, otherwise
+  `tooltip`, otherwise descendant semantics.
+- When `semanticLabel` or `tooltip` provides the explicit accessible name,
+  descendant semantics are excluded to avoid duplicate announcements.
+
+## Migration from v1.x
+
+| v1.x | v2.x | Migration |
+| --- | --- | --- |
+| `body: (context, controller) => Widget` | `body: Widget` | Drop the builder. The bar listens to `ScrollNotification`s from descendant scrollables. |
+| `barColor` | removed | Use `BottomBarThemeData.barDecoration` or `theme:`. |
+| `width`, `offset`, `borderRadius`, `barAlignment`, `fit`, `clip`, `respectSafeArea` | `BottomBarLayout` | Move these into `layout: BottomBarLayout(...)`. `barAlignment` became `alignment`. |
+| `duration`, `curve`, `start`, `end` | `BottomBarMotion` | `BottomBarMotion()` now defaults to Cupertino spring motion. `start`/`end` became `slideStart`/`slideEnd`. |
+| `hideOnScroll`, `reverse`, `scrollOpposite`, `scrollDeltaThreshold` | `BottomBarScrollBehavior` | Move these into `scrollBehavior: BottomBarScrollBehavior(...)`. `scrollDeltaThreshold` became `deltaThreshold`. |
+| `iconWidth`, `iconHeight`, `iconDecoration`, `barDecoration` | `BottomBarThemeData` | Move these to the theme or the `theme:` override. |
+| `BottomBarScrollControllerProvider` | `BottomBarScope` | The old controller provider was replaced by `BottomBarScope`, which exposes `barHeight` and `isVisible`. |
+
+No backward-compatibility shim ships with v2.
+
+## API quick reference
+
+### `BottomBar`
+
+| Parameter | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `child` | `Widget` | required | Floating content shown above the body. |
+| `body` | `Widget` | required | Descendant scrollables here drive hide/show via notifications. |
+| `controller` | `BottomBarController?` | `null` | Imperative show/hide/scroll API. |
+| `layout` | `BottomBarLayout?` | `null` | Falls back to theme layout, then `const BottomBarLayout()`. |
+| `motion` | `BottomBarMotion?` | `null` | Falls back to theme motion, then `const BottomBarMotion()`. |
+| `scrollBehavior` | `BottomBarScrollBehavior?` | `null` | Falls back to theme scroll behavior, then `const BottomBarScrollBehavior()`. |
+| `theme` | `BottomBarThemeData?` | `null` | Per-instance theme overrides. |
+| `icon` | `BackToTopIconBuilder?` | `null` | Custom hidden action visual. |
+| `showIcon` | `bool` | `true` | Enables or removes the built-in hidden action. |
+| `iconSemanticLabel` | `String?` | `null` | Defaults to the direction-aware tooltip text. |
+| `iconTooltip` | `String?` | `null` | Defaults to `Scroll to top` or `Scroll to bottom`. |
+
+The hidden action is only interactive while the bar is hidden. While the bar is
+visible it is ignored for hit testing and removed from the semantics tree.
+
+### `BottomBarLayout`
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `width` | `double` | `300` | Requested bar width before viewport/max-width clamping. |
+| `maxWidth` | `double?` | `null` | Optional explicit width cap after host constraints. |
+| `offset` | `double` | `10` | Outer padding applied around the bar or hidden action. |
+| `borderRadius` | `BorderRadius` | `BorderRadius.zero` | Used by the default rectangular bar decoration. |
+| `iconOffset` | `Offset` | `Offset.zero` | Extra translation applied only to the hidden action. |
+| `alignment` | `Alignment` | `Alignment.bottomCenter` | Shared alignment for the bar and hidden action. |
+| `fit` | `StackFit` | `StackFit.loose` | Host stack fit. |
+| `clip` | `Clip` | `Clip.hardEdge` | Host stack clip behavior. |
+| `respectSafeArea` | `bool` | `true` | Wraps the bar and hidden action in `SafeArea`. |
+
+Use `BottomBarLayout.adaptive(maxWidth: ...)` to fill available width up to a
+hard cap. When deriving layouts, `copyWith(clearMaxWidth: true)` explicitly
+removes an existing cap.
+
+### `BottomBarMotion`
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `mode` | `BottomBarMotionMode` | `cupertino` | `BottomBarMotion()` defaults to Cupertino spring mode. |
+| `duration` | `Duration` | `500ms` in default Cupertino mode | Used for curved motion and scroll-to-boundary animation timing. |
+| `curve` | `Curve` | `Curves.easeOutCubic` | Used by curved motion and controller boundary scrolling. |
+| `cupertinoPreset` | `BottomBarCupertinoMotion` | `snappy` | Default Cupertino preset. |
+| `transition` | `BottomBarTransition` | `slide` | Built-in transition when `transitionBuilder` is null. |
+| `transitionBuilder` | `Widget Function(BuildContext, Animation<double>, Widget)?` | `null` | Overrides the enum. Must preserve layout footprint and stay paint-only. |
+| `slideStart` | `Offset` | `Offset(0, 2)` | Hidden offset for `slide` and `slideAndFade`. |
+| `slideEnd` | `Offset` | `Offset.zero` | Visible offset for `slide` and `slideAndFade`. |
+
+Reduced-motion environments snap to the target shown/hidden state instead of
+animating.
+
+### `BottomBarScrollBehavior`
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `hideOnScroll` | `bool` | `true` | Disables scroll-driven hiding when false. |
+| `reverse` | `bool` | `false` | Inverts the scroll direction that hides vs shows the bar. |
+| `scrollOpposite` | `bool` | `false` | Changes only the built-in hidden action direction, tooltip, and glyph. It does not change `scrollToStart()` or `scrollToEnd()`. |
+| `deltaThreshold` | `double` | `8` | Minimum absolute delta required before visibility can flip. |
+| `showAtStart` | `bool` | `false` | Forces the bar visible when a scrollable reaches its minimum extent. |
+| `showOnScrollEnd` | `bool` | `false` | Forces the bar visible when scrolling settles. |
+| `predicate` | `bool Function(ScrollNotification)?` | `null` | Skip notifications entirely when it returns false. |
+
+### `BottomBarController`
+
+| Member | Notes |
+| --- | --- |
+| `isVisible` | Tracks the currently attached bar's visibility. |
+| `isAttached` | Whether the controller is attached to a live bar. |
+| `show()` / `hide()` / `toggle()` | Imperative visibility controls. |
+| `scrollToStart()` | Always scrolls the last active scrollable to its minimum extent. |
+| `scrollToEnd()` | Always scrolls the last active scrollable to its maximum extent. |
+
+A controller can own only one live bar at a time. Double-attach fails in both
+debug and release, and visibility updates are accepted only from the owning bar
+binding.
+
+### `BottomBarScope`
+
+`BottomBarScope` exposes two listenables inside `BottomBar.body`:
+
+- `barHeight`: the live measured bar footprint, including offset and bottom
+  safe-area when enabled.
+- `isVisible`: the current shown/hidden target state.
+
+Use `BottomBarBodyPadding` when you want the common "reserve the bottom
+footprint for me" behavior without wiring your own `ValueListenableBuilder`.
+
+## Examples and demos
+
+- API recipes: [EXAMPLES.md](./EXAMPLES.md)
+- Runnable demo app: `example/`
+- Demo entry point: `example/lib/main.dart`
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup, quality checks, and release
+dry-run steps.
+
+## Bugs or requests
+
+Open an issue at
+<https://github.com/codenameakshay/flutter-floating-bottom-bar/issues>.

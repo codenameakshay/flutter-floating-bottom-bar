@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:motor/motor.dart';
 
 import 'bottom_bar_controller.dart';
@@ -8,13 +11,16 @@ import 'config/bottom_bar_layout.dart';
 import 'config/bottom_bar_motion.dart';
 import 'config/bottom_bar_scroll_behavior.dart';
 import 'internal/scroll_notification_dispatcher.dart';
+import 'internal/size_observer.dart';
+import 'internal/bottom_bar_action.dart';
 import 'internal/visibility_animator.dart';
 
 /// Builds the back-to-top icon child.
 ///
-/// [width] and [height] reflect the animated size at the moment of build
-/// (they shrink to zero as the bar becomes fully visible). Ignore them to keep
-/// a constant icon size, or use them to scale the icon along with the container.
+/// [width] and [height] reflect the animated visual container size at the
+/// moment of build (they shrink to zero as the bar becomes fully visible).
+/// Ignore them to keep a constant icon size, or use them to scale the icon
+/// along with the container.
 typedef BackToTopIconBuilder = Widget Function(double width, double height);
 
 /// A floating bar widget that hosts any child widget above scrollable content
@@ -23,6 +29,9 @@ typedef BackToTopIconBuilder = Widget Function(double width, double height);
 /// The bar listens to [ScrollNotification]s bubbled up from any descendant
 /// scrollable in [body] — no [ScrollController] wiring is required. It can
 /// host a [TabBar], search bar, custom [Row], [BottomBarItems], or any widget.
+/// Because the bar is stacked above [body], use [BottomBarBodyPadding] (or
+/// [BottomBarScope.barHeight]) when the body should reserve matching bottom
+/// clearance.
 ///
 /// Basic usage:
 ///
@@ -46,6 +55,8 @@ typedef BackToTopIconBuilder = Widget Function(double width, double height);
 /// * [BottomBarThemeData] — app-wide defaults via [ThemeExtension].
 /// * [BottomBarController] — imperative show/hide/scroll API.
 /// * [BottomBarScope] — read bar height and visibility from descendants.
+/// * [BottomBarBodyPadding] — reserve body space equal to the bar footprint,
+///   including [BottomBarLayout.offset] and bottom safe-area when enabled.
 class BottomBar extends StatefulWidget {
   /// Creates a [BottomBar].
   ///
@@ -73,17 +84,20 @@ class BottomBar extends StatefulWidget {
   /// [BottomBarItems], or a custom [Row].
   final Widget child;
 
-  /// The scrollable content placed beneath (and behind) the bar.
+  /// The content placed beneath (and behind) the bar.
   ///
   /// Any [ScrollNotification] bubbled from a descendant scrollable here drives
   /// the bar's hide/show behaviour without requiring a [ScrollController].
+  /// This subtree also receives [BottomBarScope], so descendants can read the
+  /// live bar footprint and visibility.
   final Widget body;
 
   /// Optional imperative controller for the bar.
   ///
   /// Attach a [BottomBarController] to programmatically [BottomBarController.show],
   /// [BottomBarController.hide], [BottomBarController.toggle], or scroll the
-  /// body to its start/end. A controller can be attached to only one bar at a time.
+  /// body to its start/end. A controller can be attached to only one bar at a
+  /// time; double-attach fails in both debug and release.
   final BottomBarController? controller;
 
   /// Size, shape, and positioning configuration.
@@ -110,25 +124,29 @@ class BottomBar extends StatefulWidget {
   /// arguments ([layout], [motion], [scrollBehavior]).
   final BottomBarThemeData? theme;
 
-  /// Builder for a custom back-to-top icon shown while the bar is hidden.
+  /// Builder for a custom hidden action shown while the bar is hidden.
   ///
   /// When null a default up-arrow icon is used. The builder receives the
-  /// current animated width and height of the icon container.
+  /// current animated width and height of the icon container. The action is
+  /// non-interactive and removed from semantics while the bar itself is
+  /// visible.
   final BackToTopIconBuilder? icon;
 
-  /// Whether the back-to-top icon is rendered at all.
+  /// Whether the built-in hidden action is rendered at all.
   ///
   /// Defaults to `true`. Set to `false` to suppress the icon entirely.
   final bool showIcon;
 
-  /// Accessibility label for the back-to-top icon.
+  /// Accessibility label for the hidden action.
   ///
-  /// Passed to [Semantics.label]. Defaults to null (no label announced).
+  /// Passed to [Semantics.label]. Defaults to the direction-aware tooltip text:
+  /// `'Scroll to top'` or `'Scroll to bottom'`.
   final String? iconSemanticLabel;
 
-  /// Tooltip text shown on long-press of the back-to-top icon.
+  /// Tooltip text shown on long-press of the hidden action.
   ///
-  /// Defaults to `'Scroll to top'` when null.
+  /// Defaults to `'Scroll to top'` or `'Scroll to bottom'`, depending on
+  /// [BottomBarScrollBehavior.scrollOpposite].
   final String? iconTooltip;
 
   /// Called every time bar visibility changes.
@@ -171,7 +189,6 @@ class _BottomBarState extends State<BottomBar>
 
   final ValueNotifier<double> _barHeight = ValueNotifier<double>(0);
   final ValueNotifier<bool> _isVisibleNotifier = ValueNotifier<bool>(true);
-  final GlobalKey _barKey = GlobalKey();
 
   @override
   void initState() {
@@ -191,14 +208,13 @@ class _BottomBarState extends State<BottomBar>
     _dispatcher = ScrollNotificationDispatcher(
       deltaThreshold: _scrollBehavior.deltaThreshold,
       reverse: _scrollBehavior.reverse,
+      showAtStart: _scrollBehavior.showAtStart,
+      showOnScrollEnd: _scrollBehavior.showOnScrollEnd,
       predicate: _scrollBehavior.predicate,
       onShouldHide: (hide) => _setBarVisible(!hide, notifyCallbacks: true),
     );
 
     widget.controller?.attach(this);
-    widget.controller?.updateVisibility(true, shouldNotify: false);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) => _measureBar());
   }
 
   @override
@@ -207,23 +223,13 @@ class _BottomBarState extends State<BottomBar>
     _syncMotionAndScroll(_resolvedTheme(context));
   }
 
-  void _measureBar() {
-    final ctx = _barKey.currentContext;
-    if (ctx == null) return;
-    final renderBox = ctx.findRenderObject();
-    if (renderBox is RenderBox && renderBox.hasSize) {
-      final h = renderBox.size.height;
-      if (_barHeight.value != h) _barHeight.value = h;
-    }
-  }
-
   @override
   void didUpdateWidget(covariant BottomBar oldWidget) {
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.controller != widget.controller) {
-      oldWidget.controller?.detach(this);
       widget.controller?.attach(this);
+      oldWidget.controller?.detach(this);
     }
 
     _syncMotionAndScroll(_resolvedTheme(context));
@@ -240,6 +246,8 @@ class _BottomBarState extends State<BottomBar>
     if (_scrollBehavior != newScroll) {
       _dispatcher.deltaThreshold = newScroll.deltaThreshold;
       _dispatcher.reverse = newScroll.reverse;
+      _dispatcher.showAtStart = newScroll.showAtStart;
+      _dispatcher.showOnScrollEnd = newScroll.showOnScrollEnd;
       _dispatcher.predicate = newScroll.predicate;
     }
 
@@ -266,9 +274,9 @@ class _BottomBarState extends State<BottomBar>
 
     _isVisibleNotifier.value = visible;
 
-    _motionController.animateTo(visible ? 1 : 0, forward: visible);
+    _animateBarTo(visible);
 
-    widget.controller?.updateVisibility(visible);
+    widget.controller?.updateVisibility(this, visible);
 
     if (notifyCallbacks) {
       widget.onVisibilityChanged?.call(visible);
@@ -305,14 +313,6 @@ class _BottomBarState extends State<BottomBar>
     // to its bottom collapses the header and scrolls the body to the end. We
     // therefore issue exactly one call — animating both controllers at once
     // would have them fight over the coordinator and land at the wrong offset.
-    final nested = _nestedScrollViewOf(_dispatcher.lastActiveContext);
-    if (nested != null) {
-      final controller = toEnd ? nested.innerController : nested.outerController;
-      await _animateControllerToBoundary(controller, toEnd: toEnd);
-      _setBarVisible(true, notifyCallbacks: true, fromController: true);
-      return;
-    }
-
     final position = _dispatcher.lastActivePosition;
     if (position == null) {
       assert(() {
@@ -325,6 +325,20 @@ class _BottomBarState extends State<BottomBar>
         ));
         return true;
       }());
+      return;
+    }
+
+    final nested = _nestedScrollViewOf(_dispatcher.lastActiveContext);
+    final controller = nested == null
+        ? null
+        : _nestedBoundaryControllerForPosition(
+            nested,
+            position: position,
+            toEnd: toEnd,
+          );
+    if (controller != null) {
+      await _animateControllerToBoundary(controller, toEnd: toEnd);
+      _setBarVisible(true, notifyCallbacks: true, fromController: true);
       return;
     }
     await position.animateTo(
@@ -345,6 +359,29 @@ class _BottomBarState extends State<BottomBar>
     } catch (_) {
       return null;
     }
+  }
+
+  ScrollController? _nestedBoundaryControllerForPosition(
+    NestedScrollViewState nested, {
+    required ScrollPosition position,
+    required bool toEnd,
+  }) {
+    if (_controllerOwnsPosition(nested.outerController, position) ||
+        _controllerOwnsPosition(nested.innerController, position)) {
+      return toEnd ? nested.innerController : nested.outerController;
+    }
+    return null;
+  }
+
+  bool _controllerOwnsPosition(
+    ScrollController controller,
+    ScrollPosition position,
+  ) {
+    if (!controller.hasClients) return false;
+    for (final candidate in controller.positions) {
+      if (identical(candidate, position)) return true;
+    }
+    return false;
   }
 
   /// Animates every position attached to [controller] to its boundary.
@@ -399,43 +436,51 @@ class _BottomBarState extends State<BottomBar>
     final theme = _resolvedTheme(context);
     final l = _effectiveLayout(theme);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => _measureBar());
-
-    return NotificationListener<ScrollNotification>(
-      onNotification: (n) {
-        _dispatcher.handle(n);
-        return false; // do not absorb
-      },
-      child: Stack(
-        fit: l.fit,
-        alignment: l.alignment,
-        clipBehavior: l.clip,
-        children: [
-          BottomBarScope(
+    return Stack(
+      fit: l.fit,
+      alignment: l.alignment,
+      clipBehavior: l.clip,
+      children: [
+        NotificationListener<ScrollNotification>(
+          onNotification: _handleBodyScrollNotification,
+          child: BottomBarScope(
             barHeight: _barHeight,
             isVisible: _isVisibleNotifier,
             child: widget.body,
           ),
-          if (widget.showIcon)
-            _wrapWithSafeArea(
-              l,
-              translate: l.iconOffset,
-              child: _buildIcon(theme),
-            ),
-          _wrapWithSafeArea(l, child: _buildBottomBar(theme)),
-        ],
-      ),
+        ),
+        if (widget.showIcon)
+          _wrapWithSafeArea(
+            l,
+            translate: l.iconOffset,
+            child: _buildIcon(theme),
+          ),
+        _wrapWithSafeArea(
+          l,
+          onSizeChanged: _handleBarFootprintChanged,
+          child: _buildBottomBar(theme),
+        ),
+      ],
     );
+  }
+
+  bool _handleBodyScrollNotification(ScrollNotification notification) {
+    _dispatcher.handle(notification);
+    return false;
   }
 
   Widget _wrapWithSafeArea(
     BottomBarLayout l, {
     required Widget child,
     Offset translate = Offset.zero,
+    ValueChanged<Size>? onSizeChanged,
   }) {
     Widget content = Padding(padding: EdgeInsets.all(l.offset), child: child);
     if (l.respectSafeArea) {
       content = SafeArea(child: content);
+    }
+    if (onSizeChanged != null) {
+      content = SizeObserver(onSizeChanged: onSizeChanged, child: content);
     }
     // Translate outside the SafeArea/Padding so the offset wraps everything
     // below it. Transform keeps hit-testing aligned with the painted position
@@ -448,43 +493,85 @@ class _BottomBarState extends State<BottomBar>
     return Align(alignment: l.alignment, child: content);
   }
 
+  void _handleBarFootprintChanged(Size size) {
+    if (!mounted || _barHeight.value == size.height) return;
+    _barHeight.value = size.height;
+  }
+
   Widget _buildIcon(BottomBarThemeData theme) {
     final iconWidth = theme.iconWidth ?? 30;
     final iconHeight = theme.iconHeight ?? 30;
+    return BottomBarAction(
+      animation: ReverseAnimation(_motionController),
+      enabled: !_targetVisible,
+      visualWidth: iconWidth,
+      visualHeight: iconHeight,
+      decoration: theme.iconDecoration ?? const BoxDecoration(),
+      tooltip: _defaultIconTooltip,
+      semanticLabel: _defaultIconSemanticLabel,
+      onTap: () => scrollToBoundary(
+        toEnd: _scrollBehavior.scrollOpposite,
+      ),
+      visualBuilder: (width, height) => _buildIconChild(width, height),
+    );
+  }
 
-    return AnimatedBuilder(
-      animation: _motionController,
-      builder: (context, _) {
-        final iconProgress = (1 - _motionController.value).clamp(0.0, 1.0);
-        return Opacity(
-          opacity: iconProgress,
-          child: SizedBox(
-            width: iconWidth * iconProgress,
-            height: iconHeight * iconProgress,
-            child: DecoratedBox(
-              decoration: theme.iconDecoration ?? const BoxDecoration(),
-              child: ClipOval(
-                child: Material(
-                  color: Colors.transparent,
-                  child: Semantics(
-                    button: true,
-                    label: widget.iconSemanticLabel,
-                    child: Tooltip(
-                      message: widget.iconTooltip ?? 'Scroll to top',
-                      child: InkWell(
-                        onTap: () => scrollToBoundary(
-                          toEnd: _scrollBehavior.scrollOpposite,
-                        ),
-                        child: _buildIconChild(
-                          iconWidth,
-                          iconHeight,
-                          iconProgress,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+  String get _defaultIconTooltip {
+    return widget.iconTooltip ??
+        (_scrollBehavior.scrollOpposite ? 'Scroll to bottom' : 'Scroll to top');
+  }
+
+  String get _defaultIconSemanticLabel {
+    return widget.iconSemanticLabel ?? _defaultIconTooltip;
+  }
+
+  void _animateBarTo(bool visible) {
+    final target = visible ? 1.0 : 0.0;
+    if (_disableAnimations) {
+      _motionController.stop(canceled: true);
+      _motionController.value = target;
+      return;
+    }
+    _motionController.animateTo(target, forward: visible);
+  }
+
+  bool get _disableAnimations {
+    return SemanticsBinding.instance.disableAnimations ||
+        WidgetsBinding.instance.platformDispatcher.accessibilityFeatures
+            .disableAnimations ||
+        (MediaQuery.maybeDisableAnimationsOf(context) ?? false);
+  }
+
+  Widget _buildIconChild(double iconWidth, double iconHeight) {
+    if (widget.icon != null) {
+      return widget.icon!(iconWidth, iconHeight);
+    }
+    return Center(
+      child: Icon(
+        _scrollBehavior.scrollOpposite
+            ? Icons.arrow_downward_rounded
+            : Icons.arrow_upward_rounded,
+        color: Theme.of(context).colorScheme.onPrimary,
+        size: math.min(iconWidth, iconHeight) / 2,
+      ),
+    );
+  }
+
+  Widget _buildBottomBar(BottomBarThemeData theme) {
+    final l = _effectiveLayout(theme);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return VisibilityAnimator(
+          animation: _motionController,
+          isVisible: _targetVisible,
+          motion: _motion,
+          child: Container(
+            width: _effectiveBarWidth(constraints, l),
+            decoration: _effectiveBarDecoration(theme, l),
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: _effectiveBarBorderRadius(theme, l),
+              child: widget.child,
             ),
           ),
         );
@@ -492,41 +579,20 @@ class _BottomBarState extends State<BottomBar>
     );
   }
 
-  Widget _buildIconChild(
-    double iconWidth,
-    double iconHeight,
-    double progress,
-  ) {
-    if (widget.icon != null) {
-      return widget.icon!(
-        iconWidth / 2 * progress,
-        iconHeight / 2 * progress,
+  double _effectiveBarWidth(
+      BoxConstraints constraints, BottomBarLayout layout) {
+    final maxWidth = layout.maxWidth;
+    if (maxWidth != null &&
+        (maxWidth.isNaN || maxWidth.isInfinite || maxWidth < 0)) {
+      throw ArgumentError.value(
+        maxWidth,
+        'layout.maxWidth',
+        'BottomBarLayout.maxWidth must be finite and non-negative.',
       );
     }
-    return Center(
-      child: Icon(
-        Icons.arrow_upward_rounded,
-        color: Colors.white,
-        size: iconWidth / 2 * progress,
-      ),
-    );
-  }
-
-  Widget _buildBottomBar(BottomBarThemeData theme) {
-    final l = _effectiveLayout(theme);
-    return VisibilityAnimator(
-      animation: _motionController,
-      motion: _motion,
-      child: Container(
-        key: _barKey,
-        width: l.width,
-        decoration: _effectiveBarDecoration(theme, l),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: _effectiveBarBorderRadius(theme, l),
-          child: widget.child,
-        ),
-      ),
+    return math.min(
+      constraints.maxWidth,
+      math.min(layout.width, maxWidth ?? double.infinity),
     );
   }
 
@@ -547,7 +613,9 @@ class _BottomBarState extends State<BottomBar>
     BottomBarLayout layout,
   ) {
     final decoration = theme.barDecoration;
-    if (layout.borderRadius != BorderRadius.zero) return layout.borderRadius;
+    final hasExplicitLayoutOverride =
+        widget.layout != null || theme.layout != null;
+    if (hasExplicitLayoutOverride) return layout.borderRadius;
     return decoration?.borderRadius;
   }
 }

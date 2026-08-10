@@ -1,66 +1,60 @@
 Contributing to Flutter Floating Bottom Bar
-==========================
-Thanks for your time.
-If you'd like to report a bug or join in the development
-of Flutter Floating Bottom Bar, then here are some notes on how to do that.
+===========================================
 
-Please **note** we have a [code of conduct](https://github.com/codenameakshay/flutter-floating-bottom-bar/blob/master/CODE_OF_CONDUCT.md), please follow it in all your interactions with the project.
+Thanks for contributing.
 
-## Contents
-* [Reporting bugs and opening issues](#reporting-bugs-and-opening-issues)
-* [Coding Guidelines](#coding-guidelines)
-    * [Pull Requests](#pull-requests)
-    * [MVP architecture](#mvp-architecture)
-    * [Style Check](#style-check)
-    * [Git Commit Messages](#git-commit-messages)
-* [Security](#security)
-  
-## Reporting bugs and opening issues
+Please follow the
+[code of conduct](https://github.com/codenameakshay/flutter-floating-bottom-bar/blob/main/CODE_OF_CONDUCT.md)
+in all project interactions.
 
-If you'd like a report a bug or open an issue then please:
+## Report bugs and issues
 
-**Check if there is an existing issue.** If there is then please add
-   any more information that you have, or give it a 👍.
+Before opening a new issue:
 
-When submitting an issue please describe the issue as clearly as possible, including how to
-reproduce the bug, which situations it appears in, what you expected to happen, and what actually happens.
-If you can include a screenshot for front end issues that is very helpful.
+- Check whether an existing issue already covers the problem.
+- Include clear reproduction steps.
+- Include expected behavior, actual behavior, and environment details.
+- Add screenshots or screen recordings for UI issues when possible.
 
-## Coding Guidelines
+## Local setup
 
-### Pull Requests
-We love pull requests, so be bold with them! Don't be afraid of going ahead
-and changing something, or adding a new feature. We're very happy to work with you
-to get your changes merged into Flutter Floating Bottom Bar
+This repo is pinned to Flutter `3.44.4` through FVM.
 
-If you've got an idea for a change then please discuss it in the open first, 
-either by opening an issue, or email me at [akshaymaurya3006@gmail.com](mailto:akshaymaurya3006@gmail.com).
-
-If you're looking for something to work on, have a look at the open issues in the repository [here](https://github.com/codenameakshay/flutter-floating-bottom-bar/issues).
-
-> We don't have a set format for Pull requests, but we expect you to list changes, bugs generated and other relevant things in PR message.
-
-Refer this pull request [template](https://github.com/codenameakshay/flutter-floating-bottom-bar/blob/master/PULL_REQUEST_TEMPLATE.md).
-
-### MVP architecture
-Flutter Floating Bottom Bar is built keeping [MVP (model-view-presenter)](https://en.wikipedia.org/wiki/Model–view–presenter) architecture in mind, so any changes that are proposed to Flutter Floating Bottom Bar should follow MVP architecture.
-
-### Style Check
-Flutter Floating Bottom Bar uses `dartfmt`  for performing style checks on the codebase, which helps us in maintaining the quality of the code. Please check that the code is properly formatted according to `dartfmt` and also resolve all the issues, if any, shown by `dart analyze` before making a pull request. **Pull Requests will only be merged once all the violations are resolved**.
-
-### Git Commit Messages
-* Use the present tense ("Add feature" not "Added feature")
-* Use the imperative mood ("Move cursor to..." not "Moves cursor to...")
-* Limit the first line to 72 characters or less
-* Reference issues and pull requests liberally
-* When only changing documentation, include `[ci skip]` in the commit description
-* Please start your commits with the following prefixes for better understanding among collaborators, based on the type of commit:
+```bash
+fvm install 3.44.4
+fvm use 3.44.4
+make setup
 ```
-   feat: (addition of a new feature)
-   rfac: (refactoring the code: optimization/ different logic of existing code - output doesn't change, just the way of execution changes)
-   docs: (documenting the code, be it readme, or extra comments)
-   bfix: (bug fixing)
-   chor: (chore - beautifying code, indents, spaces, camelcasing, changing variable names to have an appropriate meaning)
-   ptch: (patches - small changes in code, mainly UI, for example color of a button, incrasing size of tet, etc etc)
-   conf: (configurational settings - changing directory structure, updating gitignore, add libraries, changing manifest etc)
-```
+
+Useful commands:
+
+- `make format` to rewrite Dart formatting.
+- `make analyze` to run static analysis for the package and example app.
+- `make test` to run tests for the package and example app.
+- `make check` to run format check, analyze, and tests together.
+- `make publish-dry-run` to validate the package for pub.dev without
+  publishing.
+
+## Pull requests
+
+- Keep changes small and reviewable.
+- Update docs and examples when public behavior changes.
+- Add or update tests when behavior changes.
+- Run `make check` before opening the PR.
+- Run `make publish-dry-run` for release-oriented changes.
+- Explain user-visible behavior changes clearly in the PR description.
+
+If you want to propose a larger change, open an issue first so the approach can
+be discussed in the open.
+
+## Style and scope
+
+- Prefer the simplest implementation that fully solves the current problem.
+- Reuse existing patterns and utilities before adding new ones.
+- Remove obsolete paths instead of adding compatibility layers.
+- Keep public API docs accurate when contracts change.
+
+## Commit messages
+
+Use clear, imperative commit messages that explain why the change was needed.
+Reference relevant issues or PRs when helpful.

@@ -3,12 +3,18 @@ build/
 
 # Internal planning / spec docs — not part of the published package
 docs/
+.omx/
+.claude/
 
 # IDE settings
 .vscode/
 
 # Development tooling
 Makefile
+tool/
+.github/
+AGENTS.md
+screenshots/
 
 # FVM (Flutter Version Management) — local toolchain, not needed by consumers
 .fvm/

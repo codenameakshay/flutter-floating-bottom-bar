@@ -8,6 +8,8 @@ class BottomBarScrollBehavior {
     this.reverse = false,
     this.scrollOpposite = false,
     this.deltaThreshold = 8,
+    this.showAtStart = false,
+    this.showOnScrollEnd = false,
     this.predicate,
   }) : assert(deltaThreshold >= 0, 'deltaThreshold must be >= 0');
 
@@ -19,16 +21,33 @@ class BottomBarScrollBehavior {
   /// inverted: scrolling down shows the bar, scrolling up hides it.
   final bool reverse;
 
-  /// When true, the back-to-top button scrolls toward `maxScrollExtent`
-  /// instead of `minScrollExtent`.
+  /// When true, the built-in hidden action scrolls toward
+  /// `maxScrollExtent` instead of `minScrollExtent`.
+  ///
+  /// This affects only the hidden action's default direction, tooltip, and
+  /// glyph. It does not change [BottomBarController.scrollToStart] or
+  /// [BottomBarController.scrollToEnd].
   final bool scrollOpposite;
 
   /// The minimum |delta| in logical pixels required before a single
   /// `ScrollNotification` is allowed to flip visibility. Suppresses jitter.
   final double deltaThreshold;
 
+  /// When true, reaching `minScrollExtent` forces the bar visible.
+  ///
+  /// This runs after [predicate] filtering and is useful when a screen should
+  /// always settle with the bar visible at the start boundary.
+  final bool showAtStart;
+
+  /// When true, [ScrollEndNotification] forces the bar visible.
+  ///
+  /// This runs after [predicate] filtering and is useful when the bar should
+  /// reappear whenever scrolling settles.
+  final bool showOnScrollEnd;
+
   /// Optional filter. When non-null, returning false skips the notification
-  /// entirely (no offset tracking, no visibility change).
+  /// entirely (no offset tracking, no visibility change, and no start/end
+  /// settling behavior).
   final bool Function(ScrollNotification notification)? predicate;
 
   /// Returns a copy of this scroll behaviour with the given fields replaced by
@@ -38,6 +57,8 @@ class BottomBarScrollBehavior {
     bool? reverse,
     bool? scrollOpposite,
     double? deltaThreshold,
+    bool? showAtStart,
+    bool? showOnScrollEnd,
     bool Function(ScrollNotification notification)? predicate,
   }) {
     return BottomBarScrollBehavior(
@@ -45,6 +66,8 @@ class BottomBarScrollBehavior {
       reverse: reverse ?? this.reverse,
       scrollOpposite: scrollOpposite ?? this.scrollOpposite,
       deltaThreshold: deltaThreshold ?? this.deltaThreshold,
+      showAtStart: showAtStart ?? this.showAtStart,
+      showOnScrollEnd: showOnScrollEnd ?? this.showOnScrollEnd,
       predicate: predicate ?? this.predicate,
     );
   }
@@ -57,6 +80,8 @@ class BottomBarScrollBehavior {
         other.reverse == reverse &&
         other.scrollOpposite == scrollOpposite &&
         other.deltaThreshold == deltaThreshold &&
+        other.showAtStart == showAtStart &&
+        other.showOnScrollEnd == showOnScrollEnd &&
         other.predicate == predicate;
   }
 
@@ -66,6 +91,8 @@ class BottomBarScrollBehavior {
         reverse,
         scrollOpposite,
         deltaThreshold,
+        showAtStart,
+        showOnScrollEnd,
         predicate,
       );
 }

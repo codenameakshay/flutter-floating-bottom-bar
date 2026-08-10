@@ -11,11 +11,13 @@ class VisibilityAnimator extends StatelessWidget {
   const VisibilityAnimator({
     super.key,
     required this.animation,
+    required this.isVisible,
     required this.motion,
     required this.child,
   });
 
   final Animation<double> animation;
+  final bool isVisible;
   final BottomBarMotion motion;
   final Widget child;
 
@@ -23,30 +25,34 @@ class VisibilityAnimator extends StatelessWidget {
   Widget build(BuildContext context) {
     final builder = motion.transitionBuilder;
     if (builder != null) {
-      return AnimatedBuilder(
-        animation: animation,
-        child: child,
-        builder: (context, child) => builder(context, animation, child!),
+      return _wrapInteraction(
+        AnimatedBuilder(
+          animation: animation,
+          child: child,
+          builder: (context, child) => builder(context, animation, child!),
+        ),
       );
     }
     final clamped = _ClampedAnimation(animation);
 
     switch (motion.transition) {
       case BottomBarTransition.slide:
-        return SlideTransition(
+        return _wrapInteraction(SlideTransition(
           position: Tween<Offset>(
             begin: motion.slideStart,
             end: motion.slideEnd,
           ).animate(animation),
           child: child,
-        );
+        ));
       case BottomBarTransition.fade:
-        return FadeTransition(opacity: clamped, child: child);
+        return _wrapInteraction(FadeTransition(opacity: clamped, child: child));
       case BottomBarTransition.scale:
-        return ScaleTransition(
-            scale: _NonNegativeAnimation(animation), child: child);
+        return _wrapInteraction(ScaleTransition(
+          scale: _NonNegativeAnimation(animation),
+          child: child,
+        ));
       case BottomBarTransition.slideAndFade:
-        return FadeTransition(
+        return _wrapInteraction(FadeTransition(
           opacity: clamped,
           child: SlideTransition(
             position: Tween<Offset>(
@@ -55,8 +61,18 @@ class VisibilityAnimator extends StatelessWidget {
             ).animate(animation),
             child: child,
           ),
-        );
+        ));
     }
+  }
+
+  Widget _wrapInteraction(Widget child) {
+    return IgnorePointer(
+      ignoring: !isVisible,
+      child: ExcludeSemantics(
+        excluding: !isVisible,
+        child: child,
+      ),
+    );
   }
 }
 

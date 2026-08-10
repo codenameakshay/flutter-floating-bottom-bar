@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 
 /// Provides bar metadata to descendants of [BottomBar.body].
 ///
-/// Use to read the live rendered bar height (for adding bottom padding to
+/// Use to read the live rendered bar footprint (for adding bottom padding to
 /// scrollable content) and the current visibility state.
 class BottomBarScope extends InheritedWidget {
   const BottomBarScope({
@@ -13,8 +13,11 @@ class BottomBarScope extends InheritedWidget {
     required this.isVisible,
   });
 
-  /// Live rendered height of the bar in logical pixels. Starts at 0 for the
-  /// first frame; updates after layout.
+  /// Live rendered layout footprint of the bar in logical pixels.
+  ///
+  /// The value includes the bar child, vertical [BottomBarLayout.offset]
+  /// padding, and any bottom safe-area inset contributed by the bar wrapper.
+  /// Starts at 0 for the first frame; updates after layout.
   final ValueListenable<double> barHeight;
 
   /// Live visibility state — equivalent to `BottomBarController.isVisible`,
