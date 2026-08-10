@@ -71,6 +71,7 @@ class BottomBarItem extends StatelessWidget {
     final effectiveColor = selected
         ? (selectedColor ?? cs.primary)
         : (color ?? cs.onSurfaceVariant);
+    final semanticLabel = label == null ? tooltip : null;
 
     final iconWidget = selected ? (selectedIcon ?? icon) : icon;
 
@@ -129,6 +130,7 @@ class BottomBarItem extends StatelessWidget {
       button: true,
       enabled: onTap != null,
       selected: selected,
+      label: semanticLabel,
       child: child,
     );
   }

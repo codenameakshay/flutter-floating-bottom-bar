@@ -63,6 +63,10 @@ void main() {
         expect(data.flagsCollection.isSelected, ui.Tristate.isTrue);
         expect(data.flagsCollection.isEnabled, ui.Tristate.isTrue);
         expect(data.hasAction(SemanticsAction.tap), isTrue);
+        expect(
+          _semanticsLabels(tester).where((label) => label == 'Home'),
+          hasLength(1),
+        );
         expect(find.byTooltip('Go home'), findsOneWidget);
       } finally {
         semantics.dispose();
@@ -111,6 +115,36 @@ void main() {
         expect(data.flagsCollection.isButton, isTrue);
         expect(data.flagsCollection.isEnabled, ui.Tristate.isFalse);
         expect(data.hasAction(SemanticsAction.tap), isFalse);
+      } finally {
+        semantics.dispose();
+      }
+    });
+
+    testWidgets('uses tooltip as the only accessible name for icon-only items',
+        (tester) async {
+      final semantics = tester.ensureSemantics();
+      try {
+        await tester.pumpWidget(_buildItemHarness(
+          item: BottomBarItem(
+            icon: const Icon(Icons.info_outline),
+            tooltip: 'More info',
+            onTap: () {},
+          ),
+        ));
+
+        final data = tester
+            .getSemantics(find.bySemanticsLabel('More info'))
+            .getSemanticsData();
+
+        expect(data.label, 'More info');
+        expect(data.flagsCollection.isButton, isTrue);
+        expect(data.flagsCollection.isEnabled, ui.Tristate.isTrue);
+        expect(data.hasAction(SemanticsAction.tap), isTrue);
+        expect(
+          _semanticsLabels(tester).where((label) => label == 'More info'),
+          hasLength(1),
+        );
+        expect(find.byTooltip('More info'), findsOneWidget);
       } finally {
         semantics.dispose();
       }
@@ -211,4 +245,11 @@ Widget _buildItemHarness({
       ),
     ),
   );
+}
+
+Iterable<String> _semanticsLabels(WidgetTester tester) {
+  return tester.semantics
+      .simulatedAccessibilityTraversal()
+      .map((node) => node.label)
+      .where((label) => label.isNotEmpty);
 }

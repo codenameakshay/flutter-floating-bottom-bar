@@ -1,3 +1,4 @@
+import 'package:flutter/semantics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,6 +15,41 @@ void main() {
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     await expectLater(tester, meetsGuideline(textContrastGuideline));
   });
+
+  testWidgets(
+      'hidden BottomBar back action passes platform tap-target, label, and contrast guidelines',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      await tester.pumpWidget(_buildAccessibilityHarness());
+      await tester.pumpAndSettle();
+
+      expect(_semanticsLabels(tester), isNot(contains('Scroll to top')));
+
+      await tester.dragFrom(const Offset(100, 100), const Offset(0, -500));
+      await tester.pumpAndSettle();
+
+      expect(find.byTooltip('Scroll to top'), findsOneWidget);
+
+      final labels =
+          _semanticsLabels(tester).where((label) => label == 'Scroll to top');
+      expect(labels, hasLength(1));
+
+      final actionData = tester
+          .getSemantics(find.bySemanticsLabel('Scroll to top'))
+          .getSemanticsData();
+      expect(actionData.label, 'Scroll to top');
+      expect(actionData.flagsCollection.isButton, isTrue);
+      expect(actionData.hasAction(SemanticsAction.tap), isTrue);
+
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+    } finally {
+      semantics.dispose();
+    }
+  });
 }
 
 Widget _buildAccessibilityHarness() {
@@ -29,12 +65,11 @@ Widget _buildAccessibilityHarness() {
             borderRadius: BorderRadius.all(Radius.circular(28)),
           ),
         ),
-        body: ListView(
-          children: const [
-            ListTile(title: Text('Inbox item 1')),
-            ListTile(title: Text('Inbox item 2')),
-            ListTile(title: Text('Inbox item 3')),
-          ],
+        body: ListView.builder(
+          itemCount: 24,
+          itemBuilder: (context, index) => ListTile(
+            title: Text('Inbox item ${index + 1}'),
+          ),
         ),
         child: const Padding(
           padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -72,3 +107,10 @@ Widget _buildAccessibilityHarness() {
 }
 
 void _noop() {}
+
+Iterable<String> _semanticsLabels(WidgetTester tester) {
+  return tester.semantics
+      .simulatedAccessibilityTraversal()
+      .map((node) => node.label)
+      .where((label) => label.isNotEmpty);
+}
