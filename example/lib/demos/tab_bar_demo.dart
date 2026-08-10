@@ -46,37 +46,44 @@ class _TabBarDemoPageState extends State<TabBarDemoPage> {
           iconWidth: 40,
           iconHeight: 40,
         ),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(24, 58, 24, 128),
-          children: const [
-            _Header(),
-            SizedBox(height: 26),
-            _FilterRow(),
-            SizedBox(height: 28),
-            _SectionLabel(label: 'In Progress'),
-            _IssueRow(
-              icon: Icons.signal_cellular_alt_rounded,
-              accent: Color(0xFFF0C93D),
-              text: 'HBT-1: Create habit creation flow',
+        body: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            key: const Key('issues-content'),
+            constraints: const BoxConstraints(maxWidth: 760),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(24, 58, 24, 128),
+              children: const [
+                _Header(),
+                SizedBox(height: 26),
+                _FilterRow(),
+                SizedBox(height: 28),
+                _SectionLabel(label: 'In Progress'),
+                _IssueRow(
+                  icon: Icons.signal_cellular_alt_rounded,
+                  accent: Color(0xFFF0C93D),
+                  text: 'HBT-1: Create habit creation flow',
+                ),
+                _IssueRow(
+                  icon: Icons.priority_high_rounded,
+                  accent: Color(0xFFFF8A5B),
+                  text: 'HBT-4: Design daily habit list UI',
+                ),
+                SizedBox(height: 26),
+                _SectionLabel(label: 'Todo'),
+                _IssueRow(
+                  icon: Icons.more_horiz_rounded,
+                  accent: Color(0xFFBEBEBE),
+                  text: 'HBT-2: Implement habit completion toast',
+                ),
+                _IssueRow(
+                  icon: Icons.circle_outlined,
+                  accent: Color(0xFFBEBEBE),
+                  text: 'HBT-3: Refine weekly review screen',
+                ),
+              ],
             ),
-            _IssueRow(
-              icon: Icons.priority_high_rounded,
-              accent: Color(0xFFFF8A5B),
-              text: 'HBT-4: Design daily habit list UI',
-            ),
-            SizedBox(height: 26),
-            _SectionLabel(label: 'Todo'),
-            _IssueRow(
-              icon: Icons.more_horiz_rounded,
-              accent: Color(0xFFBEBEBE),
-              text: 'HBT-2: Implement habit completion toast',
-            ),
-            _IssueRow(
-              icon: Icons.circle_outlined,
-              accent: Color(0xFFBEBEBE),
-              text: 'HBT-3: Refine weekly review screen',
-            ),
-          ],
+          ),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -222,18 +229,18 @@ class _SectionLabel extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: Colors.black.withValues(alpha: 0.38),
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.black.withValues(alpha: 0.56),
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
             ),
           ),
-          Icon(Icons.add_rounded, color: Colors.black.withValues(alpha: 0.38)),
+          const SizedBox(width: 6),
+          Icon(Icons.add_rounded, color: Colors.black.withValues(alpha: 0.56)),
         ],
       ),
     );

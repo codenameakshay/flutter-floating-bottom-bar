@@ -23,6 +23,7 @@ class SearchBarDemoPage extends StatelessWidget {
           barDecoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: const Color(0x10000000)),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x1A000000),
@@ -47,10 +48,31 @@ class SearchBarDemoPage extends StatelessWidget {
             const SliverFillRemaining(
               hasScrollBody: false,
               child: Center(
-                child: Icon(
-                  Icons.explore_rounded,
-                  size: 64,
-                  color: Color(0x22000000),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.explore_rounded,
+                      size: 64,
+                      color: Color(0x55000000),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Start with a prompt',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'Ask a question or imagine something new.',
+                      style: TextStyle(
+                        color: Color(0x99000000),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -109,7 +131,7 @@ class _PromptDock extends StatelessWidget {
           Text(
             'Ask Anything',
             style: TextStyle(
-              color: Colors.black.withValues(alpha: 0.42),
+              color: Colors.black.withValues(alpha: 0.58),
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
