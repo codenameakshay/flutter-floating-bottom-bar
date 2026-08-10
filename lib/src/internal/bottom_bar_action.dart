@@ -76,6 +76,7 @@ class BottomBarAction extends StatelessWidget {
       button: true,
       label: semanticLabel,
       child: Tooltip(
+        excludeFromSemantics: true,
         message: tooltip,
         child: child,
       ),

@@ -454,7 +454,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byTooltip('Scroll to top'), findsOneWidget);
-      expect(_semanticsLabels(tester), contains('Scroll to top'));
+      expect(
+        _semanticsLabels(tester).where((label) => label == 'Scroll to top'),
+        hasLength(1),
+      );
     } finally {
       semantics.dispose();
     }
