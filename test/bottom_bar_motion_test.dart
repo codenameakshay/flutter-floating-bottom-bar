@@ -191,4 +191,61 @@ void main() {
     }
     await tester.pumpAndSettle();
   });
+
+  testWidgets(
+      'disabled animations jump to the target state without a package-specific branch',
+      (tester) async {
+    final controller = BottomBarController();
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: BottomBar(
+          controller: controller,
+          motion: const BottomBarMotion(
+            duration: Duration(milliseconds: 200),
+            transition: BottomBarTransition.fade,
+          ),
+          body: const SizedBox.shrink(),
+          child: const SizedBox(
+            key: Key('bar-content'),
+            height: 56,
+            child: Center(child: Text('c')),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    controller.hide();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    final baselineFade = _barFade(tester);
+    expect(baselineFade.opacity.value, lessThan(1));
+
+    tester.binding.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(
+      tester.binding.platformDispatcher.clearAccessibilityFeaturesTestValue,
+    );
+    await tester.pump();
+
+    controller.show();
+    await tester.pump();
+
+    final disabledFade = _barFade(tester);
+    expect(disabledFade.opacity.value, moreOrLessEquals(1, epsilon: 0.01));
+  });
+}
+
+FadeTransition _barFade(WidgetTester tester) {
+  final fades = find.ancestor(
+    of: find.byKey(const Key('bar-content')),
+    matching: find.byType(FadeTransition),
+  );
+  return fades
+      .evaluate()
+      .map((element) => element.widget)
+      .cast<FadeTransition>()
+      .firstWhere((widget) => widget.child is Container);
 }

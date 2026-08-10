@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:motor/motor.dart';
 
 import 'bottom_bar_controller.dart';
@@ -11,13 +12,15 @@ import 'config/bottom_bar_motion.dart';
 import 'config/bottom_bar_scroll_behavior.dart';
 import 'internal/scroll_notification_dispatcher.dart';
 import 'internal/size_observer.dart';
+import 'internal/bottom_bar_action.dart';
 import 'internal/visibility_animator.dart';
 
 /// Builds the back-to-top icon child.
 ///
-/// [width] and [height] reflect the animated size at the moment of build
-/// (they shrink to zero as the bar becomes fully visible). Ignore them to keep
-/// a constant icon size, or use them to scale the icon along with the container.
+/// [width] and [height] reflect the animated visual container size at the
+/// moment of build (they shrink to zero as the bar becomes fully visible).
+/// Ignore them to keep a constant icon size, or use them to scale the icon
+/// along with the container.
 typedef BackToTopIconBuilder = Widget Function(double width, double height);
 
 /// A floating bar widget that hosts any child widget above scrollable content
@@ -127,12 +130,13 @@ class BottomBar extends StatefulWidget {
 
   /// Accessibility label for the back-to-top icon.
   ///
-  /// Passed to [Semantics.label]. Defaults to null (no label announced).
+  /// Passed to [Semantics.label]. Defaults to the direction-aware tooltip text.
   final String? iconSemanticLabel;
 
   /// Tooltip text shown on long-press of the back-to-top icon.
   ///
-  /// Defaults to `'Scroll to top'` when null.
+  /// Defaults to `'Scroll to top'` or `'Scroll to bottom'`, depending on
+  /// [BottomBarScrollBehavior.scrollOpposite].
   final String? iconTooltip;
 
   /// Called every time bar visibility changes.
@@ -153,7 +157,7 @@ class BottomBar extends StatefulWidget {
 class _BottomBarState extends State<BottomBar>
     with SingleTickerProviderStateMixin
     implements BottomBarBindingForController {
-  late BoundedSingleMotionController _motionController;
+  late AnimationController _motionController;
   late ScrollNotificationDispatcher _dispatcher;
   late BottomBarMotion _motion;
   late BottomBarScrollBehavior _scrollBehavior;
@@ -185,10 +189,10 @@ class _BottomBarState extends State<BottomBar>
         widget.theme?.scrollBehavior ??
         const BottomBarScrollBehavior();
 
-    _motionController = BoundedSingleMotionController(
-      motion: _motion.resolveMotion(),
+    _motionController = AnimationController.unbounded(
       vsync: this,
-      initialValue: 1,
+      value: 1,
+      animationBehavior: AnimationBehavior.normal,
     );
 
     _dispatcher = ScrollNotificationDispatcher(
@@ -225,10 +229,6 @@ class _BottomBarState extends State<BottomBar>
     final newMotion = _effectiveMotion(theme);
     final newScroll = _effectiveScrollBehavior(theme);
 
-    if (_motion != newMotion) {
-      _motionController.motion = newMotion.resolveMotion();
-    }
-
     if (_scrollBehavior != newScroll) {
       _dispatcher.deltaThreshold = newScroll.deltaThreshold;
       _dispatcher.reverse = newScroll.reverse;
@@ -260,7 +260,7 @@ class _BottomBarState extends State<BottomBar>
 
     _isVisibleNotifier.value = visible;
 
-    _motionController.animateTo(visible ? 1 : 0, forward: visible);
+    _animateBarTo(visible);
 
     widget.controller?.updateVisibility(this, visible);
 
@@ -487,63 +487,72 @@ class _BottomBarState extends State<BottomBar>
   Widget _buildIcon(BottomBarThemeData theme) {
     final iconWidth = theme.iconWidth ?? 30;
     final iconHeight = theme.iconHeight ?? 30;
-
-    return AnimatedBuilder(
-      animation: _motionController,
-      builder: (context, _) {
-        final iconProgress = (1 - _motionController.value).clamp(0.0, 1.0);
-        return Opacity(
-          opacity: iconProgress,
-          child: SizedBox(
-            width: iconWidth * iconProgress,
-            height: iconHeight * iconProgress,
-            child: DecoratedBox(
-              decoration: theme.iconDecoration ?? const BoxDecoration(),
-              child: ClipOval(
-                child: Material(
-                  color: Colors.transparent,
-                  child: Semantics(
-                    button: true,
-                    label: widget.iconSemanticLabel,
-                    child: Tooltip(
-                      message: widget.iconTooltip ?? 'Scroll to top',
-                      child: InkWell(
-                        onTap: () => scrollToBoundary(
-                          toEnd: _scrollBehavior.scrollOpposite,
-                        ),
-                        child: _buildIconChild(
-                          iconWidth,
-                          iconHeight,
-                          iconProgress,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
+    return BottomBarAction(
+      animation: ReverseAnimation(_motionController),
+      enabled: !_targetVisible,
+      visualWidth: iconWidth,
+      visualHeight: iconHeight,
+      decoration: theme.iconDecoration ?? const BoxDecoration(),
+      tooltip: _defaultIconTooltip,
+      semanticLabel: _defaultIconSemanticLabel,
+      onTap: () => scrollToBoundary(
+        toEnd: _scrollBehavior.scrollOpposite,
+      ),
+      visualBuilder: (width, height) => _buildIconChild(width, height),
     );
   }
 
-  Widget _buildIconChild(
-    double iconWidth,
-    double iconHeight,
-    double progress,
-  ) {
-    if (widget.icon != null) {
-      return widget.icon!(
-        iconWidth / 2 * progress,
-        iconHeight / 2 * progress,
+  String get _defaultIconTooltip {
+    return widget.iconTooltip ??
+        (_scrollBehavior.scrollOpposite ? 'Scroll to bottom' : 'Scroll to top');
+  }
+
+  String get _defaultIconSemanticLabel {
+    return widget.iconSemanticLabel ?? _defaultIconTooltip;
+  }
+
+  void _animateBarTo(bool visible) {
+    final target = visible ? 1.0 : 0.0;
+    if (_disableAnimations) {
+      _motionController.value = target;
+      return;
+    }
+    final resolved = _motion.resolveMotion();
+    if (resolved
+        case CurvedMotion(duration: final duration, curve: final curve)) {
+      _motionController.animateTo(
+        target,
+        duration: duration,
+        curve: curve,
       );
+      return;
+    }
+
+    _motionController.animateTo(
+      target,
+      duration: _motion.duration,
+      curve: resolved.toCurveWithVelocity(_motionController.velocity),
+    );
+  }
+
+  bool get _disableAnimations {
+    return SemanticsBinding.instance.disableAnimations ||
+        WidgetsBinding.instance.platformDispatcher.accessibilityFeatures
+            .disableAnimations ||
+        (MediaQuery.maybeDisableAnimationsOf(context) ?? false);
+  }
+
+  Widget _buildIconChild(double iconWidth, double iconHeight) {
+    if (widget.icon != null) {
+      return widget.icon!(iconWidth, iconHeight);
     }
     return Center(
       child: Icon(
-        Icons.arrow_upward_rounded,
-        color: Colors.white,
-        size: iconWidth / 2 * progress,
+        _scrollBehavior.scrollOpposite
+            ? Icons.arrow_downward_rounded
+            : Icons.arrow_upward_rounded,
+        color: Theme.of(context).colorScheme.onPrimary,
+        size: math.min(iconWidth, iconHeight) / 2,
       ),
     );
   }
@@ -554,6 +563,7 @@ class _BottomBarState extends State<BottomBar>
       builder: (context, constraints) {
         return VisibilityAnimator(
           animation: _motionController,
+          isVisible: _targetVisible,
           motion: _motion,
           child: Container(
             width: _effectiveBarWidth(constraints, l),
