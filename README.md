@@ -240,7 +240,10 @@ with built-in accessibility and RTL-aware badge placement.
   both LTR and RTL layouts.
 - The item exposes button semantics, selection state, and enabled state.
 - The tappable surface keeps at least a 48x48 target.
-- Tooltips, when provided, do not duplicate the item's main semantics label.
+- Accessible naming is deterministic: `semanticLabel` wins, otherwise
+  `tooltip`, otherwise descendant semantics.
+- When `semanticLabel` or `tooltip` provides the explicit accessible name,
+  descendant semantics are excluded to avoid duplicate announcements.
 
 ## Migration from v1.x
 

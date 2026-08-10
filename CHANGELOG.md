@@ -14,6 +14,9 @@
 
 - `BottomBarScope.barHeight` now reflects the full rendered footprint reserved
   by the bar, including configured offset and bottom safe-area when enabled.
+- `BottomBarItem` accessible naming is now deterministic:
+  `semanticLabel` wins, otherwise `tooltip`, otherwise descendant semantics.
+  Explicit names exclude descendant semantics to avoid duplicate announcements.
 - Custom `BottomBarMotion.transitionBuilder` usage is documented as a
   paint-only contract that must preserve layout footprint.
 - The hidden action is direction-aware by default: glyph, tooltip, and

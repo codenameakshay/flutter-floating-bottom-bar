@@ -78,6 +78,7 @@ class _BottomBarItemsExampleState extends State<BottomBarItemsExample> {
                 icon: const Icon(Icons.home_outlined),
                 selectedIcon: const Icon(Icons.home_rounded),
                 label: const Text('Home'),
+                semanticLabel: 'Home tab',
                 selected: index == 0,
                 onTap: () => setState(() => index = 0),
               ),
@@ -86,6 +87,7 @@ class _BottomBarItemsExampleState extends State<BottomBarItemsExample> {
                 selectedIcon: const Icon(Icons.inbox_rounded),
                 label: const Text('Inbox'),
                 badge: const Badge(label: Text('3')),
+                tooltip: 'Inbox tab',
                 selected: index == 1,
                 onTap: () => setState(() => index = 1),
               ),
@@ -97,6 +99,10 @@ class _BottomBarItemsExampleState extends State<BottomBarItemsExample> {
   }
 }
 ```
+
+Here the first item uses `semanticLabel` as its explicit accessible name, while
+the second falls back to `tooltip`. If neither is provided, the item's
+descendant semantics remain visible.
 
 ## Nested scroll + controller
 
