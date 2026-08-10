@@ -3,7 +3,8 @@
 ### Added
 
 - `BottomBarLayout.maxWidth` and `BottomBarLayout.adaptive(maxWidth: ...)` for
-  width-capped adaptive layouts.
+  width-capped adaptive layouts, plus `copyWith(clearMaxWidth: true)` for
+  returning a derived layout to an uncapped width.
 - `BottomBarBodyPadding` as the built-in way to reserve the live floating-bar
   footprint inside `BottomBar.body`.
 - `BottomBarScrollBehavior.showAtStart` and
@@ -42,6 +43,8 @@
   controller so start/end actions reset both header and body as expected.
 - Large `iconOffset` values keep the hidden action tappable because hit testing
   now follows the translated visual position.
+- The hidden action's full 48x48 minimum target now accepts taps at its corners;
+  circular clipping applies only to the animated visual.
 - The example web app now uses Flutter's current generated bootstrap and
   package-specific, orientation-neutral PWA metadata.
 

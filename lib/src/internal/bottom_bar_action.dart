@@ -35,31 +35,31 @@ class BottomBarAction extends StatelessWidget {
     Widget child = SizedBox(
       width: targetExtent,
       height: targetExtent,
-      child: ClipOval(
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: enabled ? onTap : null,
-            child: Center(
-              child: AnimatedBuilder(
-                animation: animation,
-                builder: (context, _) {
-                  final progress = animation.value.clamp(0.0, 1.0);
-                  final width = visualWidth * progress;
-                  final height = visualHeight * progress;
-                  return Opacity(
-                    opacity: progress,
-                    child: SizedBox(
-                      width: width,
-                      height: height,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          child: Center(
+            child: AnimatedBuilder(
+              animation: animation,
+              builder: (context, _) {
+                final progress = animation.value.clamp(0.0, 1.0);
+                final width = visualWidth * progress;
+                final height = visualHeight * progress;
+                return Opacity(
+                  opacity: progress,
+                  child: SizedBox(
+                    width: width,
+                    height: height,
+                    child: ClipOval(
                       child: DecoratedBox(
                         decoration: decoration,
                         child: visualBuilder(width, height),
                       ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
           ),
         ),

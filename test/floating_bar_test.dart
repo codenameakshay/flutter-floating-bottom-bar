@@ -481,6 +481,25 @@ void main() {
     expect(targetRect.height, greaterThanOrEqualTo(48));
   });
 
+  testWidgets('back action accepts taps in the corners of its 48 pixel target',
+      (tester) async {
+    await tester.pumpWidget(buildHarness());
+    await tester.pumpAndSettle();
+
+    final scrollable = find.byType(Scrollable).first;
+    await tester.drag(scrollable, const Offset(0, -300));
+    await tester.pumpAndSettle();
+
+    final position = tester.state<ScrollableState>(scrollable).position;
+    expect(position.pixels, greaterThan(0));
+
+    final targetRect = tester.getRect(find.byTooltip('Scroll to top'));
+    await tester.tapAt(targetRect.topLeft + const Offset(2, 2));
+    await tester.pumpAndSettle();
+
+    expect(position.pixels, morePreciselyEquals(position.minScrollExtent));
+  });
+
   testWidgets(
       'scrollOpposite flips the default action direction, tooltip, and semantics',
       (tester) async {

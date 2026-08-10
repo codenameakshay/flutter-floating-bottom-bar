@@ -295,7 +295,8 @@ visible it is ignored for hit testing and removed from the semantics tree.
 | `respectSafeArea` | `bool` | `true` | Wraps the bar and hidden action in `SafeArea`. |
 
 Use `BottomBarLayout.adaptive(maxWidth: ...)` to fill available width up to a
-hard cap.
+hard cap. When deriving layouts, `copyWith(clearMaxWidth: true)` explicitly
+removes an existing cap.
 
 ### `BottomBarMotion`
 

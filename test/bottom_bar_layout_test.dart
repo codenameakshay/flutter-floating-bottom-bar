@@ -41,6 +41,16 @@ void main() {
       expect(updated.respectSafeArea, true);
     });
 
+    test('copyWith can explicitly clear maxWidth', () {
+      const layout = BottomBarLayout(width: 280, maxWidth: 320, offset: 20);
+
+      final updated = layout.copyWith(clearMaxWidth: true);
+
+      expect(updated.width, 280);
+      expect(updated.maxWidth, isNull);
+      expect(updated.offset, 20);
+    });
+
     test('equality and hashCode are value-based', () {
       const a = BottomBarLayout(width: 250, maxWidth: 320);
       const b = BottomBarLayout(width: 250, maxWidth: 320);

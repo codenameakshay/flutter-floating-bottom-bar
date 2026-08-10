@@ -80,11 +80,15 @@ class BottomBarLayout {
   /// extend into system UI areas.
   final bool respectSafeArea;
 
-  /// Returns a copy of this layout with the given fields replaced by
-  /// non-null values. Null arguments leave the corresponding field unchanged.
+  /// Returns a copy of this layout with the given fields replaced by non-null
+  /// values.
+  ///
+  /// Null arguments leave the corresponding field unchanged. Set
+  /// [clearMaxWidth] to true to remove an existing [maxWidth] cap.
   BottomBarLayout copyWith({
     double? width,
     double? maxWidth,
+    bool clearMaxWidth = false,
     double? offset,
     BorderRadius? borderRadius,
     Offset? iconOffset,
@@ -93,9 +97,13 @@ class BottomBarLayout {
     Clip? clip,
     bool? respectSafeArea,
   }) {
+    assert(
+      !clearMaxWidth || maxWidth == null,
+      'maxWidth and clearMaxWidth cannot both be provided.',
+    );
     return BottomBarLayout(
       width: width ?? this.width,
-      maxWidth: maxWidth ?? this.maxWidth,
+      maxWidth: clearMaxWidth ? null : (maxWidth ?? this.maxWidth),
       offset: offset ?? this.offset,
       borderRadius: borderRadius ?? this.borderRadius,
       iconOffset: iconOffset ?? this.iconOffset,
