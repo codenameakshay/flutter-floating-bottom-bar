@@ -193,7 +193,7 @@ void main() {
   });
 
   testWidgets(
-      'disabled animations jump to the target state without a package-specific branch',
+      'disabled animations jump to the target state via an explicit reduced-motion snap',
       (tester) async {
     final controller = BottomBarController();
 

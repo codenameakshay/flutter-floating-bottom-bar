@@ -106,7 +106,7 @@
 - [ ] Wrap hidden bar content with pointer and semantics exclusion.
 - [ ] Keep a fixed accessible action target while animating only its visual circle; hoist static subtrees where possible.
 - [ ] Add selected semantics and directional badge layout to `BottomBarItem`.
-- [ ] Add a reduced-motion regression test proving Motor/Flutter honors disabled animations without a package-specific branch.
+- [ ] Add a reduced-motion regression test documenting that Motor 1.1 does not snap custom simulations under disabled animations, so `BottomBar` must cancel the active simulation and set the target value explicitly.
 - [ ] Run focused motion/item/accessibility tests until green.
 
 ### Task 7: Synchronize public documentation and release notes

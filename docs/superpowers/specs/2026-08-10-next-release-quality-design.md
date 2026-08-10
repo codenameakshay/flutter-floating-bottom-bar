@@ -108,9 +108,12 @@ is updated from this observer rather than unconditional post-frame polling.
 - Badge placement uses directional `end`, not physical `right`.
 - Hidden content is excluded from pointer interaction and accessibility focus.
 
-Motor's bounded controller already uses Flutter's normal animation behavior,
-so reduced-motion handling remains delegated to the framework and receives a
-regression test rather than a duplicate branch.
+Motor 1.1's bounded controller exposes `AnimationBehavior.normal`, but its
+custom simulation path does not snap when disabled animations are enabled.
+`BottomBar` therefore needs an explicit reduced-motion branch that cancels any
+active Motor simulation and sets the target value when platform, semantics, or
+`MediaQuery` animation disabling is in effect. This behavior receives a
+regression test.
 
 ## New APIs
 
