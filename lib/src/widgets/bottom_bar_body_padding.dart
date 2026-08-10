@@ -7,7 +7,9 @@ import '../bottom_bar_scope.dart';
 /// Use inside [BottomBar.body] to keep content clear of the floating bar while
 /// still layering the bar above the scrollable. The reserved space stays in
 /// place while the bar is hidden because [BottomBarScope.barHeight] reports the
-/// bar's layout footprint, not its animated transform.
+/// bar's layout footprint, not its animated transform. That footprint includes
+/// the measured bar height plus [BottomBarLayout.offset] and bottom safe-area
+/// when enabled.
 ///
 /// This widget is intentionally bottom-edge clearance for bottom-aligned bars.
 /// It does not inspect [BottomBarLayout.alignment] or try to reserve space on

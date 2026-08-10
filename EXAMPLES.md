@@ -1,118 +1,237 @@
 # Examples
 
+Runnable demos live under `example/lib/demos/`. This file keeps the docs-side
+snippets short, current, and directly compilable.
+
 Run the demo app:
 
 ```bash
 cd example
-flutter run
+fvm flutter run
 ```
 
-The examples now focus on motion. `BottomBarMotion()` defaults to Motor-backed Cupertino spring motion, so quick scroll direction changes redirect naturally instead of restarting a fixed curve.
+## Minimal bar
 
-## Polished Demos
-
-### Issues dock — `example/lib/demos/tab_bar_demo.dart`
-
-Reference-inspired issue list with a floating icon dock and search puck. Scroll quickly up/down to see the Cupertino spring redirect mid-flight.
-
-![Issues dock](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/screenshots/1-issues-dock.gif)
-
-### AI prompt dock — `example/lib/demos/search_bar_demo.dart`
-
-Large prompt composer with pill actions, a speak button, and interactive Cupertino motion.
-
-![AI prompt dock](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/screenshots/2-ai-prompt-dock.gif)
-
-### Basic TabBar — `example/lib/demos/basic_tab_bar_demo.dart`
-
-Direct five-tab bottom bar with a floating center action, colored pages, hide-on-scroll, and the default Cupertino-style spring.
-
-![Basic TabBar](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/screenshots/3-basic-tab-bar.gif)
-
-### Minimal API — `example/lib/demos/basic_demo.dart`
-
-Compact example showing the default spring behavior with the smallest useful `BottomBar` setup.
-
-![Minimal API](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/screenshots/4-minimal-api.gif)
-
-## Supporting Recipes
-
-### Nested scroll — `example/lib/demos/nested_scroll_demo.dart`
-
-`NestedScrollView` support with smooth spring show/hide.
-
-![Nested scroll](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/screenshots/5-nested-scroll.gif)
-
-### Badged nav — `example/lib/demos/badges_demo.dart`
-
-`BottomBarItems` and `BottomBarItem` with bouncy Cupertino motion.
-
-![Badged nav](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/screenshots/6-badged-nav.gif)
-
-### Custom transition — `example/lib/demos/custom_transition_demo.dart`
-
-Deterministic `BottomBarMotion.curved(...)` plus a custom fade/scale builder. Clamp opacity and size in custom builders because spring progress can overshoot.
-
-![Custom transition](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/screenshots/7-custom-transition.gif)
-
-## Motion Snippets
+Corresponds to `example/lib/demos/basic_demo.dart`.
 
 ```dart
-// Default Cupertino spring.
-const BottomBarMotion()
+import 'package:flutter/material.dart';
+import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+
+class MinimalBottomBarExample extends StatelessWidget {
+  const MinimalBottomBarExample({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: BottomBar(
+        layout: const BottomBarLayout.adaptive(maxWidth: 420),
+        body: BottomBarBodyPadding(
+          child: ListView.builder(
+            itemCount: 40,
+            itemBuilder: (_, index) => ListTile(title: Text('Item $index')),
+          ),
+        ),
+        child: const SizedBox(
+          height: 56,
+          child: Center(child: Text('Floating widget')),
+        ),
+      ),
+    );
+  }
+}
 ```
+
+## `BottomBarItems` navigation row
+
+Corresponds to `example/lib/demos/badges_demo.dart`.
 
 ```dart
-// A more expressive spring.
-const BottomBarMotion.cupertino(
-  preset: BottomBarCupertinoMotion.bouncy,
-  extraBounce: 0.04,
-)
+import 'package:flutter/material.dart';
+import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+
+class BottomBarItemsExample extends StatefulWidget {
+  const BottomBarItemsExample({super.key});
+
+  @override
+  State<BottomBarItemsExample> createState() => _BottomBarItemsExampleState();
+}
+
+class _BottomBarItemsExampleState extends State<BottomBarItemsExample> {
+  int index = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: BottomBar(
+        body: BottomBarBodyPadding(
+          child: ListView.builder(
+            itemCount: 30,
+            itemBuilder: (_, row) => ListTile(title: Text('Row $row')),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: BottomBarItems(
+            children: [
+              BottomBarItem(
+                icon: const Icon(Icons.home_outlined),
+                selectedIcon: const Icon(Icons.home_rounded),
+                label: const Text('Home'),
+                selected: index == 0,
+                onTap: () => setState(() => index = 0),
+              ),
+              BottomBarItem(
+                icon: const Icon(Icons.inbox_outlined),
+                selectedIcon: const Icon(Icons.inbox_rounded),
+                label: const Text('Inbox'),
+                badge: const Badge(label: Text('3')),
+                selected: index == 1,
+                onTap: () => setState(() => index = 1),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 ```
+
+## Nested scroll + controller
+
+Corresponds to `example/lib/demos/nested_scroll_demo.dart`.
 
 ```dart
-// Traditional fixed-time motion for deterministic tests/goldens.
-const BottomBarMotion.curved(
-  duration: Duration(milliseconds: 280),
-  curve: Curves.easeOutCubic,
-)
+import 'package:flutter/material.dart';
+import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+
+class NestedScrollExample extends StatefulWidget {
+  const NestedScrollExample({super.key});
+
+  @override
+  State<NestedScrollExample> createState() => _NestedScrollExampleState();
+}
+
+class _NestedScrollExampleState extends State<NestedScrollExample> {
+  final controller = BottomBarController();
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      floatingActionButton: FloatingActionButton.small(
+        onPressed: controller.scrollToStart,
+        child: const Icon(Icons.vertical_align_top_rounded),
+      ),
+      body: BottomBar(
+        controller: controller,
+        scrollBehavior: BottomBarScrollBehavior(
+          predicate: (notification) => notification.depth == 0,
+          showAtStart: true,
+          showOnScrollEnd: true,
+        ),
+        body: NestedScrollView(
+          headerSliverBuilder: (_, __) => const [
+            SliverAppBar(
+              pinned: true,
+              expandedHeight: 180,
+              flexibleSpace: FlexibleSpaceBar(title: Text('Nested scroll')),
+            ),
+          ],
+          body: ListView.builder(
+            itemCount: 100,
+            itemBuilder: (_, index) => ListTile(title: Text('Row $index')),
+          ),
+        ),
+        child: const SizedBox(
+          height: 56,
+          child: Center(child: Text('Controller-aware bar')),
+        ),
+      ),
+    );
+  }
+}
 ```
+
+## Paint-only custom transition
+
+Corresponds to `example/lib/demos/custom_transition_demo.dart`.
 
 ```dart
-// Raw Motor motion.
-const BottomBarMotion.motor(
-  Motion.snappySpring(),
-)
+import 'package:flutter/material.dart';
+import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+
+class CustomTransitionExample extends StatelessWidget {
+  const CustomTransitionExample({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: BottomBar(
+        motion: BottomBarMotion.motor(
+          Motion.snappySpring(),
+          transitionBuilder: (context, animation, child) {
+            final value = animation.value.clamp(0.0, 1.0);
+            return Opacity(
+              opacity: value,
+              child: Transform.scale(
+                scale: 0.92 + (0.08 * value),
+                child: child,
+              ),
+            );
+          },
+        ),
+        body: ListView.builder(
+          itemCount: 60,
+          itemBuilder: (_, index) => ListTile(title: Text('Row $index')),
+        ),
+        child: const SizedBox(
+          height: 56,
+          child: Center(child: Text('Paint-only transition')),
+        ),
+      ),
+    );
+  }
+}
 ```
 
----
+`Motion` is re-exported by this package on purpose, so
+`BottomBarMotion.motor(Motion.snappySpring())` does not require an extra import
+from `motor`.
 
-## Recording your own gifs
+## Demo index
 
-The repo ships a small recording helper for the iOS Simulator at [tool/record_gif.sh](tool/record_gif.sh).
+- `example/lib/demos/basic_demo.dart`
+- `example/lib/demos/basic_tab_bar_demo.dart`
+- `example/lib/demos/tab_bar_demo.dart`
+- `example/lib/demos/search_bar_demo.dart`
+- `example/lib/demos/nested_scroll_demo.dart`
+- `example/lib/demos/badges_demo.dart`
+- `example/lib/demos/custom_transition_demo.dart`
 
-1. Boot the iOS Simulator and run the demo app:
-   ```bash
-   make run-ios
-   ```
-2. Pick a demo from the list and navigate to it.
-3. In a second terminal, start recording with the slug for that demo:
-   ```bash
-   make record NAME=1-issues-dock
-   ```
-4. Interact with the simulator (scroll, tap, etc.). Press `Ctrl+C` in the recording terminal to stop and finalize.
-5. The gif is written to `screenshots/<NAME>.gif`.
+## Recording gifs
 
-Use these slugs so they line up with the README grid:
+The repo includes `tool/record_gif.sh` for simulator recordings:
 
-| # | Demo               | Slug                    |
-|---|--------------------|-------------------------|
-| 1 | Issues dock        | `1-issues-dock`         |
-| 2 | AI prompt dock     | `2-ai-prompt-dock`      |
-| 3 | Basic TabBar       | `3-basic-tab-bar`       |
-| 4 | Minimal API        | `4-minimal-api`         |
-| 5 | Nested scroll      | `5-nested-scroll`       |
-| 6 | Badged nav         | `6-badged-nav`          |
-| 7 | Custom transition  | `7-custom-transition`   |
+```bash
+make run-ios
+make record NAME=1-issues-dock
+```
 
-Tunables (env vars): `GIF_FPS` (default `24`), `GIF_WIDTH` (default `360`).
+Use these slugs so screenshots and docs stay aligned:
+
+| Demo | Slug |
+| --- | --- |
+| Issues dock | `1-issues-dock` |
+| AI prompt dock | `2-ai-prompt-dock` |
+| Basic TabBar | `3-basic-tab-bar` |
+| Minimal API | `4-minimal-api` |
+| Nested scroll | `5-nested-scroll` |
+| Badged nav | `6-badged-nav` |
+| Custom transition | `7-custom-transition` |

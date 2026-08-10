@@ -29,6 +29,9 @@ typedef BackToTopIconBuilder = Widget Function(double width, double height);
 /// The bar listens to [ScrollNotification]s bubbled up from any descendant
 /// scrollable in [body] — no [ScrollController] wiring is required. It can
 /// host a [TabBar], search bar, custom [Row], [BottomBarItems], or any widget.
+/// Because the bar is stacked above [body], use [BottomBarBodyPadding] (or
+/// [BottomBarScope.barHeight]) when the body should reserve matching bottom
+/// clearance.
 ///
 /// Basic usage:
 ///
@@ -52,7 +55,8 @@ typedef BackToTopIconBuilder = Widget Function(double width, double height);
 /// * [BottomBarThemeData] — app-wide defaults via [ThemeExtension].
 /// * [BottomBarController] — imperative show/hide/scroll API.
 /// * [BottomBarScope] — read bar height and visibility from descendants.
-/// * [BottomBarBodyPadding] — reserve body space equal to the bar footprint.
+/// * [BottomBarBodyPadding] — reserve body space equal to the bar footprint,
+///   including [BottomBarLayout.offset] and bottom safe-area when enabled.
 class BottomBar extends StatefulWidget {
   /// Creates a [BottomBar].
   ///
@@ -80,17 +84,20 @@ class BottomBar extends StatefulWidget {
   /// [BottomBarItems], or a custom [Row].
   final Widget child;
 
-  /// The scrollable content placed beneath (and behind) the bar.
+  /// The content placed beneath (and behind) the bar.
   ///
   /// Any [ScrollNotification] bubbled from a descendant scrollable here drives
   /// the bar's hide/show behaviour without requiring a [ScrollController].
+  /// This subtree also receives [BottomBarScope], so descendants can read the
+  /// live bar footprint and visibility.
   final Widget body;
 
   /// Optional imperative controller for the bar.
   ///
   /// Attach a [BottomBarController] to programmatically [BottomBarController.show],
   /// [BottomBarController.hide], [BottomBarController.toggle], or scroll the
-  /// body to its start/end. A controller can be attached to only one bar at a time.
+  /// body to its start/end. A controller can be attached to only one bar at a
+  /// time; double-attach fails in both debug and release.
   final BottomBarController? controller;
 
   /// Size, shape, and positioning configuration.
@@ -117,23 +124,26 @@ class BottomBar extends StatefulWidget {
   /// arguments ([layout], [motion], [scrollBehavior]).
   final BottomBarThemeData? theme;
 
-  /// Builder for a custom back-to-top icon shown while the bar is hidden.
+  /// Builder for a custom hidden action shown while the bar is hidden.
   ///
   /// When null a default up-arrow icon is used. The builder receives the
-  /// current animated width and height of the icon container.
+  /// current animated width and height of the icon container. The action is
+  /// non-interactive and removed from semantics while the bar itself is
+  /// visible.
   final BackToTopIconBuilder? icon;
 
-  /// Whether the back-to-top icon is rendered at all.
+  /// Whether the built-in hidden action is rendered at all.
   ///
   /// Defaults to `true`. Set to `false` to suppress the icon entirely.
   final bool showIcon;
 
-  /// Accessibility label for the back-to-top icon.
+  /// Accessibility label for the hidden action.
   ///
-  /// Passed to [Semantics.label]. Defaults to the direction-aware tooltip text.
+  /// Passed to [Semantics.label]. Defaults to the direction-aware tooltip text:
+  /// `'Scroll to top'` or `'Scroll to bottom'`.
   final String? iconSemanticLabel;
 
-  /// Tooltip text shown on long-press of the back-to-top icon.
+  /// Tooltip text shown on long-press of the hidden action.
   ///
   /// Defaults to `'Scroll to top'` or `'Scroll to bottom'`, depending on
   /// [BottomBarScrollBehavior.scrollOpposite].

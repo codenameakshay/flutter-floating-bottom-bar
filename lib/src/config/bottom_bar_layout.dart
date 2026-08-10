@@ -4,6 +4,10 @@ import 'package:flutter/widgets.dart';
 ///
 /// Group all sizing/positioning concerns into one immutable, const-friendly
 /// value object so the [BottomBar] constructor stays readable.
+///
+/// [width] is always clamped by the host viewport, and optionally by
+/// [maxWidth]. Use [BottomBarLayout.adaptive] when the bar should fill the
+/// available host width up to a hard cap.
 @immutable
 class BottomBarLayout {
   const BottomBarLayout({
@@ -38,28 +42,32 @@ class BottomBarLayout {
         maxWidth = maxWidth,
         width = double.infinity;
 
-  /// Width of the bar.
+  /// Requested width of the bar before viewport and [maxWidth] clamping.
   final double width;
 
-  /// Maximum width of the bar after host padding and safe-area constraints.
+  /// Maximum width of the bar after host constraints are applied.
   ///
   /// When null, [width] is the only explicit width cap. Must be finite and
   /// non-negative when provided.
   final double? maxWidth;
 
   /// Padding/offset from all sides of the host stack.
+  ///
+  /// This contributes to the layout footprint reported through
+  /// [BottomBarScope.barHeight] and reserved by [BottomBarBodyPadding].
   final double offset;
 
   /// Border radius applied to the bar's default decoration.
   final BorderRadius borderRadius;
 
-  /// Additional translation applied only to the back-to-top icon.
+  /// Additional translation applied only to the built-in hidden action.
   ///
   /// For example, `Offset(0, 10)` moves the icon 10 logical pixels lower
   /// without changing the bar position.
   final Offset iconOffset;
 
-  /// Alignment of the bar (and the back-to-top icon) within the host stack.
+  /// Alignment of the bar (and the built-in hidden action) within the host
+  /// stack.
   final Alignment alignment;
 
   /// `Stack.fit` applied to the host stack.
