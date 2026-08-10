@@ -9,8 +9,8 @@ surface, or any custom child.
     <img src="https://img.shields.io/badge/Platform-Flutter-02569B?logo=flutter"
       alt="Platform" />
   </a>
-  <a href="https://pub.dartlang.org/packages/flutter_floating_bottom_bar">
-    <img src="https://img.shields.io/pub/v/flutter-floating-bottom-bar.svg"
+  <a href="https://pub.dev/packages/flutter_floating_bottom_bar">
+    <img src="https://img.shields.io/pub/v/flutter_floating_bottom_bar.svg"
       alt="Pub Package" />
   </a>
   <a href="https://opensource.org/licenses/MIT">
@@ -60,6 +60,9 @@ surface, or any custom child.
 ## Install
 
 Requires Dart `>=3.5.0` and Flutter `>=3.22.0`.
+
+See the [2.1.0 release notes](./CHANGELOG.md#210) for the complete list of new
+layout, scrolling, accessibility, and reliability improvements.
 
 ```bash
 flutter pub add flutter_floating_bottom_bar

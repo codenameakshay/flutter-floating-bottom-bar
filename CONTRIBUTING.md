@@ -4,7 +4,7 @@ Contributing to Flutter Floating Bottom Bar
 Thanks for contributing.
 
 Please follow the
-[code of conduct](https://github.com/codenameakshay/flutter-floating-bottom-bar/blob/master/CODE_OF_CONDUCT.md)
+[code of conduct](https://github.com/codenameakshay/flutter-floating-bottom-bar/blob/main/CODE_OF_CONDUCT.md)
 in all project interactions.
 
 ## Report bugs and issues
