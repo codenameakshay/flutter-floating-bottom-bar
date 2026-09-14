@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'config/bottom_bar_layout.dart';
 import 'config/bottom_bar_motion.dart';

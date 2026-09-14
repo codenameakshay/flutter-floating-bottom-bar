@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_floating_bottom_bar/src/bottom_bar_controller.dart';
 import 'package:flutter_test/flutter_test.dart';

@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'helpers/tooltip_finder.dart';
 
 void main() {
   group('BottomBarLayout', () {
@@ -245,7 +247,7 @@ void main() {
 
     final iconTransform = tester.widget<Transform>(
       find.ancestor(
-        of: find.byTooltip('Scroll to top'),
+        of: findByTooltip('Scroll to top'),
         matching: find.byType(Transform),
       ),
     );

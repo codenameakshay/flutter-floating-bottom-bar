@@ -1,9 +1,11 @@
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'helpers/tooltip_finder.dart';
 
 void main() {
   group('BottomBarItem', () {
@@ -70,7 +72,7 @@ void main() {
           hasLength(1),
         );
         expect(_semanticsLabels(tester), isNot(contains('Home')));
-        expect(find.byTooltip('Go home'), findsOneWidget);
+        expect(findByTooltip('Go home'), findsOneWidget);
       } finally {
         semantics.dispose();
       }
@@ -155,7 +157,7 @@ void main() {
         );
         expect(_semanticsLabels(tester), isNot(contains('More info')));
         expect(_semanticsLabels(tester), isNot(contains('Visual only')));
-        expect(find.byTooltip('More info'), findsOneWidget);
+        expect(findByTooltip('More info'), findsOneWidget);
 
         tester.semantics.tap(find.semantics.byLabel('Open info'));
         await tester.pump();

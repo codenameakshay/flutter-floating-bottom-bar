@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Internal back action with a stable hit target and animated visual child.
 class BottomBarAction extends StatelessWidget {

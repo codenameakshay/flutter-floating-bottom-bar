@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'helpers/tooltip_finder.dart';
 
 void main() {
   Widget buildHarness(BottomBarController controller, Offset iconOffset) {
@@ -36,7 +38,7 @@ void main() {
         reason: 'bar should hide after scrolling down');
 
     // Tap the icon at its actual rendered (translated) location.
-    await tester.tap(find.byTooltip('Scroll to top'), warnIfMissed: false);
+    await tester.tap(findByTooltip('Scroll to top'), warnIfMissed: false);
     await tester.pumpAndSettle();
 
     return controller.isVisible;
