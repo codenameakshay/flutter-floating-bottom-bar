@@ -1,12 +1,12 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'demos/ai_prompt_dock_demo.dart';
 import 'demos/badges_demo.dart';
 import 'demos/basic_demo.dart';
 import 'demos/basic_tab_bar_demo.dart';
 import 'demos/custom_transition_demo.dart';
+import 'demos/issues_dock_demo.dart';
 import 'demos/nested_scroll_demo.dart';
-import 'demos/search_bar_demo.dart';
-import 'demos/tab_bar_demo.dart';
 
 void main() => runApp(const ExampleApp());
 
@@ -34,8 +34,8 @@ class _DemoPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final demos = <(String, WidgetBuilder)>[
-      ('Issues dock', (_) => const TabBarDemoPage()),
-      ('AI prompt dock', (_) => const SearchBarDemoPage()),
+      ('Issues dock', (_) => const IssuesDockDemoPage()),
+      ('AI prompt dock', (_) => const AiPromptDockDemoPage()),
       ('Basic TabBar', (_) => const BasicTabBarDemoPage()),
       ('Minimal API', (_) => const BasicDemoPage()),
       ('Nested scroll', (_) => const NestedScrollDemoPage()),
