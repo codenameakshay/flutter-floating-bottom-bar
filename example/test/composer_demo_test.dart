@@ -8,12 +8,13 @@ void main() {
     await _pumpPage(tester);
 
     await tester.tap(find.byType(TextField));
-    await tester.enterText(find.byType(TextField), 'Plan a small garden');
+    const prompt = 'Plan a small\ngarden';
+    await tester.enterText(find.byType(TextField), prompt);
     await tester.pump();
     await tester.tap(find.text('Send'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Plan a small garden'), findsOneWidget);
+    expect(find.text(prompt), findsOneWidget);
     expect(
       tester.widget<TextField>(find.byType(TextField)).controller!.text,
       isEmpty,
