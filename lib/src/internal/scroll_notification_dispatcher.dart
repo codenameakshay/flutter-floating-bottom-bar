@@ -64,8 +64,6 @@ class ScrollNotificationDispatcher {
       if (showOnScrollEnd) {
         onShouldHide(false);
       }
-      // Optional: keep history; do not evict here so subsequent updates from
-      // the same scrollable retain their tracked offset.
       return;
     }
 
@@ -127,12 +125,8 @@ class ScrollNotificationDispatcher {
 
   ScrollPosition? _maybePositionOf(ScrollNotification n) {
     final ctx = n.context;
-    if (ctx == null) return _lastActivePosition;
-    try {
-      return Scrollable.maybeOf(ctx)?.position;
-    } catch (_) {
-      return _lastActivePosition;
-    }
+    if (ctx == null || !ctx.mounted) return _lastActivePosition;
+    return Scrollable.maybeOf(ctx)?.position;
   }
 
   void _resetState(_TrackedScrollState state, double pixels) {

@@ -361,5 +361,8 @@ class _FakeEnd extends ScrollEndNotification {
 
 class _DummyBuildContext implements BuildContext {
   @override
+  bool get mounted => false;
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => null;
 }

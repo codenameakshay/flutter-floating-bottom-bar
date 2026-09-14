@@ -41,9 +41,7 @@ void main() {
     },
   );
 
-  testWidgets('controller asserts on double attachment in debug mode', (
-    tester,
-  ) async {
+  testWidgets('controller rejects double attachment', (tester) async {
     final controller = BottomBarController();
 
     await tester.pumpWidget(
@@ -71,7 +69,7 @@ void main() {
       ),
     );
 
-    expect(tester.takeException(), isA<AssertionError>());
+    expect(tester.takeException(), isA<FlutterError>());
   });
 
   testWidgets('isAttached/isVisible reflect lifecycle', (tester) async {

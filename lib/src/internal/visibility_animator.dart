@@ -33,7 +33,7 @@ class VisibilityAnimator extends StatelessWidget {
         ),
       );
     }
-    final clamped = _ClampedAnimation(animation);
+    final clamped = _ClampedAnimation(animation, max: 1);
 
     switch (motion.transition) {
       case BottomBarTransition.slide:
@@ -50,10 +50,7 @@ class VisibilityAnimator extends StatelessWidget {
         return _wrapInteraction(FadeTransition(opacity: clamped, child: child));
       case BottomBarTransition.scale:
         return _wrapInteraction(
-          ScaleTransition(
-            scale: _NonNegativeAnimation(animation),
-            child: child,
-          ),
+          ScaleTransition(scale: _ClampedAnimation(animation), child: child),
         );
       case BottomBarTransition.slideAndFade:
         return _wrapInteraction(
@@ -79,24 +76,16 @@ class VisibilityAnimator extends StatelessWidget {
   }
 }
 
+/// Clamps [parent] to `[0, max]` so spring overshoot never feeds a negative
+/// scale or an out-of-range opacity.
 class _ClampedAnimation extends Animation<double>
     with AnimationWithParentMixin<double> {
-  _ClampedAnimation(this.parent);
+  _ClampedAnimation(this.parent, {this.max = double.infinity});
 
   @override
   final Animation<double> parent;
+  final double max;
 
   @override
-  double get value => parent.value.clamp(0.0, 1.0);
-}
-
-class _NonNegativeAnimation extends Animation<double>
-    with AnimationWithParentMixin<double> {
-  _NonNegativeAnimation(this.parent);
-
-  @override
-  final Animation<double> parent;
-
-  @override
-  double get value => parent.value < 0 ? 0 : parent.value;
+  double get value => parent.value.clamp(0, max);
 }

@@ -1,3 +1,5 @@
+import 'dart:ui' show lerpDouble;
+
 import 'package:material_ui/material_ui.dart';
 
 import 'config/bottom_bar_layout.dart';
@@ -121,17 +123,12 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
         other.iconDecoration,
         t,
       ),
-      iconWidth: _lerpDouble(iconWidth, other.iconWidth, t),
-      iconHeight: _lerpDouble(iconHeight, other.iconHeight, t),
+      iconWidth: lerpDouble(iconWidth, other.iconWidth, t),
+      iconHeight: lerpDouble(iconHeight, other.iconHeight, t),
       // Config objects are stepped at t < 0.5 → this, t >= 0.5 → other.
       layout: t < 0.5 ? layout : other.layout,
       motion: t < 0.5 ? motion : other.motion,
       scrollBehavior: t < 0.5 ? scrollBehavior : other.scrollBehavior,
     );
-  }
-
-  static double? _lerpDouble(double? a, double? b, double t) {
-    if (a == null && b == null) return null;
-    return (a ?? 0) + ((b ?? 0) - (a ?? 0)) * t;
   }
 }

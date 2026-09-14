@@ -29,9 +29,7 @@ class BottomBarAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final targetExtent = math
-        .max(48.0, math.max(visualWidth, visualHeight))
-        .toDouble();
+    final targetExtent = math.max(48.0, math.max(visualWidth, visualHeight));
 
     Widget child = SizedBox(
       width: targetExtent,
@@ -67,12 +65,9 @@ class BottomBarAction extends StatelessWidget {
       ),
     );
 
-    child = IgnorePointer(ignoring: !enabled, child: child);
-    child = ExcludeSemantics(excluding: !enabled, child: child);
     if (!enabled) {
-      return child;
+      return IgnorePointer(child: ExcludeSemantics(child: child));
     }
-
     return Semantics(
       button: true,
       label: semanticLabel,
