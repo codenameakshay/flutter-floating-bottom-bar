@@ -1,8 +1,10 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'helpers/tooltip_finder.dart';
 import 'package:motor/motor.dart' as motor;
 
 void main() {
@@ -345,7 +347,7 @@ void main() {
 
     controller.hide();
     await tester.pumpAndSettle();
-    expect(find.byTooltip('Go to top'), findsOneWidget);
+    expect(findByTooltip('Go to top'), findsOneWidget);
   });
 
   testWidgets(
@@ -453,7 +455,7 @@ void main() {
       controller.hide();
       await tester.pumpAndSettle();
 
-      expect(find.byTooltip('Scroll to top'), findsOneWidget);
+      expect(findByTooltip('Scroll to top'), findsOneWidget);
       expect(
         _semanticsLabels(tester).where((label) => label == 'Scroll to top'),
         hasLength(1),
@@ -473,7 +475,7 @@ void main() {
     controller.hide();
     await tester.pumpAndSettle();
 
-    final tooltip = find.byTooltip('Scroll to top');
+    final tooltip = findByTooltip('Scroll to top');
     expect(tooltip, findsOneWidget);
 
     final targetRect = tester.getRect(tooltip);
@@ -493,7 +495,7 @@ void main() {
     final position = tester.state<ScrollableState>(scrollable).position;
     expect(position.pixels, greaterThan(0));
 
-    final targetRect = tester.getRect(find.byTooltip('Scroll to top'));
+    final targetRect = tester.getRect(findByTooltip('Scroll to top'));
     await tester.tapAt(targetRect.topLeft + const Offset(2, 2));
     await tester.pumpAndSettle();
 
@@ -517,7 +519,7 @@ void main() {
       controller.hide();
       await tester.pumpAndSettle();
 
-      expect(find.byTooltip('Scroll to bottom'), findsOneWidget);
+      expect(findByTooltip('Scroll to bottom'), findsOneWidget);
       expect(find.byIcon(Icons.arrow_downward_rounded), findsOneWidget);
       expect(_semanticsLabels(tester), contains('Scroll to bottom'));
     } finally {
@@ -543,9 +545,9 @@ void main() {
       controller.hide();
       await tester.pumpAndSettle();
 
-      expect(find.byTooltip('Jump to end'), findsOneWidget);
+      expect(findByTooltip('Jump to end'), findsOneWidget);
       expect(_semanticsLabels(tester), contains('Jump to the bottom'));
-      expect(find.byTooltip('Scroll to bottom'), findsNothing);
+      expect(findByTooltip('Scroll to bottom'), findsNothing);
       expect(_semanticsLabels(tester), isNot(contains('Scroll to bottom')));
     } finally {
       semantics.dispose();
@@ -668,7 +670,7 @@ void main() {
         body: BottomBar(
           controller: controller,
           body: NestedScrollView(
-            headerSliverBuilder: (_, __) => const [
+            headerSliverBuilder: (_, _) => const [
               SliverAppBar(title: Text('Nested')),
             ],
             body: ListView.builder(
@@ -852,7 +854,7 @@ void main() {
           controller: controller,
           body: NestedScrollView(
             key: nestedKey,
-            headerSliverBuilder: (_, __) => const [
+            headerSliverBuilder: (_, _) => const [
               SliverAppBar(
                 expandedHeight: 200,
                 pinned: true,
@@ -904,7 +906,7 @@ void main() {
           controller: controller,
           body: NestedScrollView(
             key: nestedKey,
-            headerSliverBuilder: (_, __) => const [
+            headerSliverBuilder: (_, _) => const [
               SliverAppBar(
                 expandedHeight: 200,
                 pinned: true,
@@ -954,7 +956,7 @@ void main() {
           controller: controller,
           body: NestedScrollView(
             key: nestedKey,
-            headerSliverBuilder: (_, __) => const [
+            headerSliverBuilder: (_, _) => const [
               SliverAppBar(
                 expandedHeight: 160,
                 pinned: true,

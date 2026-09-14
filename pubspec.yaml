@@ -5,12 +5,13 @@ homepage: https://hashstudios.in
 repository: https://github.com/codenameakshay/flutter-floating-bottom-bar
 
 environment:
-  sdk: ">=3.5.0 <4.0.0"
-  flutter: ">=3.22.0"
+  sdk: ">=3.12.0 <4.0.0"
+  flutter: ">=3.44.0"
 
 dependencies:
   flutter:
     sdk: flutter
+  material_ui: ^1.0.0
   motor: ^1.1.0
 
 dev_dependencies:

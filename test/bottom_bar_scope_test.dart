@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -26,7 +26,7 @@ void main() {
                   final h = BottomBarScope.of(ctx).barHeight;
                   return ValueListenableBuilder<double>(
                     valueListenable: h,
-                    builder: (_, value, __) {
+                    builder: (_, value, _) {
                       observed = value;
                       return ListView(
                         children: const [SizedBox(height: 1000)],
@@ -66,7 +66,7 @@ void main() {
                 final h = BottomBarScope.of(ctx).barHeight;
                 return ValueListenableBuilder<double>(
                   valueListenable: h,
-                  builder: (_, value, __) {
+                  builder: (_, value, _) {
                     observed = value;
                     return ListView(
                       children: const [SizedBox(height: 1000)],
@@ -106,7 +106,7 @@ void main() {
               final v = BottomBarScope.of(ctx).isVisible;
               return ValueListenableBuilder<bool>(
                 valueListenable: v,
-                builder: (_, value, __) {
+                builder: (_, value, _) {
                   observed = value;
                   return const SizedBox.shrink();
                 },

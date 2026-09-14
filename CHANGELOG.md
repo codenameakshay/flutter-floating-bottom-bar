@@ -1,3 +1,19 @@
+## Unreleased
+
+### Changed
+
+- Migrated from `package:flutter/material.dart` to the standalone
+  [`material_ui`](https://pub.dev/packages/material_ui) package. Material was
+  decoupled from the Flutter SDK in 3.47; the in-SDK copy is
+  [frozen to contributions](https://github.com/flutter/flutter/issues/184093)
+  and [scheduled for removal](https://github.com/flutter/flutter/issues/172942).
+  Apps that have already migrated no longer need
+  `MaterialUiCompatibilityBridge` on account of this package — without it, the
+  bar resolved `Theme.of(context).colorScheme` against the framework Material
+  and silently fell back to a default theme.
+- Minimum SDK constraints raised to Dart 3.12 / Flutter 3.44, which is what
+  `material_ui` requires.
+
 ## 2.1.0
 
 ### Added
