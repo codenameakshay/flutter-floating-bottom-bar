@@ -93,13 +93,11 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byTooltip('Expand dock'), findsOneWidget);
-        expect(
-          tester
-              .getSemantics(find.byTooltip('Expand dock'))
-              .getSemanticsData()
-              .label,
-          'Expand dock',
-        );
+        final toggleSemantics = tester
+            .getSemantics(find.byTooltip('Expand dock'))
+            .getSemanticsData();
+        expect(toggleSemantics.flagsCollection.isButton, isTrue);
+        expect(toggleSemantics.tooltip, 'Expand dock');
         final compactClearance = _clearance(tester);
 
         await tester.tap(find.byTooltip('Expand dock'));

@@ -130,7 +130,6 @@ class _ScrollUnderDock extends StatelessWidget {
                   tooltip: label,
                   onPressed: onToggle,
                   icon: Icon(
-                    semanticLabel: label,
                     isExpanded
                         ? Icons.unfold_less_rounded
                         : Icons.unfold_more_rounded,
@@ -157,37 +156,34 @@ class _ScrollRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      label: 'Scroll item ${index + 1}',
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: index.isEven ? const Color(0xFFF8F7F3) : Colors.white,
-          border: const Border(bottom: BorderSide(color: Color(0x12000000))),
-        ),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 76),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            child: Row(
-              children: [
-                Text(
-                  '${index + 1}'.padLeft(2, '0'),
-                  style: const TextStyle(
-                    color: Color(0x99000000),
-                    fontWeight: FontWeight.w700,
-                  ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: index.isEven ? const Color(0xFFF8F7F3) : Colors.white,
+        border: const Border(bottom: BorderSide(color: Color(0x12000000))),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 76),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          child: Row(
+            children: [
+              Text(
+                '${index + 1}'.padLeft(2, '0'),
+                style: const TextStyle(
+                  color: Color(0x99000000),
+                  fontWeight: FontWeight.w700,
                 ),
-                const SizedBox(width: 18),
-                Flexible(
-                  child: Text(
-                    'A long list row',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+              ),
+              const SizedBox(width: 18),
+              Flexible(
+                child: Text(
+                  'A long list row',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
