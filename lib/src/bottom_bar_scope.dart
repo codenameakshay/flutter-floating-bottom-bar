@@ -29,8 +29,8 @@ class BottomBarScope extends InheritedWidget {
   /// The widget returned is the one inserted by [BottomBar] around [BottomBar.body],
   /// so this must only be called from within the [BottomBar.body] subtree.
   ///
-  /// Throws a [FlutterError] in debug mode if called outside a [BottomBar.body]
-  /// subtree. Use [maybeOf] for a null-safe variant.
+  /// Asserts in debug mode if called outside a [BottomBar.body] subtree. Use
+  /// [maybeOf] for a null-safe variant.
   static BottomBarScope of(BuildContext context) {
     final scope = maybeOf(context);
     assert(

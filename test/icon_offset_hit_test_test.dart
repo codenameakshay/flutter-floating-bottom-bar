@@ -34,8 +34,11 @@ void main() {
     // Scroll down so the bar hides and a scroll position is recorded.
     await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
     await tester.pumpAndSettle();
-    expect(controller.isVisible, isFalse,
-        reason: 'bar should hide after scrolling down');
+    expect(
+      controller.isVisible,
+      isFalse,
+      reason: 'bar should hide after scrolling down',
+    );
 
     // Tap the icon at its actual rendered (translated) location.
     await tester.tap(findByTooltip('Scroll to top'), warnIfMissed: false);
@@ -44,23 +47,26 @@ void main() {
     return controller.isVisible;
   }
 
-  testWidgets('back-to-top icon is tappable with a small iconOffset',
-      (tester) async {
+  testWidgets('back-to-top icon is tappable with a small iconOffset', (
+    tester,
+  ) async {
     final controller = BottomBarController();
     await tester.pumpWidget(buildHarness(controller, const Offset(5, 0)));
 
     expect(await tapBackToTopIcon(tester, controller), isTrue);
   });
 
-  testWidgets('back-to-top icon is tappable with a large iconOffset',
-      (tester) async {
+  testWidgets('back-to-top icon is tappable with a large iconOffset', (
+    tester,
+  ) async {
     final controller = BottomBarController();
     await tester.pumpWidget(buildHarness(controller, const Offset(100, 0)));
 
     expect(
       await tapBackToTopIcon(tester, controller),
       isTrue,
-      reason: 'tapping the icon at a large offset should still register and '
+      reason:
+          'tapping the icon at a large offset should still register and '
           'scroll the bar back into view',
     );
   });

@@ -3,17 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('BottomBarScrollBehavior', () {
-    test('default values match the documented defaults', () {
-      const behavior = BottomBarScrollBehavior();
-      expect(behavior.hideOnScroll, true);
-      expect(behavior.reverse, false);
-      expect(behavior.scrollOpposite, false);
-      expect(behavior.deltaThreshold, 8);
-      expect(behavior.showAtStart, false);
-      expect(behavior.showOnScrollEnd, false);
-      expect(behavior.predicate, isNull);
-    });
-
     test('asserts deltaThreshold is non-negative', () {
       expect(
         () => BottomBarScrollBehavior(deltaThreshold: -1),

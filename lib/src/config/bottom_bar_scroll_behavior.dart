@@ -87,12 +87,12 @@ class BottomBarScrollBehavior {
 
   @override
   int get hashCode => Object.hash(
-        hideOnScroll,
-        reverse,
-        scrollOpposite,
-        deltaThreshold,
-        showAtStart,
-        showOnScrollEnd,
-        predicate,
-      );
+    hideOnScroll,
+    reverse,
+    scrollOpposite,
+    deltaThreshold,
+    showAtStart,
+    showOnScrollEnd,
+    predicate,
+  );
 }

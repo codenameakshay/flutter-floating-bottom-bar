@@ -109,18 +109,17 @@ class BottomBarMotion {
     this.transitionBuilder,
     this.slideStart = const Offset(0, 2),
     this.slideEnd = Offset.zero,
-  })  : mode = duration == null && curve == null
-            ? BottomBarMotionMode.cupertino
-            : BottomBarMotionMode.curved,
-        duration = duration ??
-            (curve == null
-                ? _defaultCupertinoDuration
-                : _defaultCurvedDuration),
-        curve = curve ?? _defaultCurve,
-        cupertinoPreset = BottomBarCupertinoMotion.snappy,
-        extraBounce = 0,
-        snapToEnd = true,
-        motorMotion = null;
+  }) : mode = duration == null && curve == null
+           ? BottomBarMotionMode.cupertino
+           : BottomBarMotionMode.curved,
+       duration =
+           duration ??
+           (curve == null ? _defaultCupertinoDuration : _defaultCurvedDuration),
+       curve = curve ?? _defaultCurve,
+       cupertinoPreset = BottomBarCupertinoMotion.snappy,
+       extraBounce = 0,
+       snapToEnd = true,
+       motorMotion = null;
 
   /// Creates a Cupertino spring motion using one of the built-in presets.
   ///
@@ -138,10 +137,10 @@ class BottomBarMotion {
     this.transitionBuilder,
     this.slideStart = const Offset(0, 2),
     this.slideEnd = Offset.zero,
-  })  : mode = BottomBarMotionMode.cupertino,
-        curve = _defaultCurve,
-        cupertinoPreset = preset,
-        motorMotion = null;
+  }) : mode = BottomBarMotionMode.cupertino,
+       curve = _defaultCurve,
+       cupertinoPreset = preset,
+       motorMotion = null;
 
   /// Creates a deterministic duration + curve animation.
   ///
@@ -155,11 +154,11 @@ class BottomBarMotion {
     this.transitionBuilder,
     this.slideStart = const Offset(0, 2),
     this.slideEnd = Offset.zero,
-  })  : mode = BottomBarMotionMode.curved,
-        cupertinoPreset = BottomBarCupertinoMotion.snappy,
-        extraBounce = 0,
-        snapToEnd = true,
-        motorMotion = null;
+  }) : mode = BottomBarMotionMode.curved,
+       cupertinoPreset = BottomBarCupertinoMotion.snappy,
+       extraBounce = 0,
+       snapToEnd = true,
+       motorMotion = null;
 
   /// Creates a motion driven by a caller-supplied [motor.Motion].
   ///
@@ -176,10 +175,10 @@ class BottomBarMotion {
     this.transitionBuilder,
     this.slideStart = const Offset(0, 2),
     this.slideEnd = Offset.zero,
-  })  : mode = BottomBarMotionMode.motor,
-        cupertinoPreset = BottomBarCupertinoMotion.snappy,
-        extraBounce = 0,
-        snapToEnd = true;
+  }) : mode = BottomBarMotionMode.motor,
+       cupertinoPreset = BottomBarCupertinoMotion.snappy,
+       extraBounce = 0,
+       snapToEnd = true;
 
   /// Which motion engine drives the bar.
   final BottomBarMotionMode mode;
@@ -217,7 +216,7 @@ class BottomBarMotion {
   /// animations may overshoot, so clamp `animation.value` before using it for
   /// opacity or scale.
   final Widget Function(BuildContext, Animation<double>, Widget)?
-      transitionBuilder;
+  transitionBuilder;
 
   /// Slide source offset (used by `BottomBarTransition.slide` and
   /// `BottomBarTransition.slideAndFade`). Expressed in the same units as
@@ -245,63 +244,41 @@ class BottomBarMotion {
     Offset? slideStart,
     Offset? slideEnd,
   }) {
-    return BottomBarMotion(
-      duration: duration ?? this.duration,
-      curve: curve ?? this.curve,
-      transition: transition ?? this.transition,
-      transitionBuilder: transitionBuilder ?? this.transitionBuilder,
-      slideStart: slideStart ?? this.slideStart,
-      slideEnd: slideEnd ?? this.slideEnd,
-    )._copyMotionFields(
-      mode: mode ?? this.mode,
-      cupertinoPreset: cupertinoPreset ?? this.cupertinoPreset,
-      extraBounce: extraBounce ?? this.extraBounce,
-      snapToEnd: snapToEnd ?? this.snapToEnd,
-      motorMotion: motorMotion ?? this.motorMotion,
-    );
-  }
-
-  BottomBarMotion _copyMotionFields({
-    required BottomBarMotionMode mode,
-    required BottomBarCupertinoMotion cupertinoPreset,
-    required double extraBounce,
-    required bool snapToEnd,
-    required motor.Motion? motorMotion,
-  }) {
-    switch (mode) {
-      case BottomBarMotionMode.cupertino:
-        return BottomBarMotion.cupertino(
-          preset: cupertinoPreset,
-          duration: duration,
-          extraBounce: extraBounce,
-          snapToEnd: snapToEnd,
-          transition: transition,
-          transitionBuilder: transitionBuilder,
-          slideStart: slideStart,
-          slideEnd: slideEnd,
-        );
-      case BottomBarMotionMode.curved:
-        return BottomBarMotion.curved(
-          duration: duration,
-          curve: curve,
-          transition: transition,
-          transitionBuilder: transitionBuilder,
-          slideStart: slideStart,
-          slideEnd: slideEnd,
-        );
-      case BottomBarMotionMode.motor:
-        return BottomBarMotion.motor(
-          motorMotion ??
-              this.motorMotion ??
-              motor.Motion.curved(duration, curve),
-          duration: duration,
-          curve: curve,
-          transition: transition,
-          transitionBuilder: transitionBuilder,
-          slideStart: slideStart,
-          slideEnd: slideEnd,
-        );
-    }
+    duration ??= this.duration;
+    curve ??= this.curve;
+    transition ??= this.transition;
+    transitionBuilder ??= this.transitionBuilder;
+    slideStart ??= this.slideStart;
+    slideEnd ??= this.slideEnd;
+    return switch (mode ?? this.mode) {
+      BottomBarMotionMode.cupertino => BottomBarMotion.cupertino(
+        preset: cupertinoPreset ?? this.cupertinoPreset,
+        duration: duration,
+        extraBounce: extraBounce ?? this.extraBounce,
+        snapToEnd: snapToEnd ?? this.snapToEnd,
+        transition: transition,
+        transitionBuilder: transitionBuilder,
+        slideStart: slideStart,
+        slideEnd: slideEnd,
+      ),
+      BottomBarMotionMode.curved => BottomBarMotion.curved(
+        duration: duration,
+        curve: curve,
+        transition: transition,
+        transitionBuilder: transitionBuilder,
+        slideStart: slideStart,
+        slideEnd: slideEnd,
+      ),
+      BottomBarMotionMode.motor => BottomBarMotion.motor(
+        motorMotion ?? this.motorMotion ?? motor.Motion.curved(duration, curve),
+        duration: duration,
+        curve: curve,
+        transition: transition,
+        transitionBuilder: transitionBuilder,
+        slideStart: slideStart,
+        slideEnd: slideEnd,
+      ),
+    };
   }
 
   /// Resolves this package-level configuration to the Motor motion that drives
@@ -311,20 +288,20 @@ class BottomBarMotion {
       case BottomBarMotionMode.cupertino:
         return switch (cupertinoPreset) {
           BottomBarCupertinoMotion.smooth => motor.CupertinoMotion.smooth(
-              duration: duration,
-              extraBounce: extraBounce,
-              snapToEnd: snapToEnd,
-            ),
+            duration: duration,
+            extraBounce: extraBounce,
+            snapToEnd: snapToEnd,
+          ),
           BottomBarCupertinoMotion.snappy => motor.CupertinoMotion.snappy(
-              duration: duration,
-              extraBounce: extraBounce,
-              snapToEnd: snapToEnd,
-            ),
+            duration: duration,
+            extraBounce: extraBounce,
+            snapToEnd: snapToEnd,
+          ),
           BottomBarCupertinoMotion.bouncy => motor.CupertinoMotion.bouncy(
-              duration: duration,
-              extraBounce: extraBounce,
-              snapToEnd: snapToEnd,
-            ),
+            duration: duration,
+            extraBounce: extraBounce,
+            snapToEnd: snapToEnd,
+          ),
           BottomBarCupertinoMotion.interactive =>
             motor.CupertinoMotion.interactive(
               duration: duration,
@@ -358,16 +335,16 @@ class BottomBarMotion {
 
   @override
   int get hashCode => Object.hash(
-        mode,
-        duration,
-        curve,
-        cupertinoPreset,
-        extraBounce,
-        snapToEnd,
-        motorMotion,
-        transition,
-        transitionBuilder,
-        slideStart,
-        slideEnd,
-      );
+    mode,
+    duration,
+    curve,
+    cupertinoPreset,
+    extraBounce,
+    snapToEnd,
+    motorMotion,
+    transition,
+    transitionBuilder,
+    slideStart,
+    slideEnd,
+  );
 }

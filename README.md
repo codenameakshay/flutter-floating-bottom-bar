@@ -59,7 +59,7 @@ surface, or any custom child.
 
 ## Install
 
-Requires Dart `>=3.5.0` and Flutter `>=3.22.0`.
+Requires Dart `>=3.12.0` and Flutter `>=3.44.0`.
 
 See the [2.1.0 release notes](./CHANGELOG.md#210) for the complete list of new
 layout, scrolling, accessibility, and reliability improvements.

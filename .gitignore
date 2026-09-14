@@ -15,8 +15,7 @@ build/
 .flutter-plugins-dependencies
 
 # FVM
-.fvm/flutter_sdk
-.fvm/versions
+.fvm/
 
 # Coverage
 coverage/
@@ -26,3 +25,5 @@ coverage/
 
 # Misc
 *.log
+.omx/
+.DS_Store

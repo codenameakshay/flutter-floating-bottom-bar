@@ -4,119 +4,130 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets(
-      'BottomBarScope.barHeight reports outer footprint including offset and safe area',
-      (tester) async {
-    double? observed;
-    const childHeight = 56.0;
-    const offset = 10.0;
-    const safeAreaBottom = 24.0;
+    'BottomBarScope.barHeight reports outer footprint including offset and safe area',
+    (tester) async {
+      double? observed;
+      const childHeight = 56.0;
+      const offset = 10.0;
+      const safeAreaBottom = 24.0;
 
-    await tester.pumpWidget(
-      MediaQuery(
-        data: const MediaQueryData(
-          size: Size(400, 800),
-          padding: EdgeInsets.only(bottom: safeAreaBottom),
-        ),
-        child: MaterialApp(
-          home: Scaffold(
-            body: BottomBar(
-              layout: const BottomBarLayout(offset: offset),
-              body: Builder(
-                builder: (ctx) {
-                  final h = BottomBarScope.of(ctx).barHeight;
-                  return ValueListenableBuilder<double>(
-                    valueListenable: h,
-                    builder: (_, value, _) {
-                      observed = value;
-                      return ListView(
-                        children: const [SizedBox(height: 1000)],
-                      );
-                    },
-                  );
-                },
-              ),
-              child: const SizedBox(height: childHeight, width: 200),
-            ),
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(
+            size: Size(400, 800),
+            padding: EdgeInsets.only(bottom: safeAreaBottom),
           ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(observed, isNotNull);
-    expect(
-        observed!, closeTo(childHeight + (offset * 2) + safeAreaBottom, 0.01));
-  });
-
-  testWidgets(
-      'BottomBarScope.barHeight updates when bar child height changes without rebuilding BottomBar',
-      (tester) async {
-    final barChildKey = GlobalKey<_ResizableBarChildState>();
-    double? observed;
-    var bottomBarBuilds = 0;
-
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: _BottomBarBuildCounter(
-          onBuild: () => bottomBarBuilds += 1,
-          child: BottomBar(
-            layout: const BottomBarLayout(offset: 0, respectSafeArea: false),
-            body: Builder(
-              builder: (ctx) {
-                final h = BottomBarScope.of(ctx).barHeight;
-                return ValueListenableBuilder<double>(
-                  valueListenable: h,
-                  builder: (_, value, _) {
-                    observed = value;
-                    return ListView(
-                      children: const [SizedBox(height: 1000)],
+          child: MaterialApp(
+            home: Scaffold(
+              body: BottomBar(
+                layout: const BottomBarLayout(offset: offset),
+                body: Builder(
+                  builder: (ctx) {
+                    final h = BottomBarScope.of(ctx).barHeight;
+                    return ValueListenableBuilder<double>(
+                      valueListenable: h,
+                      builder: (_, value, _) {
+                        observed = value;
+                        return ListView(
+                          children: const [SizedBox(height: 1000)],
+                        );
+                      },
                     );
                   },
-                );
-              },
+                ),
+                child: const SizedBox(height: childHeight, width: 200),
+              ),
             ),
-            child: ResizableBarChild(key: barChildKey, initialHeight: 40),
           ),
         ),
-      ),
-    ));
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(observed, closeTo(40, 0.01));
-    expect(bottomBarBuilds, 1);
+      expect(observed, isNotNull);
+      expect(
+        observed!,
+        closeTo(childHeight + (offset * 2) + safeAreaBottom, 0.01),
+      );
+    },
+  );
 
-    barChildKey.currentState!.setHeight(88);
-    await tester.pump();
-    await tester.pump();
+  testWidgets(
+    'BottomBarScope.barHeight updates when bar child height changes without rebuilding BottomBar',
+    (tester) async {
+      final barChildKey = GlobalKey<_ResizableBarChildState>();
+      double? observed;
+      var bottomBarBuilds = 0;
 
-    expect(observed, closeTo(88, 0.01));
-    expect(bottomBarBuilds, 1);
-  });
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: _BottomBarBuildCounter(
+              onBuild: () => bottomBarBuilds += 1,
+              child: BottomBar(
+                layout: const BottomBarLayout(
+                  offset: 0,
+                  respectSafeArea: false,
+                ),
+                body: Builder(
+                  builder: (ctx) {
+                    final h = BottomBarScope.of(ctx).barHeight;
+                    return ValueListenableBuilder<double>(
+                      valueListenable: h,
+                      builder: (_, value, _) {
+                        observed = value;
+                        return ListView(
+                          children: const [SizedBox(height: 1000)],
+                        );
+                      },
+                    );
+                  },
+                ),
+                child: ResizableBarChild(key: barChildKey, initialHeight: 40),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(observed, closeTo(40, 0.01));
+      expect(bottomBarBuilds, 1);
+
+      barChildKey.currentState!.setHeight(88);
+      await tester.pump();
+      await tester.pump();
+
+      expect(observed, closeTo(88, 0.01));
+      expect(bottomBarBuilds, 1);
+    },
+  );
 
   testWidgets('BottomBarScope.isVisible reflects controller', (tester) async {
     final controller = BottomBarController();
     bool? observed;
 
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: BottomBar(
-          controller: controller,
-          body: Builder(
-            builder: (ctx) {
-              final v = BottomBarScope.of(ctx).isVisible;
-              return ValueListenableBuilder<bool>(
-                valueListenable: v,
-                builder: (_, value, _) {
-                  observed = value;
-                  return const SizedBox.shrink();
-                },
-              );
-            },
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: BottomBar(
+            controller: controller,
+            body: Builder(
+              builder: (ctx) {
+                final v = BottomBarScope.of(ctx).isVisible;
+                return ValueListenableBuilder<bool>(
+                  valueListenable: v,
+                  builder: (_, value, _) {
+                    observed = value;
+                    return const SizedBox.shrink();
+                  },
+                );
+              },
+            ),
+            child: const SizedBox(height: 56, width: 200),
           ),
-          child: const SizedBox(height: 56, width: 200),
         ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
     expect(observed, isTrue);
 
@@ -124,13 +135,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(observed, isFalse);
   });
+
+  testWidgets('BottomBarScope.maybeOf returns null outside a BottomBar', (
+    tester,
+  ) async {
+    BottomBarScope? observed;
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: Builder(
+          builder: (ctx) {
+            observed = BottomBarScope.maybeOf(ctx);
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+
+    expect(observed, isNull);
+  });
 }
 
 class _BottomBarBuildCounter extends StatelessWidget {
-  const _BottomBarBuildCounter({
-    required this.onBuild,
-    required this.child,
-  });
+  const _BottomBarBuildCounter({required this.onBuild, required this.child});
 
   final VoidCallback onBuild;
   final Widget child;
@@ -143,10 +171,7 @@ class _BottomBarBuildCounter extends StatelessWidget {
 }
 
 class ResizableBarChild extends StatefulWidget {
-  const ResizableBarChild({
-    required this.initialHeight,
-    super.key,
-  });
+  const ResizableBarChild({required this.initialHeight, super.key});
 
   final double initialHeight;
 

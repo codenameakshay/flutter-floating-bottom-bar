@@ -194,10 +194,11 @@ class _BottomBarState extends State<BottomBar>
   void initState() {
     super.initState();
 
-    _motion = widget.motion ?? widget.theme?.motion ?? const BottomBarMotion();
-    _scrollBehavior = widget.scrollBehavior ??
-        widget.theme?.scrollBehavior ??
-        const BottomBarScrollBehavior();
+    // Theme.of is unavailable here; didChangeDependencies re-syncs against
+    // the fully resolved theme before the first build.
+    final theme = widget.theme ?? const BottomBarThemeData();
+    _motion = _effectiveMotion(theme);
+    _scrollBehavior = _effectiveScrollBehavior(theme);
 
     _motionController = BoundedSingleMotionController(
       motion: _motion.resolveMotion(),
@@ -316,13 +317,15 @@ class _BottomBarState extends State<BottomBar>
     final position = _dispatcher.lastActivePosition;
     if (position == null) {
       assert(() {
-        FlutterError.reportError(FlutterErrorDetails(
-          exception: FlutterError(
-            'BottomBarController.scrollToStart/scrollToEnd called before any '
-            'scroll notification was observed; nothing to scroll.',
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: FlutterError(
+              'BottomBarController.scrollToStart/scrollToEnd called before any '
+              'scroll notification was observed; nothing to scroll.',
+            ),
+            library: 'flutter_floating_bottom_bar',
           ),
-          library: 'flutter_floating_bottom_bar',
-        ));
+        );
         return true;
       }());
       return;
@@ -336,16 +339,15 @@ class _BottomBarState extends State<BottomBar>
             position: position,
             toEnd: toEnd,
           );
-    if (controller != null) {
-      await _animateControllerToBoundary(controller, toEnd: toEnd);
-      _setBarVisible(true, notifyCallbacks: true, fromController: true);
-      return;
-    }
-    await position.animateTo(
-      toEnd ? position.maxScrollExtent : position.minScrollExtent,
-      duration: _motion.duration,
-      curve: _motion.curve,
-    );
+    final targets = controller?.positions ?? [position];
+    await Future.wait([
+      for (final target in targets)
+        target.animateTo(
+          toEnd ? target.maxScrollExtent : target.minScrollExtent,
+          duration: _motion.duration,
+          curve: _motion.curve,
+        ),
+    ]);
     _setBarVisible(true, notifyCallbacks: true, fromController: true);
   }
 
@@ -354,50 +356,23 @@ class _BottomBarState extends State<BottomBar>
   /// longer mounted).
   NestedScrollViewState? _nestedScrollViewOf(BuildContext? context) {
     if (context == null || !context.mounted) return null;
-    try {
-      return context.findAncestorStateOfType<NestedScrollViewState>();
-    } catch (_) {
-      return null;
-    }
+    return context.findAncestorStateOfType<NestedScrollViewState>();
   }
 
+  /// Picks the controller that must be driven when [position] belongs to a
+  /// [NestedScrollView]: the outer one to reach the top, the inner one to
+  /// reach the bottom. Returns `null` when [position] is not one of its own.
   ScrollController? _nestedBoundaryControllerForPosition(
     NestedScrollViewState nested, {
     required ScrollPosition position,
     required bool toEnd,
   }) {
-    if (_controllerOwnsPosition(nested.outerController, position) ||
-        _controllerOwnsPosition(nested.innerController, position)) {
+    bool owns(ScrollController c) =>
+        c.positions.any((p) => identical(p, position));
+    if (owns(nested.outerController) || owns(nested.innerController)) {
       return toEnd ? nested.innerController : nested.outerController;
     }
     return null;
-  }
-
-  bool _controllerOwnsPosition(
-    ScrollController controller,
-    ScrollPosition position,
-  ) {
-    if (!controller.hasClients) return false;
-    for (final candidate in controller.positions) {
-      if (identical(candidate, position)) return true;
-    }
-    return false;
-  }
-
-  /// Animates every position attached to [controller] to its boundary.
-  Future<void> _animateControllerToBoundary(
-    ScrollController controller, {
-    required bool toEnd,
-  }) {
-    if (!controller.hasClients) return Future<void>.value();
-    return Future.wait([
-      for (final position in controller.positions)
-        position.animateTo(
-          toEnd ? position.maxScrollExtent : position.minScrollExtent,
-          duration: _motion.duration,
-          curve: _motion.curve,
-        ),
-    ]);
   }
 
   // -- theme resolution ------------------------------------------------------
@@ -409,10 +384,7 @@ class _BottomBarState extends State<BottomBar>
         color: cs.surfaceContainer,
         borderRadius: BorderRadius.circular(28),
       ),
-      iconDecoration: BoxDecoration(
-        color: cs.primary,
-        shape: BoxShape.circle,
-      ),
+      iconDecoration: BoxDecoration(color: cs.primary, shape: BoxShape.circle),
       iconWidth: 30,
       iconHeight: 30,
     );
@@ -458,7 +430,7 @@ class _BottomBarState extends State<BottomBar>
         _wrapWithSafeArea(
           l,
           onSizeChanged: _handleBarFootprintChanged,
-          child: _buildBottomBar(theme),
+          child: _buildBottomBar(theme, l),
         ),
       ],
     );
@@ -499,8 +471,9 @@ class _BottomBarState extends State<BottomBar>
   }
 
   Widget _buildIcon(BottomBarThemeData theme) {
-    final iconWidth = theme.iconWidth ?? 30;
-    final iconHeight = theme.iconHeight ?? 30;
+    // _resolvedTheme always seeds iconWidth/iconHeight.
+    final iconWidth = theme.iconWidth!;
+    final iconHeight = theme.iconHeight!;
     return BottomBarAction(
       animation: ReverseAnimation(_motionController),
       enabled: !_targetVisible,
@@ -509,9 +482,7 @@ class _BottomBarState extends State<BottomBar>
       decoration: theme.iconDecoration ?? const BoxDecoration(),
       tooltip: _defaultIconTooltip,
       semanticLabel: _defaultIconSemanticLabel,
-      onTap: () => scrollToBoundary(
-        toEnd: _scrollBehavior.scrollOpposite,
-      ),
+      onTap: () => scrollToBoundary(toEnd: _scrollBehavior.scrollOpposite),
       visualBuilder: (width, height) => _buildIconChild(width, height),
     );
   }
@@ -537,7 +508,10 @@ class _BottomBarState extends State<BottomBar>
 
   bool get _disableAnimations {
     return SemanticsBinding.instance.disableAnimations ||
-        WidgetsBinding.instance.platformDispatcher.accessibilityFeatures
+        WidgetsBinding
+            .instance
+            .platformDispatcher
+            .accessibilityFeatures
             .disableAnimations ||
         (MediaQuery.maybeDisableAnimationsOf(context) ?? false);
   }
@@ -557,8 +531,7 @@ class _BottomBarState extends State<BottomBar>
     );
   }
 
-  Widget _buildBottomBar(BottomBarThemeData theme) {
-    final l = _effectiveLayout(theme);
+  Widget _buildBottomBar(BottomBarThemeData theme, BottomBarLayout l) {
     return LayoutBuilder(
       builder: (context, constraints) {
         return VisibilityAnimator(
@@ -580,7 +553,9 @@ class _BottomBarState extends State<BottomBar>
   }
 
   double _effectiveBarWidth(
-      BoxConstraints constraints, BottomBarLayout layout) {
+    BoxConstraints constraints,
+    BottomBarLayout layout,
+  ) {
     final maxWidth = layout.maxWidth;
     if (maxWidth != null &&
         (maxWidth.isNaN || maxWidth.isInfinite || maxWidth < 0)) {

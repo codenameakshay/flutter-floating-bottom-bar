@@ -1,6 +1,6 @@
-# API reference (v2.0.0)
+# API reference
 
-Compact, normative reference for `flutter_floating_bottom_bar`. If a field isn't here, it isn't part of the public API.
+Compact, normative reference for `flutter_floating_bottom_bar`. Tracks the current package source. If a field isn't here, it isn't part of the public API.
 
 ## Table of contents
 
@@ -12,6 +12,7 @@ Compact, normative reference for `flutter_floating_bottom_bar`. If a field isn't
 - [`BottomBarThemeData`](#bottombarthemedata) — `ThemeExtension` for app-wide styling
 - [`BottomBarController`](#bottombarcontroller) — imperative `show`/`hide`/`scrollToStart`
 - [`BottomBarScope`](#bottombarscope) — `InheritedWidget` exposing `barHeight` + `isVisible`
+- [`BottomBarBodyPadding`](#bottombarbodypadding) — reserves the bar's footprint inside `body`
 - [`BottomBarItem` / `BottomBarItems`](#bottombaritem--bottombaritems) — nav-item helpers
 
 ## `BottomBar`
@@ -60,8 +61,22 @@ const BottomBar({
 ```dart
 const BottomBarLayout({
   double width = 300,
+  double? maxWidth,
   double offset = 10,
   BorderRadius borderRadius = BorderRadius.zero,
+  Offset iconOffset = Offset.zero,
+  Alignment alignment = Alignment.bottomCenter,
+  StackFit fit = StackFit.loose,
+  Clip clip = Clip.hardEdge,
+  bool respectSafeArea = true,
+});
+
+// Fills the available host width up to maxWidth (sets width: double.infinity).
+const BottomBarLayout.adaptive({
+  required double maxWidth,
+  double offset = 10,
+  BorderRadius borderRadius = BorderRadius.zero,
+  Offset iconOffset = Offset.zero,
   Alignment alignment = Alignment.bottomCenter,
   StackFit fit = StackFit.loose,
   Clip clip = Clip.hardEdge,
@@ -72,12 +87,18 @@ const BottomBarLayout({
 | Field | Default | Notes |
 |---|---|---|
 | `width` | `300` | Logical pixels. For full-width-with-margin, use `MediaQuery.of(context).size.width - 32`. |
+| `maxWidth` | `null` | Optional cap applied after `width` and viewport clamping. Must be finite and non-negative when provided. |
 | `offset` | `10` | Padding from screen bottom and sides. Increase to `24` for breathing room. |
 | `borderRadius` | `BorderRadius.zero` | Use `BorderRadius.circular(28)` for M3, `999` for pill. |
+| `iconOffset` | `Offset.zero` | Additional translation applied only to the built-in hidden action, without moving the bar. |
 | `alignment` | `Alignment.bottomCenter` | The `Stack` alignment. |
 | `fit` | `StackFit.loose` | Pass `StackFit.expand` when the bar's child uses `Stack` + `Positioned` (e.g. FAB notch). |
 | `clip` | `Clip.hardEdge` | **Set `Clip.none` when overlapping a FAB out of bounds.** |
 | `respectSafeArea` | `true` | Avoids iOS home indicator. |
+
+`BottomBarLayout.adaptive({required double maxWidth, ...})` is a named constructor for the common "fill available width, cap at `maxWidth`" case — equivalent to the default constructor with `width: double.infinity`.
+
+`copyWith({..., bool clearMaxWidth = false})` replaces given fields; pass `clearMaxWidth: true` to remove an existing `maxWidth` cap (cannot be combined with also passing a new `maxWidth`).
 
 ## `BottomBarMotion`
 
@@ -138,6 +159,8 @@ const BottomBarScrollBehavior({
   bool reverse = false,
   bool scrollOpposite = false,
   double deltaThreshold = 8,
+  bool showAtStart = false,
+  bool showOnScrollEnd = false,
   bool Function(ScrollNotification)? predicate,
 });
 ```
@@ -148,6 +171,8 @@ const BottomBarScrollBehavior({
 | `reverse` | `false` | When `true`, bar hides on **upward** scroll instead of downward. |
 | `scrollOpposite` | `false` | When `true`, the back-to-top icon scrolls to **end** instead of start. |
 | `deltaThreshold` | `8` | Min scroll delta in px to flip visibility. Bump to `16+` if the bar feels twitchy. |
+| `showAtStart` | `false` | When `true`, reaching `minScrollExtent` forces the bar visible (after `predicate` filtering). |
+| `showOnScrollEnd` | `false` | When `true`, a `ScrollEndNotification` forces the bar visible (after `predicate` filtering). |
 | `predicate` | `null` | Filter for `ScrollNotification`s. Return `false` to ignore. **Use this for `NestedScrollView`** to disambiguate inner vs outer scroll. |
 
 ## `BottomBarThemeData`
@@ -217,6 +242,17 @@ ValueListenableBuilder<double>(
 )
 ```
 
+## `BottomBarBodyPadding`
+
+```dart
+const BottomBarBodyPadding({
+  required Widget child,
+  EdgeInsetsGeometry padding = EdgeInsets.zero,
+});
+```
+
+Use inside `BottomBar.body` to reserve the bar's live footprint (measured height + `layout.offset` + bottom safe-area when enabled) as bottom padding, so content stays clear of the floating bar. The reserved space stays in place even while the bar is hidden, since it tracks `BottomBarScope.barHeight`'s layout footprint rather than the bar's animated transform. It only reserves bottom-edge clearance and does not account for `BottomBarLayout.alignment`.
+
 ## `BottomBarItem` / `BottomBarItems`
 
 Optional helpers for the nav-item case. Skip them if you have a `TabBar`, search field, or anything more custom — pass the raw widget as `child` instead.
@@ -229,6 +265,7 @@ const BottomBarItem({
   Widget? badge,
   bool selected = false,
   VoidCallback? onTap,
+  String? semanticLabel,
   String? tooltip,
   Color? color,
   Color? selectedColor,
@@ -242,6 +279,8 @@ const BottomBarItems({
 
 `BottomBarItem` does **not** maintain its own state. Pass `selected: index == _currentIndex` and update in `onTap`.
 
+**Accessible name precedence:** `semanticLabel`, else `tooltip`, else the child's own semantics remain visible.
+
 ## Re-exports from `package:motor/motor.dart`
 
 The library re-exports these so you don't need a separate motor import for `BottomBarMotion.motor(...)`:
@@ -254,8 +293,8 @@ Motion, CupertinoMotion, CurvedMotion, LinearMotion, SpringMotion, MaterialSprin
 
 ```yaml
 environment:
-  sdk: ">=3.5.0 <4.0.0"
-  flutter: ">=3.22.0"
+  sdk: ">=3.12.0 <4.0.0"
+  flutter: ">=3.44.0"
 ```
 
 Bump SDK constraints in the user's `pubspec.yaml` if their existing constraints are tighter.

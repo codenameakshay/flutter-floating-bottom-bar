@@ -1,8 +1,8 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 
-class SearchBarDemoPage extends StatelessWidget {
-  const SearchBarDemoPage({super.key});
+class AiPromptDockDemoPage extends StatelessWidget {
+  const AiPromptDockDemoPage({super.key});
 
   @override
   Widget build(BuildContext context) {

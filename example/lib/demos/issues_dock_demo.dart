@@ -1,14 +1,14 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 
-class TabBarDemoPage extends StatefulWidget {
-  const TabBarDemoPage({super.key});
+class IssuesDockDemoPage extends StatefulWidget {
+  const IssuesDockDemoPage({super.key});
 
   @override
-  State<TabBarDemoPage> createState() => _TabBarDemoPageState();
+  State<IssuesDockDemoPage> createState() => _IssuesDockDemoPageState();
 }
 
-class _TabBarDemoPageState extends State<TabBarDemoPage> {
+class _IssuesDockDemoPageState extends State<IssuesDockDemoPage> {
   int _index = 1;
 
   @override

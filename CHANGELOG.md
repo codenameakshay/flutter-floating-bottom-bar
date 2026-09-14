@@ -13,6 +13,8 @@
   and silently fell back to a default theme.
 - Minimum SDK constraints raised to Dart 3.12 / Flutter 3.44, which is what
   `material_ui` requires.
+- Attaching a `BottomBarController` to a second bar now throws a
+  `FlutterError` in debug builds as well, instead of an `AssertionError`.
 
 ## 2.1.0
 

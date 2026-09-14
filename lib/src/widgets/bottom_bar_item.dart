@@ -99,11 +99,7 @@ class BottomBarItem extends StatelessWidget {
           child: iconWidget,
         ),
         if (badge != null)
-          PositionedDirectional(
-            top: -4,
-            end: -4,
-            child: badge!,
-          ),
+          PositionedDirectional(top: -4, end: -4, child: badge!),
       ],
     );
 

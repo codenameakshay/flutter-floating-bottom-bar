@@ -215,8 +215,8 @@ from `motor`.
 
 - `example/lib/demos/basic_demo.dart`
 - `example/lib/demos/basic_tab_bar_demo.dart`
-- `example/lib/demos/tab_bar_demo.dart`
-- `example/lib/demos/search_bar_demo.dart`
+- `example/lib/demos/issues_dock_demo.dart`
+- `example/lib/demos/ai_prompt_dock_demo.dart`
 - `example/lib/demos/nested_scroll_demo.dart`
 - `example/lib/demos/badges_demo.dart`
 - `example/lib/demos/custom_transition_demo.dart`
