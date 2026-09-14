@@ -1,167 +1,302 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 
-class AiPromptDockDemoPage extends StatelessWidget {
+class AiPromptDockDemoPage extends StatefulWidget {
   const AiPromptDockDemoPage({super.key});
 
   @override
+  State<AiPromptDockDemoPage> createState() => _AiPromptDockDemoPageState();
+}
+
+class _AiPromptDockDemoPageState extends State<AiPromptDockDemoPage> {
+  final _draftController = TextEditingController();
+  final _focusNode = FocusNode();
+  final _barController = BottomBarController();
+  final _messages = <String>[];
+  bool _isImagineMode = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_handleFocusChanged);
+  }
+
+  @override
+  void dispose() {
+    _focusNode
+      ..removeListener(_handleFocusChanged)
+      ..dispose();
+    _draftController.dispose();
+    _barController.dispose();
+    super.dispose();
+  }
+
+  void _handleFocusChanged() {
+    if (_focusNode.hasFocus) {
+      _barController.show();
+    }
+    setState(() {});
+  }
+
+  void _submit() {
+    final text = _draftController.text.trim();
+    if (text.isEmpty) {
+      _focusNode.requestFocus();
+      return;
+    }
+
+    setState(() {
+      _messages.add(text);
+      _draftController.clear();
+    });
+    _focusNode.requestFocus();
+    _barController.show();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAF8),
-      body: BottomBar(
-        layout: const BottomBarLayout.adaptive(
-          maxWidth: 440,
-          offset: 24,
-          borderRadius: BorderRadius.all(Radius.circular(28)),
-          alignment: Alignment.bottomCenter,
-        ),
-        motion: const BottomBarMotion.cupertino(
-          preset: BottomBarCupertinoMotion.interactive,
-          duration: Duration(milliseconds: 360),
-        ),
-        theme: BottomBarThemeData(
-          barDecoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: const Color(0x10000000)),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x1A000000),
-                blurRadius: 30,
-                offset: Offset(0, 16),
+      resizeToAvoidBottomInset: false,
+      body: Padding(
+        padding: EdgeInsets.only(bottom: keyboardInset),
+        child: BottomBar(
+          controller: _barController,
+          layout: const BottomBarLayout.adaptive(
+            maxWidth: 440,
+            offset: 24,
+            borderRadius: BorderRadius.all(Radius.circular(28)),
+            alignment: Alignment.bottomCenter,
+          ),
+          motion: const BottomBarMotion.cupertino(
+            preset: BottomBarCupertinoMotion.interactive,
+            duration: Duration(milliseconds: 360),
+          ),
+          scrollBehavior: BottomBarScrollBehavior(
+            hideOnScroll: !_focusNode.hasFocus,
+            showOnScrollEnd: !_focusNode.hasFocus,
+          ),
+          theme: BottomBarThemeData(
+            barDecoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: const Color(0x10000000)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x1A000000),
+                  blurRadius: 30,
+                  offset: Offset(0, 16),
+                ),
+              ],
+            ),
+            iconDecoration: const BoxDecoration(
+              color: Colors.black,
+              shape: BoxShape.circle,
+            ),
+            iconWidth: 40,
+            iconHeight: 40,
+          ),
+          body: CustomScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.manual,
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(24, 54, 24, 24),
+                sliver: SliverToBoxAdapter(
+                  child: _PromptHeader(
+                    isImagineMode: _isImagineMode,
+                    onModeChanged: (value) =>
+                        setState(() => _isImagineMode = value),
+                  ),
+                ),
+              ),
+              if (_messages.isEmpty)
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.explore_rounded,
+                          size: 64,
+                          color: Color(0x55000000),
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'Start with a prompt',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          'Ask a question or imagine something new.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Color(0x99000000),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  sliver: SliverList.builder(
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _TranscriptBubble(message: _messages[index]),
+                    ),
+                  ),
+                ),
+              const SliverToBoxAdapter(
+                child: BottomBarBodyPadding(child: SizedBox(height: 1)),
               ),
             ],
           ),
-          iconDecoration: const BoxDecoration(
-            color: Colors.black,
-            shape: BoxShape.circle,
+          child: _PromptComposer(
+            controller: _draftController,
+            focusNode: _focusNode,
+            isImagineMode: _isImagineMode,
+            onSubmit: _submit,
+            onDismissKeyboard: () => _focusNode.unfocus(),
           ),
-          iconWidth: 40,
-          iconHeight: 40,
         ),
-        body: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(24, 54, 24, 0),
-              sliver: SliverToBoxAdapter(child: _PromptHeader()),
-            ),
-            const SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.explore_rounded,
-                      size: 64,
-                      color: Color(0x55000000),
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      'Start with a prompt',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(height: 6),
-                    Text(
-                      'Ask a question or imagine something new.',
-                      style: TextStyle(
-                        color: Color(0x99000000),
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        child: const _PromptDock(),
       ),
     );
   }
 }
 
 class _PromptHeader extends StatelessWidget {
+  const _PromptHeader({
+    required this.isImagineMode,
+    required this.onModeChanged,
+  });
+
+  final bool isImagineMode;
+  final ValueChanged<bool> onModeChanged;
+
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 8,
+      runSpacing: 8,
       children: [
-        _RoundButton(icon: Icons.menu_rounded),
-        Container(
-          padding: const EdgeInsets.all(5),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(999),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x12000000),
-                blurRadius: 18,
-                offset: Offset(0, 10),
-              ),
-            ],
-          ),
-          child: const Row(
-            children: [
-              _Segment(label: 'Ask', selected: true),
-              _Segment(label: 'Imagine', selected: false),
-            ],
-          ),
+        IconButton(
+          tooltip: 'Back to demos',
+          onPressed: () => Navigator.of(context).maybePop(),
+          icon: const Icon(Icons.arrow_back_rounded),
         ),
-        _RoundButton(icon: Icons.auto_awesome_rounded),
+        SegmentedButton<bool>(
+          segments: const [
+            ButtonSegment(value: false, label: Text('Ask')),
+            ButtonSegment(value: true, label: Text('Imagine')),
+          ],
+          selected: {isImagineMode},
+          onSelectionChanged: (selection) => onModeChanged(selection.first),
+          showSelectedIcon: false,
+        ),
       ],
     );
   }
 }
 
-class _PromptDock extends StatelessWidget {
-  const _PromptDock();
+class _PromptComposer extends StatelessWidget {
+  const _PromptComposer({
+    required this.controller,
+    required this.focusNode,
+    required this.isImagineMode,
+    required this.onSubmit,
+    required this.onDismissKeyboard,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final bool isImagineMode;
+  final VoidCallback onSubmit;
+  final VoidCallback onDismissKeyboard;
 
   @override
   Widget build(BuildContext context) {
+    final compact =
+        MediaQuery.viewInsetsOf(context).bottom > 0 ||
+        MediaQuery.textScalerOf(context).scale(1) > 1.5;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 12, 12),
+      padding: EdgeInsets.fromLTRB(16, compact ? 8 : 14, 12, compact ? 6 : 12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Ask Anything',
+            isImagineMode ? 'Imagine something' : 'Ask anything',
             style: TextStyle(
               color: Colors.black.withValues(alpha: 0.58),
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const _CircleAction(icon: Icons.attach_file_rounded),
-              const SizedBox(width: 8),
-              const _PillAction(icon: Icons.lightbulb_outline, label: 'Expert'),
-              const Spacer(),
-              const _CircleAction(icon: Icons.mic_none_rounded),
-              const SizedBox(width: 8),
-              FilledButton.icon(
+          const SizedBox(height: 10),
+          TextField(
+            controller: controller,
+            focusNode: focusNode,
+            minLines: 1,
+            maxLines: compact ? 2 : 4,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: InputDecoration(
+              hintText: isImagineMode
+                  ? 'Describe an idea...'
+                  : 'What would you like to explore?',
+              filled: true,
+              fillColor: const Color(0xFFF4F4F2),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(18),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
+              suffixIcon: focusNode.hasFocus
+                  ? IconButton(
+                      tooltip: 'Dismiss keyboard',
+                      onPressed: onDismissKeyboard,
+                      icon: const Icon(Icons.keyboard_hide_rounded),
+                    )
+                  : null,
+            ),
+            onSubmitted: (_) => onSubmit(),
+          ),
+          const SizedBox(height: 10),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (context, value, child) => SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: value.text.trim().isNotEmpty ? onSubmit : null,
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.black,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
+                  disabledBackgroundColor: const Color(0xFFE5E5E1),
+                  disabledForegroundColor: const Color(0x88000000),
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                onPressed: () {},
-                icon: const Icon(Icons.graphic_eq_rounded, size: 18),
+                icon: const Icon(Icons.arrow_upward_rounded, size: 20),
                 label: const Text(
-                  'Speak',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                  'Send',
+                  style: TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
-            ],
+            ),
           ),
         ],
       ),
@@ -169,99 +304,27 @@ class _PromptDock extends StatelessWidget {
   }
 }
 
-class _RoundButton extends StatelessWidget {
-  const _RoundButton({required this.icon});
+class _TranscriptBubble extends StatelessWidget {
+  const _TranscriptBubble({required this.message});
 
-  final IconData icon;
+  final String message;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 50,
-      width: 50,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x12000000),
-            blurRadius: 16,
-            offset: Offset(0, 8),
+    return Align(
+      alignment: Alignment.centerRight,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 340),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(18),
           ),
-        ],
-      ),
-      child: Icon(icon, size: 24),
-    );
-  }
-}
-
-class _Segment extends StatelessWidget {
-  const _Segment({required this.label, required this.selected});
-
-  final String label;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: selected ? const Color(0xFFF6F6F3) : Colors.transparent,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 15,
-          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Text(message, style: const TextStyle(color: Colors.white)),
+          ),
         ),
-      ),
-    );
-  }
-}
-
-class _CircleAction extends StatelessWidget {
-  const _CircleAction({required this.icon});
-
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 38,
-      height: 38,
-      decoration: const BoxDecoration(
-        color: Color(0xFFF4F4F2),
-        shape: BoxShape.circle,
-      ),
-      child: Icon(icon, size: 20),
-    );
-  }
-}
-
-class _PillAction extends StatelessWidget {
-  const _PillAction({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF4F4F2),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 18),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-          ),
-        ],
       ),
     );
   }
