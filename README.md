@@ -263,7 +263,8 @@ The example app includes five focused recipes with [source links in
 - [Scroll under](./example/lib/demos/scroll_under_demo.dart) reserves native
   sliver space from the measured `BottomBarScope.barHeight`.
 - [Adaptive navigation](./example/lib/demos/adaptive_navigation_demo.dart)
-  wraps complete destinations while preserving inherited text scaling and
+  uses a wrapping destination layout at standard text sizes and switches to
+  labeled rows for large text while preserving inherited text scaling and
   selected destination state.
 
 ## Migration from v1.x

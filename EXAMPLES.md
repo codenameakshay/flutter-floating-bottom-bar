@@ -246,9 +246,10 @@ hidden, so the final row can scroll clear of the floating dock.
 ### Adaptive navigation
 
 [Adaptive navigation source](example/lib/demos/adaptive_navigation_demo.dart)
-uses a wrapping destination layout with complete labels and preserves the
-inherited `MediaQuery.textScaler` while previewing larger text. The selected
-destination is app state, and its content changes with the selected item.
+uses a wrapping destination layout at standard text sizes and switches to
+labeled rows for large text while preserving the inherited
+`MediaQuery.textScaler`. The selected destination is app state, and its content
+changes with the selected item.
 
 ## Demo index
 
