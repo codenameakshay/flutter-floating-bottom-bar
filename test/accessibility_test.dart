@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'helpers/semantics.dart';
 import 'helpers/tooltip_finder.dart';
 
 void main() {
@@ -27,14 +28,14 @@ void main() {
         await tester.pumpWidget(_buildAccessibilityHarness());
         await tester.pumpAndSettle();
 
-        expect(_semanticsLabels(tester), isNot(contains('Scroll to top')));
+        expect(semanticsLabels(tester), isNot(contains('Scroll to top')));
 
         await tester.dragFrom(const Offset(100, 100), const Offset(0, -500));
         await tester.pumpAndSettle();
 
         expect(findByTooltip('Scroll to top'), findsOneWidget);
 
-        final labels = _semanticsLabels(
+        final labels = semanticsLabels(
           tester,
         ).where((label) => label == 'Scroll to top');
         expect(labels, hasLength(1));
@@ -109,10 +110,3 @@ Widget _buildAccessibilityHarness() {
 }
 
 void _noop() {}
-
-Iterable<String> _semanticsLabels(WidgetTester tester) {
-  return tester.semantics
-      .simulatedAccessibilityTraversal()
-      .map((node) => node.label)
-      .where((label) => label.isNotEmpty);
-}

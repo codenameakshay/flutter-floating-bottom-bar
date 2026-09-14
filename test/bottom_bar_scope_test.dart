@@ -135,6 +135,26 @@ void main() {
     await tester.pumpAndSettle();
     expect(observed, isFalse);
   });
+
+  testWidgets('BottomBarScope.maybeOf returns null outside a BottomBar', (
+    tester,
+  ) async {
+    BottomBarScope? observed;
+
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: Builder(
+          builder: (ctx) {
+            observed = BottomBarScope.maybeOf(ctx);
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+
+    expect(observed, isNull);
+  });
 }
 
 class _BottomBarBuildCounter extends StatelessWidget {

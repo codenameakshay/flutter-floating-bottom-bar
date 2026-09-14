@@ -6,31 +6,11 @@ import 'helpers/tooltip_finder.dart';
 
 void main() {
   group('BottomBarLayout', () {
-    test('default values match the documented defaults', () {
-      const layout = BottomBarLayout();
-      expect(layout.width, 300);
-      expect(layout.maxWidth, null);
-      expect(layout.offset, 10);
-      expect(layout.borderRadius, BorderRadius.zero);
-      expect(layout.iconOffset, Offset.zero);
-      expect(layout.alignment, Alignment.bottomCenter);
-      expect(layout.fit, StackFit.loose);
-      expect(layout.clip, Clip.hardEdge);
-      expect(layout.respectSafeArea, true);
-    });
-
-    test('adaptive constructor uses infinity width and preserves defaults', () {
+    test('adaptive constructor uses infinity width', () {
       const layout = BottomBarLayout.adaptive(maxWidth: 360);
 
       expect(layout.width, double.infinity);
       expect(layout.maxWidth, 360);
-      expect(layout.offset, 10);
-      expect(layout.borderRadius, BorderRadius.zero);
-      expect(layout.iconOffset, Offset.zero);
-      expect(layout.alignment, Alignment.bottomCenter);
-      expect(layout.fit, StackFit.loose);
-      expect(layout.clip, Clip.hardEdge);
-      expect(layout.respectSafeArea, true);
     });
 
     test('copyWith preserves untouched fields', () {

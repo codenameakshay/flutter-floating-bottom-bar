@@ -5,6 +5,7 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'helpers/semantics.dart';
 import 'helpers/tooltip_finder.dart';
 
 void main() {
@@ -75,10 +76,10 @@ void main() {
           expect(data.flagsCollection.isEnabled, ui.Tristate.isTrue);
           expect(data.hasAction(SemanticsAction.tap), isTrue);
           expect(
-            _semanticsLabels(tester).where((label) => label == 'Go home'),
+            semanticsLabels(tester).where((label) => label == 'Go home'),
             hasLength(1),
           );
-          expect(_semanticsLabels(tester), isNot(contains('Home')));
+          expect(semanticsLabels(tester), isNot(contains('Home')));
           expect(findByTooltip('Go home'), findsOneWidget);
         } finally {
           semantics.dispose();
@@ -167,11 +168,11 @@ void main() {
           expect(data.flagsCollection.isEnabled, ui.Tristate.isTrue);
           expect(data.hasAction(SemanticsAction.tap), isTrue);
           expect(
-            _semanticsLabels(tester).where((label) => label == 'Open info'),
+            semanticsLabels(tester).where((label) => label == 'Open info'),
             hasLength(1),
           );
-          expect(_semanticsLabels(tester), isNot(contains('More info')));
-          expect(_semanticsLabels(tester), isNot(contains('Visual only')));
+          expect(semanticsLabels(tester), isNot(contains('More info')));
+          expect(semanticsLabels(tester), isNot(contains('Visual only')));
           expect(findByTooltip('More info'), findsOneWidget);
 
           tester.semantics.tap(find.semantics.byLabel('Open info'));
@@ -282,11 +283,4 @@ Widget _buildItemHarness({
       ),
     ),
   );
-}
-
-Iterable<String> _semanticsLabels(WidgetTester tester) {
-  return tester.semantics
-      .simulatedAccessibilityTraversal()
-      .map((node) => node.label)
-      .where((label) => label.isNotEmpty);
 }

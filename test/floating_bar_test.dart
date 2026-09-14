@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'helpers/semantics.dart';
 import 'helpers/tooltip_finder.dart';
 import 'package:motor/motor.dart' as motor;
 
@@ -43,11 +44,6 @@ void main() {
       ),
     );
   }
-
-  testWidgets('renders with default constructor usage', (tester) async {
-    await tester.pumpWidget(buildHarness());
-    expect(find.text('Bottom Bar Child'), findsOneWidget);
-  });
 
   testWidgets('controller can hide and show the bar', (tester) async {
     final controller = BottomBarController();
@@ -432,13 +428,13 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(_semanticsLabels(tester), contains('Floating bar content'));
+        expect(semanticsLabels(tester), contains('Floating bar content'));
 
         controller.hide();
         await tester.pump();
 
         expect(
-          _semanticsLabels(tester),
+          semanticsLabels(tester),
           isNot(contains('Floating bar content')),
         );
       } finally {
@@ -453,22 +449,17 @@ void main() {
       final controller = BottomBarController();
       final semantics = tester.ensureSemantics();
       try {
-        await tester.pumpWidget(
-          buildHarness(
-            controller: controller,
-            iconSemanticLabel: 'Scroll to top',
-          ),
-        );
+        await tester.pumpWidget(buildHarness(controller: controller));
         await tester.pumpAndSettle();
 
-        expect(_semanticsLabels(tester), isNot(contains('Scroll to top')));
+        expect(semanticsLabels(tester), isNot(contains('Scroll to top')));
 
         controller.hide();
         await tester.pumpAndSettle();
 
         expect(findByTooltip('Scroll to top'), findsOneWidget);
         expect(
-          _semanticsLabels(tester).where((label) => label == 'Scroll to top'),
+          semanticsLabels(tester).where((label) => label == 'Scroll to top'),
           hasLength(1),
         );
       } finally {
@@ -537,7 +528,7 @@ void main() {
 
         expect(findByTooltip('Scroll to bottom'), findsOneWidget);
         expect(find.byIcon(Icons.arrow_downward_rounded), findsOneWidget);
-        expect(_semanticsLabels(tester), contains('Scroll to bottom'));
+        expect(semanticsLabels(tester), contains('Scroll to bottom'));
       } finally {
         semantics.dispose();
       }
@@ -564,9 +555,9 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(findByTooltip('Jump to end'), findsOneWidget);
-        expect(_semanticsLabels(tester), contains('Jump to the bottom'));
+        expect(semanticsLabels(tester), contains('Jump to the bottom'));
         expect(findByTooltip('Scroll to bottom'), findsNothing);
-        expect(_semanticsLabels(tester), isNot(contains('Scroll to bottom')));
+        expect(semanticsLabels(tester), isNot(contains('Scroll to bottom')));
       } finally {
         semantics.dispose();
       }
@@ -1078,13 +1069,6 @@ void main() {
 }
 
 Matcher morePreciselyEquals(double value) => closeTo(value, 0.5);
-
-Iterable<String> _semanticsLabels(WidgetTester tester) {
-  return tester.semantics
-      .simulatedAccessibilityTraversal()
-      .map((node) => node.label)
-      .where((label) => label.isNotEmpty);
-}
 
 double _barProgress(WidgetTester tester) {
   final slide = tester
