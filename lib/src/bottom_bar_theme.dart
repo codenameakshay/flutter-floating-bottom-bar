@@ -116,8 +116,11 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
     if (other is! BottomBarThemeData) return this;
     return BottomBarThemeData(
       barDecoration: BoxDecoration.lerp(barDecoration, other.barDecoration, t),
-      iconDecoration:
-          BoxDecoration.lerp(iconDecoration, other.iconDecoration, t),
+      iconDecoration: BoxDecoration.lerp(
+        iconDecoration,
+        other.iconDecoration,
+        t,
+      ),
       iconWidth: _lerpDouble(iconWidth, other.iconWidth, t),
       iconHeight: _lerpDouble(iconHeight, other.iconHeight, t),
       // Config objects are stepped at t < 0.5 → this, t >= 0.5 → other.

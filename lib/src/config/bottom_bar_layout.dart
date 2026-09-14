@@ -21,8 +21,8 @@ class BottomBarLayout {
     this.clip = Clip.hardEdge,
     this.respectSafeArea = true,
   }) : assert(
-          maxWidth == null || (maxWidth >= 0 && maxWidth < double.infinity),
-        );
+         maxWidth == null || (maxWidth >= 0 && maxWidth < double.infinity),
+       );
 
   /// Creates a layout that fills the available host width up to [maxWidth].
   ///
@@ -38,9 +38,9 @@ class BottomBarLayout {
     this.fit = StackFit.loose,
     this.clip = Clip.hardEdge,
     this.respectSafeArea = true,
-  })  : assert(maxWidth >= 0 && maxWidth < double.infinity),
-        maxWidth = maxWidth,
-        width = double.infinity;
+  }) : assert(maxWidth >= 0 && maxWidth < double.infinity),
+       maxWidth = maxWidth,
+       width = double.infinity;
 
   /// Requested width of the bar before viewport and [maxWidth] clamping.
   final double width;
@@ -131,14 +131,14 @@ class BottomBarLayout {
 
   @override
   int get hashCode => Object.hash(
-        width,
-        maxWidth,
-        offset,
-        borderRadius,
-        iconOffset,
-        alignment,
-        fit,
-        clip,
-        respectSafeArea,
-      );
+    width,
+    maxWidth,
+    offset,
+    borderRadius,
+    iconOffset,
+    alignment,
+    fit,
+    clip,
+    respectSafeArea,
+  );
 }

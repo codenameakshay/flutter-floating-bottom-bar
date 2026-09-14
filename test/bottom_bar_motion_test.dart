@@ -44,9 +44,9 @@ void main() {
       );
       expect(curved.resolveMotion(), isA<motor.CurvedMotion>());
 
-      const rawMotor = BottomBarMotion.motor(motor.Motion.linear(
-        Duration(milliseconds: 90),
-      ));
+      const rawMotor = BottomBarMotion.motor(
+        motor.Motion.linear(Duration(milliseconds: 90)),
+      );
       expect(rawMotor.resolveMotion(), isA<motor.LinearMotion>());
     });
 
@@ -67,22 +67,25 @@ void main() {
   // The bar's child is wrapped in a FadeTransition when transition is fade.
   // We use a Key on the bar child to narrow the search past
   // MaterialApp/Navigator route fades and the icon's AnimatedOpacity.
-  testWidgets('BottomBarTransition.fade renders a FadeTransition',
-      (tester) async {
+  testWidgets('BottomBarTransition.fade renders a FadeTransition', (
+    tester,
+  ) async {
     const barKey = Key('bar-content');
-    await tester.pumpWidget(const MaterialApp(
-      home: Scaffold(
-        body: BottomBar(
-          motion: BottomBarMotion(transition: BottomBarTransition.fade),
-          body: SizedBox.shrink(),
-          child: SizedBox(
-            key: barKey,
-            height: 56,
-            child: Center(child: Text('c')),
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: BottomBar(
+            motion: BottomBarMotion(transition: BottomBarTransition.fade),
+            body: SizedBox.shrink(),
+            child: SizedBox(
+              key: barKey,
+              height: 56,
+              child: Center(child: Text('c')),
+            ),
           ),
         ),
       ),
-    ));
+    );
 
     // VisibilityAnimator wraps the bar's Container (which contains the
     // keyed SizedBox) in exactly one FadeTransition.
@@ -102,54 +105,63 @@ void main() {
         break;
       }
     }
-    expect(hasBarFade, isTrue,
-        reason: 'expected a FadeTransition wrapping the bar Container');
+    expect(
+      hasBarFade,
+      isTrue,
+      reason: 'expected a FadeTransition wrapping the bar Container',
+    );
   });
 
-  testWidgets('BottomBarMotion.transitionBuilder overrides the enum',
-      (tester) async {
+  testWidgets('BottomBarMotion.transitionBuilder overrides the enum', (
+    tester,
+  ) async {
     bool builderCalled = false;
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: BottomBar(
-          motion: BottomBarMotion(
-            transitionBuilder: (ctx, anim, child) {
-              builderCalled = true;
-              return Opacity(opacity: anim.value, child: child);
-            },
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: BottomBar(
+            motion: BottomBarMotion(
+              transitionBuilder: (ctx, anim, child) {
+                builderCalled = true;
+                return Opacity(opacity: anim.value, child: child);
+              },
+            ),
+            body: const SizedBox.shrink(),
+            child: const SizedBox(height: 56, child: Center(child: Text('c'))),
           ),
-          body: const SizedBox.shrink(),
-          child: const SizedBox(height: 56, child: Center(child: Text('c'))),
         ),
       ),
-    ));
+    );
 
     expect(builderCalled, isTrue);
   });
 
-  testWidgets('transitionBuilder receives live spring progress',
-      (tester) async {
+  testWidgets('transitionBuilder receives live spring progress', (
+    tester,
+  ) async {
     final controller = BottomBarController();
     final values = <double>[];
 
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: BottomBar(
-          controller: controller,
-          motion: BottomBarMotion(
-            transitionBuilder: (ctx, anim, child) {
-              values.add(anim.value);
-              return Transform.translate(
-                offset: Offset(0, 24 * (1 - anim.value)),
-                child: child,
-              );
-            },
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: BottomBar(
+            controller: controller,
+            motion: BottomBarMotion(
+              transitionBuilder: (ctx, anim, child) {
+                values.add(anim.value);
+                return Transform.translate(
+                  offset: Offset(0, 24 * (1 - anim.value)),
+                  child: child,
+                );
+              },
+            ),
+            body: const SizedBox.shrink(),
+            child: const SizedBox(height: 56, child: Center(child: Text('c'))),
           ),
-          body: const SizedBox.shrink(),
-          child: const SizedBox(height: 56, child: Center(child: Text('c'))),
         ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
 
     controller.hide();
@@ -159,23 +171,26 @@ void main() {
     expect(values.any((value) => value > 0 && value < 1), isTrue);
   });
 
-  testWidgets('overshooting curve does not produce negative icon constraints',
-      (tester) async {
+  testWidgets('overshooting curve does not produce negative icon constraints', (
+    tester,
+  ) async {
     final controller = BottomBarController();
 
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: BottomBar(
-          controller: controller,
-          motion: const BottomBarMotion(
-            duration: Duration(milliseconds: 200),
-            curve: Curves.easeOutBack,
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: BottomBar(
+            controller: controller,
+            motion: const BottomBarMotion(
+              duration: Duration(milliseconds: 200),
+              curve: Curves.easeOutBack,
+            ),
+            body: const SizedBox.shrink(),
+            child: const SizedBox(height: 56, child: Center(child: Text('c'))),
           ),
-          body: const SizedBox.shrink(),
-          child: const SizedBox(height: 56, child: Center(child: Text('c'))),
         ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
 
     // Hide the bar — this triggers the back-to-top icon's AnimatedContainer
@@ -186,56 +201,62 @@ void main() {
     controller.hide();
     for (var i = 0; i < 12; i++) {
       await tester.pump(const Duration(milliseconds: 20));
-      expect(tester.takeException(), isNull,
-          reason: 'No layout exceptions allowed mid-animation.');
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'No layout exceptions allowed mid-animation.',
+      );
     }
     await tester.pumpAndSettle();
   });
 
   testWidgets(
-      'disabled animations jump to the target state via an explicit reduced-motion snap',
-      (tester) async {
-    final controller = BottomBarController();
+    'disabled animations jump to the target state via an explicit reduced-motion snap',
+    (tester) async {
+      final controller = BottomBarController();
 
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: BottomBar(
-          controller: controller,
-          motion: const BottomBarMotion(
-            duration: Duration(milliseconds: 200),
-            transition: BottomBarTransition.fade,
-          ),
-          body: const SizedBox.shrink(),
-          child: const SizedBox(
-            key: Key('bar-content'),
-            height: 56,
-            child: Center(child: Text('c')),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BottomBar(
+              controller: controller,
+              motion: const BottomBarMotion(
+                duration: Duration(milliseconds: 200),
+                transition: BottomBarTransition.fade,
+              ),
+              body: const SizedBox.shrink(),
+              child: const SizedBox(
+                key: Key('bar-content'),
+                height: 56,
+                child: Center(child: Text('c')),
+              ),
+            ),
           ),
         ),
-      ),
-    ));
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    controller.hide();
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 50));
+      controller.hide();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
 
-    final baselineFade = _barFade(tester);
-    expect(baselineFade.opacity.value, lessThan(1));
+      final baselineFade = _barFade(tester);
+      expect(baselineFade.opacity.value, lessThan(1));
 
-    tester.binding.platformDispatcher.accessibilityFeaturesTestValue =
-        const FakeAccessibilityFeatures(disableAnimations: true);
-    addTearDown(
-      tester.binding.platformDispatcher.clearAccessibilityFeaturesTestValue,
-    );
-    await tester.pump();
+      tester.binding.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.binding.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await tester.pump();
 
-    controller.show();
-    await tester.pump();
+      controller.show();
+      await tester.pump();
 
-    final disabledFade = _barFade(tester);
-    expect(disabledFade.opacity.value, moreOrLessEquals(1, epsilon: 0.01));
-  });
+      final disabledFade = _barFade(tester);
+      expect(disabledFade.opacity.value, moreOrLessEquals(1, epsilon: 0.01));
+    },
+  );
 }
 
 FadeTransition _barFade(WidgetTester tester) {

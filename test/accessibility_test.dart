@@ -7,58 +7,59 @@ import 'helpers/tooltip_finder.dart';
 
 void main() {
   testWidgets(
-      'BottomBar passes platform tap-target, label, and contrast guidelines',
-      (tester) async {
-    await tester.pumpWidget(_buildAccessibilityHarness());
-    await tester.pumpAndSettle();
-
-    await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
-    await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
-    await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
-    await expectLater(tester, meetsGuideline(textContrastGuideline));
-  });
-
-  testWidgets(
-      'hidden BottomBar back action passes platform tap-target, label, and contrast guidelines',
-      (tester) async {
-    final semantics = tester.ensureSemantics();
-    try {
+    'BottomBar passes platform tap-target, label, and contrast guidelines',
+    (tester) async {
       await tester.pumpWidget(_buildAccessibilityHarness());
       await tester.pumpAndSettle();
-
-      expect(_semanticsLabels(tester), isNot(contains('Scroll to top')));
-
-      await tester.dragFrom(const Offset(100, 100), const Offset(0, -500));
-      await tester.pumpAndSettle();
-
-      expect(findByTooltip('Scroll to top'), findsOneWidget);
-
-      final labels =
-          _semanticsLabels(tester).where((label) => label == 'Scroll to top');
-      expect(labels, hasLength(1));
-
-      final actionData = tester
-          .getSemantics(find.bySemanticsLabel('Scroll to top'))
-          .getSemanticsData();
-      expect(actionData.label, 'Scroll to top');
-      expect(actionData.flagsCollection.isButton, isTrue);
-      expect(actionData.hasAction(SemanticsAction.tap), isTrue);
 
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
       await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
       await expectLater(tester, meetsGuideline(textContrastGuideline));
-    } finally {
-      semantics.dispose();
-    }
-  });
+    },
+  );
+
+  testWidgets(
+    'hidden BottomBar back action passes platform tap-target, label, and contrast guidelines',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      try {
+        await tester.pumpWidget(_buildAccessibilityHarness());
+        await tester.pumpAndSettle();
+
+        expect(_semanticsLabels(tester), isNot(contains('Scroll to top')));
+
+        await tester.dragFrom(const Offset(100, 100), const Offset(0, -500));
+        await tester.pumpAndSettle();
+
+        expect(findByTooltip('Scroll to top'), findsOneWidget);
+
+        final labels = _semanticsLabels(
+          tester,
+        ).where((label) => label == 'Scroll to top');
+        expect(labels, hasLength(1));
+
+        final actionData = tester
+            .getSemantics(find.bySemanticsLabel('Scroll to top'))
+            .getSemanticsData();
+        expect(actionData.label, 'Scroll to top');
+        expect(actionData.flagsCollection.isButton, isTrue);
+        expect(actionData.hasAction(SemanticsAction.tap), isTrue);
+
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+      } finally {
+        semantics.dispose();
+      }
+    },
+  );
 }
 
 Widget _buildAccessibilityHarness() {
   return MaterialApp(
-    theme: ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-    ),
+    theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue)),
     home: Scaffold(
       body: BottomBar(
         theme: const BottomBarThemeData(
@@ -69,9 +70,8 @@ Widget _buildAccessibilityHarness() {
         ),
         body: ListView.builder(
           itemCount: 24,
-          itemBuilder: (context, index) => ListTile(
-            title: Text('Inbox item ${index + 1}'),
-          ),
+          itemBuilder: (context, index) =>
+              ListTile(title: Text('Inbox item ${index + 1}')),
         ),
         child: const Padding(
           padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),

@@ -88,23 +88,26 @@ void main() {
     });
   });
 
-  testWidgets('layout borderRadius shapes the visible default decoration',
-      (tester) async {
+  testWidgets('layout borderRadius shapes the visible default decoration', (
+    tester,
+  ) async {
     final radius = BorderRadius.circular(40);
 
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: BottomBar(
-          layout: BottomBarLayout(borderRadius: radius),
-          body: const SizedBox.shrink(),
-          child: const SizedBox(
-            key: Key('bar-child'),
-            height: 56,
-            child: Center(child: Text('Bottom Bar Child')),
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: BottomBar(
+            layout: BottomBarLayout(borderRadius: radius),
+            body: const SizedBox.shrink(),
+            child: const SizedBox(
+              key: Key('bar-child'),
+              height: 56,
+              child: Center(child: Text('Bottom Bar Child')),
+            ),
           ),
         ),
       ),
-    ));
+    );
 
     final containers = find.ancestor(
       of: find.byKey(const Key('bar-child')),
@@ -119,47 +122,50 @@ void main() {
   });
 
   testWidgets(
-      'widget layout with explicit BorderRadius.zero overrides rounded decoration',
-      (tester) async {
-    const roundedDecoration = BorderRadius.all(Radius.circular(28));
+    'widget layout with explicit BorderRadius.zero overrides rounded decoration',
+    (tester) async {
+      const roundedDecoration = BorderRadius.all(Radius.circular(28));
 
-    await _pumpBottomBar(
-      tester,
-      theme: const BottomBarThemeData(
-        barDecoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: roundedDecoration,
+      await _pumpBottomBar(
+        tester,
+        theme: const BottomBarThemeData(
+          barDecoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: roundedDecoration,
+          ),
         ),
-      ),
-      layout: const BottomBarLayout(borderRadius: BorderRadius.zero),
-    );
+        layout: const BottomBarLayout(borderRadius: BorderRadius.zero),
+      );
 
-    expect(_barDecoration(tester).borderRadius, BorderRadius.zero);
-    expect(_barMaterial(tester).borderRadius, BorderRadius.zero);
-  });
+      expect(_barDecoration(tester).borderRadius, BorderRadius.zero);
+      expect(_barMaterial(tester).borderRadius, BorderRadius.zero);
+    },
+  );
 
   testWidgets(
-      'theme layout with explicit BorderRadius.zero overrides rounded decoration',
-      (tester) async {
-    const roundedDecoration = BorderRadius.all(Radius.circular(28));
+    'theme layout with explicit BorderRadius.zero overrides rounded decoration',
+    (tester) async {
+      const roundedDecoration = BorderRadius.all(Radius.circular(28));
 
-    await _pumpBottomBar(
-      tester,
-      theme: const BottomBarThemeData(
-        barDecoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: roundedDecoration,
+      await _pumpBottomBar(
+        tester,
+        theme: const BottomBarThemeData(
+          barDecoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: roundedDecoration,
+          ),
+          layout: BottomBarLayout(borderRadius: BorderRadius.zero),
         ),
-        layout: BottomBarLayout(borderRadius: BorderRadius.zero),
-      ),
-    );
+      );
 
-    expect(_barDecoration(tester).borderRadius, BorderRadius.zero);
-    expect(_barMaterial(tester).borderRadius, BorderRadius.zero);
-  });
+      expect(_barDecoration(tester).borderRadius, BorderRadius.zero);
+      expect(_barMaterial(tester).borderRadius, BorderRadius.zero);
+    },
+  );
 
-  testWidgets('decoration radius remains when no layout override exists',
-      (tester) async {
+  testWidgets('decoration radius remains when no layout override exists', (
+    tester,
+  ) async {
     const roundedDecoration = BorderRadius.all(Radius.circular(18));
 
     await _pumpBottomBar(
@@ -176,23 +182,25 @@ void main() {
   });
 
   testWidgets(
-      'adaptive layout uses available width on narrow viewports after offset padding',
-      (tester) async {
-    await _pumpBottomBar(
-      tester,
-      viewport: const Size(320, 800),
-      layout: const BottomBarLayout.adaptive(
-        maxWidth: 420,
-        offset: 20,
-        respectSafeArea: false,
-      ),
-    );
+    'adaptive layout uses available width on narrow viewports after offset padding',
+    (tester) async {
+      await _pumpBottomBar(
+        tester,
+        viewport: const Size(320, 800),
+        layout: const BottomBarLayout.adaptive(
+          maxWidth: 420,
+          offset: 20,
+          respectSafeArea: false,
+        ),
+      );
 
-    expect(_barSize(tester).width, 280);
-  });
+      expect(_barSize(tester).width, 280);
+    },
+  );
 
-  testWidgets('adaptive layout caps width at maxWidth on wide viewports',
-      (tester) async {
+  testWidgets('adaptive layout caps width at maxWidth on wide viewports', (
+    tester,
+  ) async {
     await _pumpBottomBar(
       tester,
       viewport: const Size(800, 800),
@@ -221,25 +229,28 @@ void main() {
     expect(_barSize(tester).width, 300);
   });
 
-  testWidgets('iconOffset translates only the back-to-top icon',
-      (tester) async {
+  testWidgets('iconOffset translates only the back-to-top icon', (
+    tester,
+  ) async {
     const iconOffset = Offset(0, 10);
 
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: BottomBar(
-          layout: const BottomBarLayout(iconOffset: iconOffset),
-          body: ListView.builder(
-            itemBuilder: (context, index) => Text('Row $index'),
-          ),
-          child: const SizedBox(
-            key: Key('bar-child'),
-            height: 56,
-            child: Text('Bottom Bar Child'),
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: BottomBar(
+            layout: const BottomBarLayout(iconOffset: iconOffset),
+            body: ListView.builder(
+              itemBuilder: (context, index) => Text('Row $index'),
+            ),
+            child: const SizedBox(
+              key: Key('bar-child'),
+              height: 56,
+              child: Text('Bottom Bar Child'),
+            ),
           ),
         ),
       ),
-    ));
+    );
 
     await tester.drag(find.byType(ListView), const Offset(0, -320));
     await tester.pump();

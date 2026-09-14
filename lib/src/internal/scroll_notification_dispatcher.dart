@@ -81,7 +81,8 @@ class ScrollNotificationDispatcher {
     final pixels = notification.metrics.pixels;
 
     // LRU touch.
-    final state = _trackedScrollables.remove(key) ??
+    final state =
+        _trackedScrollables.remove(key) ??
         _TrackedScrollState(anchorPixels: pixels, lastPixels: pixels);
     _trackedScrollables[key] = state;
 
@@ -143,10 +144,7 @@ class ScrollNotificationDispatcher {
 }
 
 class _TrackedScrollState {
-  _TrackedScrollState({
-    required this.anchorPixels,
-    required this.lastPixels,
-  });
+  _TrackedScrollState({required this.anchorPixels, required this.lastPixels});
 
   double anchorPixels;
   double lastPixels;

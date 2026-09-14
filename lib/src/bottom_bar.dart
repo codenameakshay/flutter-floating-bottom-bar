@@ -195,7 +195,8 @@ class _BottomBarState extends State<BottomBar>
     super.initState();
 
     _motion = widget.motion ?? widget.theme?.motion ?? const BottomBarMotion();
-    _scrollBehavior = widget.scrollBehavior ??
+    _scrollBehavior =
+        widget.scrollBehavior ??
         widget.theme?.scrollBehavior ??
         const BottomBarScrollBehavior();
 
@@ -316,13 +317,15 @@ class _BottomBarState extends State<BottomBar>
     final position = _dispatcher.lastActivePosition;
     if (position == null) {
       assert(() {
-        FlutterError.reportError(FlutterErrorDetails(
-          exception: FlutterError(
-            'BottomBarController.scrollToStart/scrollToEnd called before any '
-            'scroll notification was observed; nothing to scroll.',
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: FlutterError(
+              'BottomBarController.scrollToStart/scrollToEnd called before any '
+              'scroll notification was observed; nothing to scroll.',
+            ),
+            library: 'flutter_floating_bottom_bar',
           ),
-          library: 'flutter_floating_bottom_bar',
-        ));
+        );
         return true;
       }());
       return;
@@ -409,10 +412,7 @@ class _BottomBarState extends State<BottomBar>
         color: cs.surfaceContainer,
         borderRadius: BorderRadius.circular(28),
       ),
-      iconDecoration: BoxDecoration(
-        color: cs.primary,
-        shape: BoxShape.circle,
-      ),
+      iconDecoration: BoxDecoration(color: cs.primary, shape: BoxShape.circle),
       iconWidth: 30,
       iconHeight: 30,
     );
@@ -509,9 +509,7 @@ class _BottomBarState extends State<BottomBar>
       decoration: theme.iconDecoration ?? const BoxDecoration(),
       tooltip: _defaultIconTooltip,
       semanticLabel: _defaultIconSemanticLabel,
-      onTap: () => scrollToBoundary(
-        toEnd: _scrollBehavior.scrollOpposite,
-      ),
+      onTap: () => scrollToBoundary(toEnd: _scrollBehavior.scrollOpposite),
       visualBuilder: (width, height) => _buildIconChild(width, height),
     );
   }
@@ -537,7 +535,10 @@ class _BottomBarState extends State<BottomBar>
 
   bool get _disableAnimations {
     return SemanticsBinding.instance.disableAnimations ||
-        WidgetsBinding.instance.platformDispatcher.accessibilityFeatures
+        WidgetsBinding
+            .instance
+            .platformDispatcher
+            .accessibilityFeatures
             .disableAnimations ||
         (MediaQuery.maybeDisableAnimationsOf(context) ?? false);
   }
@@ -580,7 +581,9 @@ class _BottomBarState extends State<BottomBar>
   }
 
   double _effectiveBarWidth(
-      BoxConstraints constraints, BottomBarLayout layout) {
+    BoxConstraints constraints,
+    BottomBarLayout layout,
+  ) {
     final maxWidth = layout.maxWidth;
     if (maxWidth != null &&
         (maxWidth.isNaN || maxWidth.isInfinite || maxWidth < 0)) {

@@ -4,22 +4,24 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets('default Material 3 dark theme', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: Colors.indigo,
-        brightness: Brightness.dark,
-      ),
-      home: Scaffold(
-        body: BottomBar(
-          body: const SizedBox.shrink(),
-          child: const SizedBox(
-            height: 56,
-            child: Center(child: Text('Bar')),
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(
+          useMaterial3: true,
+          colorSchemeSeed: Colors.indigo,
+          brightness: Brightness.dark,
+        ),
+        home: Scaffold(
+          body: BottomBar(
+            body: const SizedBox.shrink(),
+            child: const SizedBox(
+              height: 56,
+              child: Center(child: Text('Bar')),
+            ),
           ),
         ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
 
     await expectLater(

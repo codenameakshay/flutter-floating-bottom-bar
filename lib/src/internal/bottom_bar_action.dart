@@ -29,8 +29,9 @@ class BottomBarAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final targetExtent =
-        math.max(48.0, math.max(visualWidth, visualHeight)).toDouble();
+    final targetExtent = math
+        .max(48.0, math.max(visualWidth, visualHeight))
+        .toDouble();
 
     Widget child = SizedBox(
       width: targetExtent,

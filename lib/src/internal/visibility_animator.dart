@@ -37,41 +37,44 @@ class VisibilityAnimator extends StatelessWidget {
 
     switch (motion.transition) {
       case BottomBarTransition.slide:
-        return _wrapInteraction(SlideTransition(
-          position: Tween<Offset>(
-            begin: motion.slideStart,
-            end: motion.slideEnd,
-          ).animate(animation),
-          child: child,
-        ));
-      case BottomBarTransition.fade:
-        return _wrapInteraction(FadeTransition(opacity: clamped, child: child));
-      case BottomBarTransition.scale:
-        return _wrapInteraction(ScaleTransition(
-          scale: _NonNegativeAnimation(animation),
-          child: child,
-        ));
-      case BottomBarTransition.slideAndFade:
-        return _wrapInteraction(FadeTransition(
-          opacity: clamped,
-          child: SlideTransition(
+        return _wrapInteraction(
+          SlideTransition(
             position: Tween<Offset>(
               begin: motion.slideStart,
               end: motion.slideEnd,
             ).animate(animation),
             child: child,
           ),
-        ));
+        );
+      case BottomBarTransition.fade:
+        return _wrapInteraction(FadeTransition(opacity: clamped, child: child));
+      case BottomBarTransition.scale:
+        return _wrapInteraction(
+          ScaleTransition(
+            scale: _NonNegativeAnimation(animation),
+            child: child,
+          ),
+        );
+      case BottomBarTransition.slideAndFade:
+        return _wrapInteraction(
+          FadeTransition(
+            opacity: clamped,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: motion.slideStart,
+                end: motion.slideEnd,
+              ).animate(animation),
+              child: child,
+            ),
+          ),
+        );
     }
   }
 
   Widget _wrapInteraction(Widget child) {
     return IgnorePointer(
       ignoring: !isVisible,
-      child: ExcludeSemantics(
-        excluding: !isVisible,
-        child: child,
-      ),
+      child: ExcludeSemantics(excluding: !isVisible, child: child),
     );
   }
 }
