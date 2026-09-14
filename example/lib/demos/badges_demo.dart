@@ -12,16 +12,16 @@ class _BadgesDemoPageState extends State<BadgesDemoPage> {
   int _index = 0;
 
   Widget _badge(String count) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-        decoration: BoxDecoration(
-          color: Colors.red,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          count,
-          style: const TextStyle(color: Colors.white, fontSize: 10),
-        ),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+    decoration: BoxDecoration(
+      color: Colors.red,
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Text(
+      count,
+      style: const TextStyle(color: Colors.white, fontSize: 10),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
