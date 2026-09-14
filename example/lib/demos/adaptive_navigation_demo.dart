@@ -115,32 +115,104 @@ class _AdaptiveNavigationDemoPageState
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-              child: Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 4,
-                runSpacing: 4,
-                children: [
-                  for (var index = 0; index < _destinations.length; index++)
-                    SizedBox(
-                      width: 88,
-                      child: BottomBarItem(
-                        icon: Icon(_destinations[index].icon),
-                        selectedIcon: Icon(_destinations[index].selectedIcon),
-                        label: Text(
-                          _destinations[index].label,
-                          textAlign: TextAlign.center,
-                        ),
-                        semanticLabel: _destinations[index].label,
-                        selected: _selectedIndex == index,
-                        onTap: () => setState(() => _selectedIndex = index),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final textScale = MediaQuery.of(context).textScaler.scale(1);
+                  final itemWidth = (72 * textScale)
+                      .clamp(88.0, constraints.maxWidth)
+                      .toDouble();
+
+                  if (textScale >= 1.5) {
+                    final maxNavigationHeight = constraints.hasBoundedHeight
+                        ? constraints.maxHeight
+                        : MediaQuery.sizeOf(context).height;
+                    return ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: maxNavigationHeight,
                       ),
-                    ),
-                ],
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            for (
+                              var index = 0;
+                              index < _destinations.length;
+                              index++
+                            ) ...[
+                              _LargeTextNavigationItem(
+                                destination: _destinations[index],
+                                selected: _selectedIndex == index,
+                                onTap: () =>
+                                    setState(() => _selectedIndex = index),
+                              ),
+                              if (index != _destinations.length - 1)
+                                const SizedBox(height: 4),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  return Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: [
+                      for (var index = 0; index < _destinations.length; index++)
+                        SizedBox(
+                          width: itemWidth,
+                          child: BottomBarItem(
+                            icon: Icon(_destinations[index].icon),
+                            selectedIcon: Icon(
+                              _destinations[index].selectedIcon,
+                            ),
+                            label: Text(
+                              _destinations[index].label,
+                              textAlign: TextAlign.center,
+                            ),
+                            semanticLabel: _destinations[index].label,
+                            selected: _selectedIndex == index,
+                            onTap: () => setState(() => _selectedIndex = index),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _LargeTextNavigationItem extends StatelessWidget {
+  const _LargeTextNavigationItem({
+    required this.destination,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _Destination destination;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = selected ? destination.selectedIcon : destination.icon;
+
+    return ListTile(
+      key: ValueKey('adaptive-navigation-${destination.label}'),
+      selected: selected,
+      selectedTileColor: Theme.of(context).colorScheme.secondaryContainer,
+      minTileHeight: 48,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      leading: Icon(icon),
+      title: Text(destination.label),
+      onTap: onTap,
     );
   }
 }

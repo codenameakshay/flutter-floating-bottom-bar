@@ -27,13 +27,17 @@ void main() {
 
       await tester.pumpWidget(_buildHarness(textScale: 2));
       await tester.pumpAndSettle();
+      _expectIconLabelOrder(tester, iconBeforeLabel: true);
 
       for (var direction = 0; direction < 2; direction++) {
         for (final (label, description) in _destinations) {
-          final destination = find.bySemanticsLabel(label);
+          final destination = find.byKey(
+            ValueKey('adaptive-navigation-$label'),
+          );
           expect(destination, findsOneWidget);
+          await tester.ensureVisible(destination);
           final targetSize = tester.getSize(destination);
-          expect(targetSize.width, greaterThanOrEqualTo(48));
+          expect(targetSize.width, greaterThan(240));
           expect(targetSize.height, greaterThanOrEqualTo(48));
 
           await tester.tap(destination);
@@ -47,6 +51,7 @@ void main() {
         if (direction == 0) {
           await tester.tap(find.byTooltip('Toggle right-to-left layout'));
           await tester.pumpAndSettle();
+          _expectIconLabelOrder(tester, iconBeforeLabel: false);
           expect(tester.takeException(), isNull);
         }
       }
@@ -91,6 +96,26 @@ void main() {
   });
 }
 
+void _expectIconLabelOrder(
+  WidgetTester tester, {
+  required bool iconBeforeLabel,
+}) {
+  final icon = find
+      .byIcon(iconBeforeLabel ? Icons.home : Icons.home_outlined)
+      .last;
+  final label = find.text('Home overview').last;
+  expect(icon, findsOneWidget);
+  expect(label, findsOneWidget);
+
+  final iconX = tester.getCenter(icon).dx;
+  final labelX = tester.getCenter(label).dx;
+  if (iconBeforeLabel) {
+    expect(iconX, lessThan(labelX));
+  } else {
+    expect(iconX, greaterThan(labelX));
+  }
+}
+
 Widget _buildHarness({required double textScale}) {
   return MaterialApp(
     builder: (context, child) => MediaQuery(
@@ -105,8 +130,9 @@ Widget _buildHarness({required double textScale}) {
 
 void _expectSelected(WidgetTester tester, String label, bool selected) {
   final data = tester
-      .getSemantics(find.bySemanticsLabel(label))
+      .getSemantics(find.byKey(ValueKey('adaptive-navigation-$label')))
       .getSemanticsData();
+  expect(data.label, label);
   expect(
     data.flagsCollection.isSelected,
     selected ? ui.Tristate.isTrue : ui.Tristate.isFalse,
