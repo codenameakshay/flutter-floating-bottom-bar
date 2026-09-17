@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'bottom_bar_items.dart';
+
 /// A simple, opinionated nav-item widget for use inside [BottomBar.child].
 ///
 /// Renders an [icon] (or [selectedIcon] when [selected]), an optional [label]
@@ -41,6 +43,10 @@ class BottomBarItem extends StatelessWidget {
   /// Optional label rendered below the icon.
   ///
   /// Styled with `textTheme.labelSmall` tinted to [color] or [selectedColor].
+  /// A `Text` label with non-null `data` is truncated to a single line with
+  /// an ellipsis, since items inside a [BottomBarItems] row share equal
+  /// width. Other widgets (including `Text.rich`) are left untouched. Label
+  /// visibility is controlled by the enclosing [BottomBarItems.labelBehavior].
   final Widget? label;
 
   /// Optional badge rendered in the top-end corner of the icon.
@@ -84,6 +90,14 @@ class BottomBarItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final labelBehavior =
+        BottomBarItemsScope.maybeOf(context) ??
+        BottomBarLabelBehavior.alwaysShow;
+    final showLabel = switch (labelBehavior) {
+      BottomBarLabelBehavior.alwaysShow => true,
+      BottomBarLabelBehavior.onlySelected => selected,
+      BottomBarLabelBehavior.alwaysHide => false,
+    };
     final effectiveColor = selected
         ? (selectedColor ?? cs.primary)
         : (color ?? cs.onSurfaceVariant);
@@ -103,16 +117,34 @@ class BottomBarItem extends StatelessWidget {
       ],
     );
 
+    final currentLabel = label;
+    Widget labelChild = currentLabel ?? const SizedBox.shrink();
+    if (currentLabel is Text && currentLabel.data != null) {
+      // Ellipsize plain-text labels so they never overflow the equal-width
+      // slot Expanded gives each item inside a BottomBarItems row.
+      labelChild = Text(
+        currentLabel.data!,
+        style: currentLabel.style,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center,
+      );
+    }
+
     final column = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         stack,
-        if (label != null) ...[
+        if (currentLabel != null && showLabel) ...[
           const SizedBox(height: 2),
-          DefaultTextStyle(
-            style: (Theme.of(context).textTheme.labelSmall ?? const TextStyle())
-                .copyWith(color: effectiveColor),
-            child: label!,
+          SizedBox(
+            width: double.infinity,
+            child: DefaultTextStyle(
+              style:
+                  (Theme.of(context).textTheme.labelSmall ?? const TextStyle())
+                      .copyWith(color: effectiveColor),
+              child: labelChild,
+            ),
           ),
         ],
       ],

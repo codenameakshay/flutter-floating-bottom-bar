@@ -13,8 +13,19 @@
   source that never emits `ScrollNotification`s, such as an embedded WebView.
   Visibility-only — it does not affect `scrollToStart()`/`scrollToEnd()`,
   which still require a real `ScrollPosition`.
+- `BottomBarLabelBehavior` (`alwaysShow`, `onlySelected`, `alwaysHide`) and
+  `BottomBarItems.labelBehavior`: controls when descendant `BottomBarItem`
+  labels render. Exposed to `BottomBarItem` via the new public
+  `BottomBarItemsScope` inherited widget; items outside a `BottomBarItems`
+  row keep the `alwaysShow` default.
 
 ### Changed
+
+- `BottomBarItems` now wraps every child in `Expanded`, so items share the
+  row's width equally instead of overflowing at higher item counts or larger
+  text scales. A `BottomBarItem`'s `Text` label (with non-null `data`) is
+  truncated to a single line with an ellipsis to fit; `Text.rich` and other
+  label widgets are unaffected.
 
 - Migrated from `package:flutter/material.dart` to the standalone
   [`material_ui`](https://pub.dev/packages/material_ui) package. Material was
