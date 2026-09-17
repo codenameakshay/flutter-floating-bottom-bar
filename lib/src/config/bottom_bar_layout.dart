@@ -14,7 +14,7 @@ class BottomBarLayout {
     this.width = 300,
     this.maxWidth,
     this.offset = 10,
-    this.borderRadius = BorderRadius.zero,
+    this.borderRadius = const BorderRadius.all(Radius.circular(28)),
     this.iconOffset = Offset.zero,
     this.alignment = Alignment.bottomCenter,
     this.fit = StackFit.loose,
@@ -32,7 +32,7 @@ class BottomBarLayout {
   const BottomBarLayout.adaptive({
     required double maxWidth,
     this.offset = 10,
-    this.borderRadius = BorderRadius.zero,
+    this.borderRadius = const BorderRadius.all(Radius.circular(28)),
     this.iconOffset = Offset.zero,
     this.alignment = Alignment.bottomCenter,
     this.fit = StackFit.loose,
@@ -58,6 +58,9 @@ class BottomBarLayout {
   final double offset;
 
   /// Border radius applied to the bar's default decoration.
+  ///
+  /// Defaults to a 28px Material 3 radius, matching the built-in theme.
+  /// Pass [BorderRadius.zero] for a square bar.
   final BorderRadius borderRadius;
 
   /// Additional translation applied only to the built-in hidden action.

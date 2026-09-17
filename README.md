@@ -290,7 +290,7 @@ visible it is ignored for hit testing and removed from the semantics tree.
 | `width` | `double` | `300` | Requested bar width before viewport/max-width clamping. |
 | `maxWidth` | `double?` | `null` | Optional explicit width cap after host constraints. |
 | `offset` | `double` | `10` | Outer padding applied around the bar or hidden action. |
-| `borderRadius` | `BorderRadius` | `BorderRadius.zero` | Used by the default rectangular bar decoration. |
+| `borderRadius` | `BorderRadius` | `BorderRadius.circular(28)` | Matches the default Material 3 bar decoration; pass `BorderRadius.zero` for a square bar. |
 | `iconOffset` | `Offset` | `Offset.zero` | Extra translation applied only to the hidden action. |
 | `alignment` | `Alignment` | `Alignment.bottomCenter` | Shared alignment for the bar and hidden action. |
 | `fit` | `StackFit` | `StackFit.loose` | Host stack fit. |

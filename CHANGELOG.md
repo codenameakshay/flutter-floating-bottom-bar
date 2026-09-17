@@ -15,6 +15,9 @@
   `material_ui` requires.
 - Attaching a `BottomBarController` to a second bar now throws a
   `FlutterError` in debug builds as well, instead of an `AssertionError`.
+- `BottomBarLayout` and `BottomBarLayout.adaptive` now default
+  `borderRadius` to 28 so passing `layout:` no longer squares the bar.
+  Pass `BorderRadius.zero` to opt out.
 
 ## 2.1.0
 
