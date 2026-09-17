@@ -16,6 +16,11 @@
 - Attaching a `BottomBarController` to a second bar now throws a
   `FlutterError` in debug builds as well, instead of an `AssertionError`.
 
+### Fixed
+
+- Hidden bar descendants are excluded from keyboard focus, so a `TextField`
+  in the floating child cannot be tab-focused while the bar is hidden.
+
 ## 2.1.0
 
 ### Added
