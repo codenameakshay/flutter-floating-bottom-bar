@@ -10,6 +10,7 @@ class BottomBarScrollBehavior {
     this.deltaThreshold = 8,
     this.showAtStart = false,
     this.showOnScrollEnd = false,
+    this.keepVisibleOnFocus = true,
     this.predicate,
   }) : assert(deltaThreshold >= 0, 'deltaThreshold must be >= 0');
 
@@ -45,6 +46,13 @@ class BottomBarScrollBehavior {
   /// reappear whenever scrolling settles.
   final bool showOnScrollEnd;
 
+  /// When true, scroll-driven hide is skipped while the floating [BottomBar]
+  /// child holds focus.
+  ///
+  /// [BottomBarController.hide] still hides the bar regardless of focus.
+  /// This does not auto-show the bar when focus is gained.
+  final bool keepVisibleOnFocus;
+
   /// Optional filter. When non-null, returning false skips the notification
   /// entirely (no offset tracking, no visibility change, and no start/end
   /// settling behavior).
@@ -59,6 +67,7 @@ class BottomBarScrollBehavior {
     double? deltaThreshold,
     bool? showAtStart,
     bool? showOnScrollEnd,
+    bool? keepVisibleOnFocus,
     bool Function(ScrollNotification notification)? predicate,
   }) {
     return BottomBarScrollBehavior(
@@ -68,6 +77,7 @@ class BottomBarScrollBehavior {
       deltaThreshold: deltaThreshold ?? this.deltaThreshold,
       showAtStart: showAtStart ?? this.showAtStart,
       showOnScrollEnd: showOnScrollEnd ?? this.showOnScrollEnd,
+      keepVisibleOnFocus: keepVisibleOnFocus ?? this.keepVisibleOnFocus,
       predicate: predicate ?? this.predicate,
     );
   }
@@ -82,6 +92,7 @@ class BottomBarScrollBehavior {
         other.deltaThreshold == deltaThreshold &&
         other.showAtStart == showAtStart &&
         other.showOnScrollEnd == showOnScrollEnd &&
+        other.keepVisibleOnFocus == keepVisibleOnFocus &&
         other.predicate == predicate;
   }
 
@@ -93,6 +104,7 @@ class BottomBarScrollBehavior {
     deltaThreshold,
     showAtStart,
     showOnScrollEnd,
+    keepVisibleOnFocus,
     predicate,
   );
 }

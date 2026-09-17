@@ -353,6 +353,7 @@ animating.
 | `deltaThreshold` | `double` | `8` | Minimum absolute delta required before visibility can flip. |
 | `showAtStart` | `bool` | `false` | Forces the bar visible when a scrollable reaches its minimum extent. |
 | `showOnScrollEnd` | `bool` | `false` | Forces the bar visible when scrolling settles. |
+| `keepVisibleOnFocus` | `bool` | `true` | Skip scroll-hide while the floating child has focus. `BottomBarController.hide()` still hides it. |
 | `predicate` | `bool Function(ScrollNotification)?` | `null` | Skip notifications entirely when it returns false. |
 
 ### `BottomBarController`
