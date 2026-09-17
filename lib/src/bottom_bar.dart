@@ -351,6 +351,12 @@ class _BottomBarState extends State<BottomBar>
     _setBarVisible(true, notifyCallbacks: true, fromController: true);
   }
 
+  @override
+  void reportScroll({required double delta}) {
+    if (!mounted) return;
+    _dispatcher.handleDelta(delta);
+  }
+
   /// Returns the [NestedScrollViewState] enclosing [context], or `null` if the
   /// active scrollable is not inside a [NestedScrollView] (or the context is no
   /// longer mounted).
