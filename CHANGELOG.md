@@ -1,5 +1,14 @@
 ## Unreleased
 
+### Added
+
+- `BottomBarLayout.avoidKeyboard` (default `true`): pads the bar and hidden
+  action by `MediaQuery.viewInsets.bottom` so they sit above the on-screen
+  keyboard when the host hasn't already consumed it (e.g.
+  `Scaffold(resizeToAvoidBottomInset: false)`). No-op when insets are already
+  zero, and does not affect `BottomBarScope.barHeight` or
+  `BottomBarBodyPadding`.
+
 ### Changed
 
 - Migrated from `package:flutter/material.dart` to the standalone

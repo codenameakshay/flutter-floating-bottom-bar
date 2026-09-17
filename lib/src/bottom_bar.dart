@@ -462,7 +462,17 @@ class _BottomBarState extends State<BottomBar>
     if (translate != Offset.zero) {
       content = Transform.translate(offset: translate, child: content);
     }
-    return Align(alignment: l.alignment, child: content);
+    content = Align(alignment: l.alignment, child: content);
+    if (l.avoidKeyboard) {
+      final inset = MediaQuery.viewInsetsOf(context).bottom;
+      if (inset > 0) {
+        content = Padding(
+          padding: EdgeInsets.only(bottom: inset),
+          child: content,
+        );
+      }
+    }
+    return content;
   }
 
   void _handleBarFootprintChanged(Size size) {

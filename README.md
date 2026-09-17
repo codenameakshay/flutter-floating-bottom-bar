@@ -296,6 +296,7 @@ visible it is ignored for hit testing and removed from the semantics tree.
 | `fit` | `StackFit` | `StackFit.loose` | Host stack fit. |
 | `clip` | `Clip` | `Clip.hardEdge` | Host stack clip behavior. |
 | `respectSafeArea` | `bool` | `true` | Wraps the bar and hidden action in `SafeArea`. |
+| `avoidKeyboard` | `bool` | `true` | Pads the bar and hidden action by `MediaQuery.viewInsets.bottom` so they sit above the keyboard. No-op when insets are 0 (typical inside a `Scaffold` body). |
 
 Use `BottomBarLayout.adaptive(maxWidth: ...)` to fill available width up to a
 hard cap. When deriving layouts, `copyWith(clearMaxWidth: true)` explicitly
