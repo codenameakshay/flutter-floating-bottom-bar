@@ -69,9 +69,12 @@ class VisibilityAnimator extends StatelessWidget {
   }
 
   Widget _wrapInteraction(Widget child) {
-    return IgnorePointer(
-      ignoring: !isVisible,
-      child: ExcludeSemantics(excluding: !isVisible, child: child),
+    return ExcludeFocus(
+      excluding: !isVisible,
+      child: IgnorePointer(
+        ignoring: !isVisible,
+        child: ExcludeSemantics(excluding: !isVisible, child: child),
+      ),
     );
   }
 }
