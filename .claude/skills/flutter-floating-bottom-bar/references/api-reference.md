@@ -63,7 +63,7 @@ const BottomBarLayout({
   double width = 300,
   double? maxWidth,
   double offset = 10,
-  BorderRadius borderRadius = BorderRadius.zero,
+  BorderRadius borderRadius = const BorderRadius.all(Radius.circular(28)),
   Offset iconOffset = Offset.zero,
   Alignment alignment = Alignment.bottomCenter,
   StackFit fit = StackFit.loose,
@@ -75,7 +75,7 @@ const BottomBarLayout({
 const BottomBarLayout.adaptive({
   required double maxWidth,
   double offset = 10,
-  BorderRadius borderRadius = BorderRadius.zero,
+  BorderRadius borderRadius = const BorderRadius.all(Radius.circular(28)),
   Offset iconOffset = Offset.zero,
   Alignment alignment = Alignment.bottomCenter,
   StackFit fit = StackFit.loose,
@@ -89,7 +89,7 @@ const BottomBarLayout.adaptive({
 | `width` | `300` | Logical pixels. For full-width-with-margin, use `MediaQuery.of(context).size.width - 32`. |
 | `maxWidth` | `null` | Optional cap applied after `width` and viewport clamping. Must be finite and non-negative when provided. |
 | `offset` | `10` | Padding from screen bottom and sides. Increase to `24` for breathing room. |
-| `borderRadius` | `BorderRadius.zero` | Use `BorderRadius.circular(28)` for M3, `999` for pill. |
+| `borderRadius` | `BorderRadius.circular(28)` | Matches the built-in M3 decoration. Pass `BorderRadius.zero` for a square bar, `999` for pill. |
 | `iconOffset` | `Offset.zero` | Additional translation applied only to the built-in hidden action, without moving the bar. |
 | `alignment` | `Alignment.bottomCenter` | The `Stack` alignment. |
 | `fit` | `StackFit.loose` | Pass `StackFit.expand` when the bar's child uses `Stack` + `Positioned` (e.g. FAB notch). |

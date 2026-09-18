@@ -11,6 +11,7 @@ void main() {
 
       expect(layout.width, double.infinity);
       expect(layout.maxWidth, 360);
+      expect(layout.borderRadius, const BorderRadius.all(Radius.circular(28)));
     });
 
     test('copyWith preserves untouched fields', () {
@@ -140,6 +141,26 @@ void main() {
 
       expect(_barDecoration(tester).borderRadius, BorderRadius.zero);
       expect(_barMaterial(tester).borderRadius, BorderRadius.zero);
+    },
+  );
+
+  testWidgets(
+    'adaptive layout without an explicit radius keeps the default 28px '
+    'decoration',
+    (tester) async {
+      await _pumpBottomBar(
+        tester,
+        layout: const BottomBarLayout.adaptive(maxWidth: 420),
+      );
+
+      expect(
+        _barDecoration(tester).borderRadius,
+        const BorderRadius.all(Radius.circular(28)),
+      );
+      expect(
+        _barMaterial(tester).borderRadius,
+        const BorderRadius.all(Radius.circular(28)),
+      );
     },
   );
 
