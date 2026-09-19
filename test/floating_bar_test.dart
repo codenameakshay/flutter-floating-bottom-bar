@@ -1143,15 +1143,11 @@ void main() {
       expect(controller.isVisible, isTrue);
     });
 
-    testWidgets('unfocusing the floating child restores scroll-driven hide', (
+    testWidgets('moving focus elsewhere restores scroll-driven hide', (
       tester,
     ) async {
       final focusNode = FocusNode();
       addTearDown(focusNode.dispose);
-      // Represents focus moving elsewhere in the app (e.g. the user tapping
-      // a focusable widget outside the bar). `focusNode.unfocus()` alone
-      // would leave the bar's FocusScopeNode itself as the primary focus,
-      // so `hasFocus` would stay true.
       final elsewhereFocusNode = FocusNode();
       addTearDown(elsewhereFocusNode.dispose);
       final controller = BottomBarController();
@@ -1169,6 +1165,31 @@ void main() {
       focusNode.requestFocus();
       await tester.pumpAndSettle();
       elsewhereFocusNode.requestFocus();
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+      await tester.pumpAndSettle();
+
+      expect(controller.isVisible, isFalse);
+    });
+
+    testWidgets('unfocusing the floating child restores scroll-driven hide', (
+      tester,
+    ) async {
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+      final controller = BottomBarController();
+
+      await tester.pumpWidget(
+        buildHarness(
+          controller: controller,
+          child: TextField(focusNode: focusNode),
+        ),
+      );
+
+      focusNode.requestFocus();
+      await tester.pumpAndSettle();
+      focusNode.unfocus();
       await tester.pumpAndSettle();
 
       await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
