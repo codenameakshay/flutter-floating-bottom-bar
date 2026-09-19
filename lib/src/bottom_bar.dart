@@ -466,8 +466,8 @@ class _BottomBarState extends State<BottomBar>
     if (l.avoidKeyboard) {
       final inset = MediaQuery.viewInsetsOf(context).bottom;
       if (inset > 0) {
-        content = Padding(
-          padding: EdgeInsets.only(bottom: inset),
+        content = Transform.translate(
+          offset: Offset(0, -inset),
           child: content,
         );
       }

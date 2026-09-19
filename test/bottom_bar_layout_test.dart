@@ -351,6 +351,64 @@ void main() {
 
       expect(withInsetHeights.last, closeTo(noInsetHeights.last, 0.01));
     });
+
+    testWidgets(
+      'flexible-height child keeps its footprint above the keyboard',
+      (tester) async {
+        final noInsetHeights = <double>[];
+        final withInsetHeights = <double>[];
+        const child = KeyedSubtree(
+          key: Key('bar-child'),
+          child: FractionallySizedBox(
+            heightFactor: 1,
+            child: ColoredBox(color: Colors.red),
+          ),
+        );
+
+        await _pumpBottomBarWithViewInsets(
+          tester,
+          viewInsets: EdgeInsets.zero,
+          child: child,
+          onBarHeightChanged: noInsetHeights.add,
+        );
+        await tester.pumpAndSettle();
+
+        await _pumpBottomBarWithViewInsets(
+          tester,
+          viewInsets: const EdgeInsets.only(bottom: 300),
+          child: child,
+          onBarHeightChanged: withInsetHeights.add,
+        );
+        await tester.pumpAndSettle();
+
+        expect(noInsetHeights.last, greaterThan(56));
+        expect(withInsetHeights.last, closeTo(noInsetHeights.last, 0.01));
+      },
+    );
+
+    testWidgets('default Scaffold resize moves the bar only once', (
+      tester,
+    ) async {
+      await _pumpBottomBarWithViewInsets(
+        tester,
+        viewInsets: EdgeInsets.zero,
+        resizeToAvoidBottomInset: null,
+      );
+      final baseline = tester
+          .getBottomLeft(find.byKey(const Key('bar-child')))
+          .dy;
+
+      await _pumpBottomBarWithViewInsets(
+        tester,
+        viewInsets: const EdgeInsets.only(bottom: 300),
+        resizeToAvoidBottomInset: null,
+      );
+      final lifted = tester
+          .getBottomLeft(find.byKey(const Key('bar-child')))
+          .dy;
+
+      expect(baseline - lifted, closeTo(300, 0.5));
+    });
   });
 }
 
@@ -360,6 +418,12 @@ Future<void> _pumpBottomBarWithViewInsets(
   BottomBarLayout? layout,
   Size size = const Size(400, 800),
   ValueChanged<double>? onBarHeightChanged,
+  bool? resizeToAvoidBottomInset = false,
+  Widget child = const SizedBox(
+    key: Key('bar-child'),
+    height: 56,
+    child: Center(child: Text('Bottom Bar Child')),
+  ),
 }) async {
   Widget body = const SizedBox.expand();
   if (onBarHeightChanged != null) {
@@ -382,16 +446,8 @@ Future<void> _pumpBottomBarWithViewInsets(
       data: MediaQueryData(size: size, viewInsets: viewInsets),
       child: MaterialApp(
         home: Scaffold(
-          resizeToAvoidBottomInset: false,
-          body: BottomBar(
-            layout: layout,
-            body: body,
-            child: const SizedBox(
-              key: Key('bar-child'),
-              height: 56,
-              child: Center(child: Text('Bottom Bar Child')),
-            ),
-          ),
+          resizeToAvoidBottomInset: resizeToAvoidBottomInset,
+          body: BottomBar(layout: layout, body: body, child: child),
         ),
       ),
     ),
