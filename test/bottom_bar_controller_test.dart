@@ -38,6 +38,10 @@ void main() {
       await controller.scrollToEnd();
       expect(first.lastScrollToEnd, isTrue);
       expect(second.lastScrollToEnd, isNull);
+
+      controller.reportScroll(delta: 42);
+      expect(first.lastReportedDelta, 42);
+      expect(second.lastReportedDelta, isNull);
     },
   );
 
@@ -103,6 +107,7 @@ class _FakeBinding implements BottomBarBindingForController {
 
   bool? requestedVisibility;
   bool? lastScrollToEnd;
+  double? lastReportedDelta;
 
   @override
   void requestVisible(bool visible) {
@@ -112,5 +117,10 @@ class _FakeBinding implements BottomBarBindingForController {
   @override
   Future<void> scrollToBoundary({required bool toEnd}) async {
     lastScrollToEnd = toEnd;
+  }
+
+  @override
+  void reportScroll({required double delta}) {
+    lastReportedDelta = delta;
   }
 }

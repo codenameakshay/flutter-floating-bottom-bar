@@ -69,6 +69,7 @@ const BottomBarLayout({
   StackFit fit = StackFit.loose,
   Clip clip = Clip.hardEdge,
   bool respectSafeArea = true,
+  bool avoidKeyboard = true,
 });
 
 // Fills the available host width up to maxWidth (sets width: double.infinity).
@@ -81,6 +82,7 @@ const BottomBarLayout.adaptive({
   StackFit fit = StackFit.loose,
   Clip clip = Clip.hardEdge,
   bool respectSafeArea = true,
+  bool avoidKeyboard = true,
 });
 ```
 
@@ -95,6 +97,7 @@ const BottomBarLayout.adaptive({
 | `fit` | `StackFit.loose` | Pass `StackFit.expand` when the bar's child uses `Stack` + `Positioned` (e.g. FAB notch). |
 | `clip` | `Clip.hardEdge` | **Set `Clip.none` when overlapping a FAB out of bounds.** |
 | `respectSafeArea` | `true` | Avoids iOS home indicator. |
+| `avoidKeyboard` | `true` | Pads the bar/hidden action by `MediaQuery.viewInsets.bottom` so they clear the on-screen keyboard. No-op when insets are 0 (typical `Scaffold` body). Does not change `barHeight`. |
 
 `BottomBarLayout.adaptive({required double maxWidth, ...})` is a named constructor for the common "fill available width, cap at `maxWidth`" case — equivalent to the default constructor with `width: double.infinity`.
 

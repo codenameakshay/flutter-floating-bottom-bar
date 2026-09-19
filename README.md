@@ -196,6 +196,21 @@ BottomBar(
 )
 ```
 
+### Non-notification scroll sources (e.g. WebView)
+
+`BottomBar` normally drives visibility from `ScrollNotification`s bubbled up
+from `body`. Some content — most notably an embedded WebView — scrolls
+internally without ever emitting one. For those cases, call
+`BottomBarController.reportScroll` from the WebView's own scroll callback:
+
+```dart
+controller.reportScroll(delta: newPixels - oldPixels);
+```
+
+This drives the same threshold/reverse/`hideOnScroll` visibility rules as
+body scrolling. It only affects visibility — `scrollToStart()`/`scrollToEnd()`
+still require a real `ScrollPosition`, which a WebView cannot provide.
+
 ### Custom transitions
 
 Custom transition builders must preserve the child's layout footprint. Use
@@ -296,6 +311,7 @@ visible it is ignored for hit testing and removed from the semantics tree.
 | `fit` | `StackFit` | `StackFit.loose` | Host stack fit. |
 | `clip` | `Clip` | `Clip.hardEdge` | Host stack clip behavior. |
 | `respectSafeArea` | `bool` | `true` | Wraps the bar and hidden action in `SafeArea`. |
+| `avoidKeyboard` | `bool` | `true` | Pads the bar and hidden action by `MediaQuery.viewInsets.bottom` so they sit above the keyboard. No-op when insets are 0 (typical inside a `Scaffold` body). |
 
 Use `BottomBarLayout.adaptive(maxWidth: ...)` to fill available width up to a
 hard cap. When deriving layouts, `copyWith(clearMaxWidth: true)` explicitly
@@ -338,6 +354,7 @@ animating.
 | `show()` / `hide()` / `toggle()` | Imperative visibility controls. |
 | `scrollToStart()` | Always scrolls the last active scrollable to its minimum extent. |
 | `scrollToEnd()` | Always scrolls the last active scrollable to its maximum extent. |
+| `reportScroll(delta: ...)` | Drives visibility from a source that doesn't emit `ScrollNotification`s (e.g. WebView). Visibility only; doesn't affect `scrollToStart`/`scrollToEnd`. |
 
 A controller can own only one live bar at a time. Double-attach fails in both
 debug and release, and visibility updates are accepted only from the owning bar

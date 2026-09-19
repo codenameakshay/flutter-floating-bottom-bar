@@ -1,5 +1,19 @@
 ## Unreleased
 
+### Added
+
+- `BottomBarLayout.avoidKeyboard` (default `true`): pads the bar and hidden
+  action by `MediaQuery.viewInsets.bottom` so they sit above the on-screen
+  keyboard when the host hasn't already consumed it (e.g.
+  `Scaffold(resizeToAvoidBottomInset: false)`). No-op when insets are already
+  zero, and does not affect `BottomBarScope.barHeight` or
+  `BottomBarBodyPadding`.
+- `BottomBarController.reportScroll({required double delta})`: drives the
+  bar's threshold/reverse/`hideOnScroll` visibility rules from a scroll
+  source that never emits `ScrollNotification`s, such as an embedded WebView.
+  Visibility-only — it does not affect `scrollToStart()`/`scrollToEnd()`,
+  which still require a real `ScrollPosition`.
+
 ### Changed
 
 - Migrated from `package:flutter/material.dart` to the standalone

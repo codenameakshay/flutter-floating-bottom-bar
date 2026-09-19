@@ -20,6 +20,7 @@ class BottomBarLayout {
     this.fit = StackFit.loose,
     this.clip = Clip.hardEdge,
     this.respectSafeArea = true,
+    this.avoidKeyboard = true,
   }) : assert(
          maxWidth == null || (maxWidth >= 0 && maxWidth < double.infinity),
        );
@@ -38,6 +39,7 @@ class BottomBarLayout {
     this.fit = StackFit.loose,
     this.clip = Clip.hardEdge,
     this.respectSafeArea = true,
+    this.avoidKeyboard = true,
   }) : assert(maxWidth >= 0 && maxWidth < double.infinity),
        maxWidth = maxWidth,
        width = double.infinity;
@@ -83,6 +85,14 @@ class BottomBarLayout {
   /// extend into system UI areas.
   final bool respectSafeArea;
 
+  /// When true, the bar and the built-in hidden action are padded by
+  /// `MediaQuery.viewInsets.bottom` so they sit above the on-screen keyboard.
+  ///
+  /// Has no effect when `viewInsets.bottom` is already zero, which is the
+  /// typical case for a `Scaffold` body since the `Scaffold` already shrinks
+  /// its body to avoid the keyboard. Does not change [BottomBarScope.barHeight].
+  final bool avoidKeyboard;
+
   /// Returns a copy of this layout with the given fields replaced by non-null
   /// values.
   ///
@@ -99,6 +109,7 @@ class BottomBarLayout {
     StackFit? fit,
     Clip? clip,
     bool? respectSafeArea,
+    bool? avoidKeyboard,
   }) {
     assert(
       !clearMaxWidth || maxWidth == null,
@@ -114,6 +125,7 @@ class BottomBarLayout {
       fit: fit ?? this.fit,
       clip: clip ?? this.clip,
       respectSafeArea: respectSafeArea ?? this.respectSafeArea,
+      avoidKeyboard: avoidKeyboard ?? this.avoidKeyboard,
     );
   }
 
@@ -129,7 +141,8 @@ class BottomBarLayout {
         other.alignment == alignment &&
         other.fit == fit &&
         other.clip == clip &&
-        other.respectSafeArea == respectSafeArea;
+        other.respectSafeArea == respectSafeArea &&
+        other.avoidKeyboard == avoidKeyboard;
   }
 
   @override
@@ -143,5 +156,6 @@ class BottomBarLayout {
     fit,
     clip,
     respectSafeArea,
+    avoidKeyboard,
   );
 }

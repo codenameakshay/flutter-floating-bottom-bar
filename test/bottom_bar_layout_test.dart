@@ -22,6 +22,16 @@ void main() {
       expect(updated.offset, 10);
       expect(updated.iconOffset, Offset.zero);
       expect(updated.respectSafeArea, true);
+      expect(updated.avoidKeyboard, true);
+    });
+
+    test('copyWith can override avoidKeyboard', () {
+      const layout = BottomBarLayout();
+      final updated = layout.copyWith(avoidKeyboard: false);
+
+      expect(updated.avoidKeyboard, false);
+      expect(updated.offset, layout.offset);
+      expect(updated.respectSafeArea, layout.respectSafeArea);
     });
 
     test('copyWith can explicitly clear maxWidth', () {
@@ -39,6 +49,13 @@ void main() {
       const b = BottomBarLayout(width: 250, maxWidth: 320);
       expect(a, b);
       expect(a.hashCode, b.hashCode);
+    });
+
+    test('equality distinguishes avoidKeyboard', () {
+      const a = BottomBarLayout();
+      const b = BottomBarLayout(avoidKeyboard: false);
+      expect(a.avoidKeyboard, true);
+      expect(a, isNot(b));
     });
 
     test('negative, infinite, and NaN maxWidth values are rejected', () {
@@ -266,6 +283,175 @@ void main() {
 
     expect(iconTransform.transform.getTranslation().y, iconOffset.dy);
   });
+
+  group('BottomBarLayout.avoidKeyboard', () {
+    testWidgets('lifts the bar above the keyboard inset by default', (
+      tester,
+    ) async {
+      await _pumpBottomBarWithViewInsets(tester, viewInsets: EdgeInsets.zero);
+      final baseline = tester
+          .getBottomLeft(find.byKey(const Key('bar-child')))
+          .dy;
+
+      await _pumpBottomBarWithViewInsets(
+        tester,
+        viewInsets: const EdgeInsets.only(bottom: 300),
+      );
+      final lifted = tester
+          .getBottomLeft(find.byKey(const Key('bar-child')))
+          .dy;
+
+      expect(baseline - lifted, closeTo(300, 0.5));
+    });
+
+    testWidgets('avoidKeyboard: false does not lift the bar', (tester) async {
+      const layout = BottomBarLayout(
+        avoidKeyboard: false,
+        respectSafeArea: false,
+      );
+
+      await _pumpBottomBarWithViewInsets(
+        tester,
+        viewInsets: EdgeInsets.zero,
+        layout: layout,
+      );
+      final baseline = tester
+          .getBottomLeft(find.byKey(const Key('bar-child')))
+          .dy;
+
+      await _pumpBottomBarWithViewInsets(
+        tester,
+        viewInsets: const EdgeInsets.only(bottom: 300),
+        layout: layout,
+      );
+      final withInsets = tester
+          .getBottomLeft(find.byKey(const Key('bar-child')))
+          .dy;
+
+      expect(withInsets, closeTo(baseline, 0.5));
+    });
+
+    testWidgets('does not change the reported bar footprint', (tester) async {
+      final noInsetHeights = <double>[];
+      final withInsetHeights = <double>[];
+
+      await _pumpBottomBarWithViewInsets(
+        tester,
+        viewInsets: EdgeInsets.zero,
+        onBarHeightChanged: noInsetHeights.add,
+      );
+      await tester.pumpAndSettle();
+
+      await _pumpBottomBarWithViewInsets(
+        tester,
+        viewInsets: const EdgeInsets.only(bottom: 300),
+        onBarHeightChanged: withInsetHeights.add,
+      );
+      await tester.pumpAndSettle();
+
+      expect(withInsetHeights.last, closeTo(noInsetHeights.last, 0.01));
+    });
+
+    testWidgets(
+      'flexible-height child keeps its footprint above the keyboard',
+      (tester) async {
+        final noInsetHeights = <double>[];
+        final withInsetHeights = <double>[];
+        const child = KeyedSubtree(
+          key: Key('bar-child'),
+          child: FractionallySizedBox(
+            heightFactor: 1,
+            child: ColoredBox(color: Colors.red),
+          ),
+        );
+
+        await _pumpBottomBarWithViewInsets(
+          tester,
+          viewInsets: EdgeInsets.zero,
+          child: child,
+          onBarHeightChanged: noInsetHeights.add,
+        );
+        await tester.pumpAndSettle();
+
+        await _pumpBottomBarWithViewInsets(
+          tester,
+          viewInsets: const EdgeInsets.only(bottom: 300),
+          child: child,
+          onBarHeightChanged: withInsetHeights.add,
+        );
+        await tester.pumpAndSettle();
+
+        expect(noInsetHeights.last, greaterThan(56));
+        expect(withInsetHeights.last, closeTo(noInsetHeights.last, 0.01));
+      },
+    );
+
+    testWidgets('default Scaffold resize moves the bar only once', (
+      tester,
+    ) async {
+      await _pumpBottomBarWithViewInsets(
+        tester,
+        viewInsets: EdgeInsets.zero,
+        resizeToAvoidBottomInset: null,
+      );
+      final baseline = tester
+          .getBottomLeft(find.byKey(const Key('bar-child')))
+          .dy;
+
+      await _pumpBottomBarWithViewInsets(
+        tester,
+        viewInsets: const EdgeInsets.only(bottom: 300),
+        resizeToAvoidBottomInset: null,
+      );
+      final lifted = tester
+          .getBottomLeft(find.byKey(const Key('bar-child')))
+          .dy;
+
+      expect(baseline - lifted, closeTo(300, 0.5));
+    });
+  });
+}
+
+Future<void> _pumpBottomBarWithViewInsets(
+  WidgetTester tester, {
+  required EdgeInsets viewInsets,
+  BottomBarLayout? layout,
+  Size size = const Size(400, 800),
+  ValueChanged<double>? onBarHeightChanged,
+  bool? resizeToAvoidBottomInset = false,
+  Widget child = const SizedBox(
+    key: Key('bar-child'),
+    height: 56,
+    child: Center(child: Text('Bottom Bar Child')),
+  ),
+}) async {
+  Widget body = const SizedBox.expand();
+  if (onBarHeightChanged != null) {
+    body = Builder(
+      builder: (context) {
+        final scope = BottomBarScope.of(context);
+        return ValueListenableBuilder<double>(
+          valueListenable: scope.barHeight,
+          builder: (context, value, _) {
+            onBarHeightChanged(value);
+            return const SizedBox.expand();
+          },
+        );
+      },
+    );
+  }
+
+  await tester.pumpWidget(
+    MediaQuery(
+      data: MediaQueryData(size: size, viewInsets: viewInsets),
+      child: MaterialApp(
+        home: Scaffold(
+          resizeToAvoidBottomInset: resizeToAvoidBottomInset,
+          body: BottomBar(layout: layout, body: body, child: child),
+        ),
+      ),
+    ),
+  );
 }
 
 Future<void> _pumpBottomBar(
