@@ -1,9 +1,26 @@
 import 'package:flutter/widgets.dart';
 
+/// Controls when a [BottomBarItem]'s label is visible when it is placed
+/// inside a [BottomBarItems] row.
+enum BottomBarLabelBehavior {
+  /// Always show the label, regardless of selection state.
+  alwaysShow,
+
+  /// Only show the label on the selected item.
+  onlySelected,
+
+  /// Never show the label.
+  alwaysHide,
+}
+
 /// A thin row layout helper for [BottomBarItem]s (or any other widgets).
 ///
 /// Arranges [children] horizontally with [spacing] as the main-axis alignment.
-/// Designed to be passed as [BottomBar.child]:
+/// In bounded rows wide enough for each child's 48px minimum target, each
+/// child is wrapped in [Expanded] so all items share the available width
+/// equally. Narrow bounded rows use a horizontal [SingleChildScrollView] to
+/// preserve those targets. Unbounded rows keep their raw children. Designed
+/// to be passed as [BottomBar.child]:
 ///
 /// ```dart
 /// BottomBar(
@@ -22,6 +39,7 @@ class BottomBarItems extends StatelessWidget {
     super.key,
     required this.children,
     this.spacing = MainAxisAlignment.spaceAround,
+    this.labelBehavior = BottomBarLabelBehavior.alwaysShow,
   });
 
   /// The widgets to display in the row — typically [BottomBarItem] instances.
@@ -29,15 +47,72 @@ class BottomBarItems extends StatelessWidget {
 
   /// Main-axis alignment applied to the [Row].
   ///
-  /// Defaults to [MainAxisAlignment.spaceAround].
+  /// Defaults to [MainAxisAlignment.spaceAround]. In wide bounded rows, this
+  /// only affects layout when [children] is empty because each child is
+  /// expanded.
   final MainAxisAlignment spacing;
+
+  /// Controls when descendant [BottomBarItem] labels are visible.
+  ///
+  /// Exposed to descendants via [BottomBarItemsScope]. Defaults to
+  /// [BottomBarLabelBehavior.alwaysShow].
+  final BottomBarLabelBehavior labelBehavior;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: spacing,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: children,
+    return BottomBarItemsScope(
+      labelBehavior: labelBehavior,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          Widget row(List<Widget> rowChildren) => Row(
+            mainAxisAlignment: spacing,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: rowChildren,
+          );
+
+          if (!constraints.hasBoundedWidth) {
+            return row(children);
+          }
+          if (constraints.maxWidth < children.length * 48) {
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: row(children),
+            );
+          }
+          return row([for (final child in children) Expanded(child: child)]);
+        },
+      ),
     );
+  }
+}
+
+/// Exposes the enclosing [BottomBarItems.labelBehavior] to descendant
+/// [BottomBarItem]s.
+///
+/// [BottomBarItem] reads this via [BottomBarItemsScope.maybeOf] to decide
+/// whether to render its label. An item used outside a [BottomBarItems] row
+/// falls back to [BottomBarLabelBehavior.alwaysShow].
+class BottomBarItemsScope extends InheritedWidget {
+  /// Creates a [BottomBarItemsScope].
+  const BottomBarItemsScope({
+    super.key,
+    required this.labelBehavior,
+    required super.child,
+  });
+
+  /// The label behavior in effect for descendant [BottomBarItem]s.
+  final BottomBarLabelBehavior labelBehavior;
+
+  /// Returns the nearest enclosing [BottomBarItemsScope]'s [labelBehavior],
+  /// or `null` if there isn't one.
+  static BottomBarLabelBehavior? maybeOf(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<BottomBarItemsScope>()
+        ?.labelBehavior;
+  }
+
+  @override
+  bool updateShouldNotify(BottomBarItemsScope oldWidget) {
+    return labelBehavior != oldWidget.labelBehavior;
   }
 }

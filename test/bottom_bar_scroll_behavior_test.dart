@@ -17,6 +17,13 @@ void main() {
       expect(updated.deltaThreshold, 8);
       expect(updated.showAtStart, false);
       expect(updated.showOnScrollEnd, false);
+      expect(updated.keepVisibleOnFocus, true);
+    });
+
+    test('copyWith updates keepVisibleOnFocus', () {
+      const behavior = BottomBarScrollBehavior();
+      final updated = behavior.copyWith(keepVisibleOnFocus: false);
+      expect(updated.keepVisibleOnFocus, false);
     });
 
     test('copyWith updates the settling flags', () {
@@ -39,6 +46,19 @@ void main() {
       expect(showOnScrollEnd, isNot(base));
       expect(showAtStart.hashCode, isNot(base.hashCode));
       expect(showOnScrollEnd.hashCode, isNot(base.hashCode));
+    });
+
+    test('equality and hashCode include keepVisibleOnFocus', () {
+      const base = BottomBarScrollBehavior();
+      const disabled = BottomBarScrollBehavior(keepVisibleOnFocus: false);
+
+      expect(disabled, isNot(base));
+      expect(disabled.hashCode, isNot(base.hashCode));
+    });
+
+    test('keepVisibleOnFocus defaults to true', () {
+      const behavior = BottomBarScrollBehavior();
+      expect(behavior.keepVisibleOnFocus, true);
     });
   });
 }

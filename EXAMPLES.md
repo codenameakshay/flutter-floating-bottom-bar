@@ -42,6 +42,43 @@ class MinimalBottomBarExample extends StatelessWidget {
 }
 ```
 
+## Focus-aware search bar
+
+While the `TextField` is focused, the default `keepVisibleOnFocus: true` keeps
+the bar visible as the body scrolls.
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+
+class FocusAwareBottomBarExample extends StatelessWidget {
+  const FocusAwareBottomBarExample({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: BottomBar(
+        body: BottomBarBodyPadding(
+          child: ListView.builder(
+            itemCount: 40,
+            itemBuilder: (_, index) => ListTile(title: Text('Item $index')),
+          ),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.all(8),
+          child: TextField(
+            decoration: InputDecoration(hintText: 'Search'),
+          ),
+        ),
+      ),
+    );
+  }
+}
+```
+
+To opt out, pass
+`scrollBehavior: const BottomBarScrollBehavior(keepVisibleOnFocus: false)`.
+
 ## `BottomBarItems` navigation row
 
 Related runnable demo: `example/lib/demos/badges_demo.dart`.

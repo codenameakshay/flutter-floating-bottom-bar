@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'bottom_bar_items.dart';
+
 /// A simple, opinionated nav-item widget for use inside [BottomBar.child].
 ///
 /// Renders an [icon] (or [selectedIcon] when [selected]), an optional [label]
@@ -41,6 +43,10 @@ class BottomBarItem extends StatelessWidget {
   /// Optional label rendered below the icon.
   ///
   /// Styled with `textTheme.labelSmall` tinted to [color] or [selectedColor].
+  /// A `Text` label with non-null `data` is truncated to a single line with
+  /// an ellipsis. Other widgets (including `Text.rich`) are left untouched.
+  /// Label visibility is controlled by the enclosing
+  /// [BottomBarItems.labelBehavior].
   final Widget? label;
 
   /// Optional badge rendered in the top-end corner of the icon.
@@ -84,6 +90,14 @@ class BottomBarItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final labelBehavior =
+        BottomBarItemsScope.maybeOf(context) ??
+        BottomBarLabelBehavior.alwaysShow;
+    final showLabel = switch (labelBehavior) {
+      BottomBarLabelBehavior.alwaysShow => true,
+      BottomBarLabelBehavior.onlySelected => selected,
+      BottomBarLabelBehavior.alwaysHide => false,
+    };
     final effectiveColor = selected
         ? (selectedColor ?? cs.primary)
         : (color ?? cs.onSurfaceVariant);
@@ -103,16 +117,54 @@ class BottomBarItem extends StatelessWidget {
       ],
     );
 
+    final currentLabel = label;
+    Widget labelChild = currentLabel ?? const SizedBox.shrink();
+    if (currentLabel is Text && currentLabel.data != null) {
+      labelChild = Text(
+        currentLabel.data!,
+        key: currentLabel.key,
+        style: currentLabel.style,
+        strutStyle: currentLabel.strutStyle,
+        textAlign: currentLabel.textAlign ?? TextAlign.center,
+        textDirection: currentLabel.textDirection,
+        locale: currentLabel.locale,
+        softWrap: currentLabel.softWrap,
+        textScaler: currentLabel.textScaler,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        semanticsLabel: currentLabel.semanticsLabel,
+        semanticsIdentifier: currentLabel.semanticsIdentifier,
+        textWidthBasis: currentLabel.textWidthBasis,
+        textHeightBehavior: currentLabel.textHeightBehavior,
+        selectionColor: currentLabel.selectionColor,
+      );
+    }
+
+    final accessibleLabel =
+        explicitSemanticLabel ??
+        (!showLabel && currentLabel is Text && currentLabel.data != null
+            ? currentLabel.semanticsLabel ?? currentLabel.data
+            : null);
+
     final column = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         stack,
-        if (label != null) ...[
+        if (currentLabel != null && showLabel) ...[
           const SizedBox(height: 2),
-          DefaultTextStyle(
-            style: (Theme.of(context).textTheme.labelSmall ?? const TextStyle())
-                .copyWith(color: effectiveColor),
-            child: label!,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final text = DefaultTextStyle(
+                style:
+                    (Theme.of(context).textTheme.labelSmall ??
+                            const TextStyle())
+                        .copyWith(color: effectiveColor),
+                child: labelChild,
+              );
+              return constraints.hasBoundedWidth
+                  ? SizedBox(width: double.infinity, child: text)
+                  : text;
+            },
           ),
         ],
       ],
@@ -138,7 +190,7 @@ class BottomBarItem extends StatelessWidget {
       );
     }
 
-    if (explicitSemanticLabel != null) {
+    if (accessibleLabel != null) {
       child = ExcludeSemantics(child: child);
     }
 
@@ -146,8 +198,8 @@ class BottomBarItem extends StatelessWidget {
       button: true,
       enabled: onTap != null,
       selected: selected,
-      label: explicitSemanticLabel,
-      onTap: explicitSemanticLabel != null ? onTap : null,
+      label: accessibleLabel,
+      onTap: accessibleLabel != null ? onTap : null,
       child: child,
     );
   }

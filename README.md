@@ -262,6 +262,17 @@ with built-in accessibility and RTL-aware badge placement.
   `tooltip`, otherwise descendant semantics.
 - When `semanticLabel` or `tooltip` provides the explicit accessible name,
   descendant semantics are excluded to avoid duplicate announcements.
+- In bounded rows wide enough for each item's 48x48 minimum target,
+  `BottomBarItems` wraps every child in `Expanded`, so items share the row's
+  width equally. Narrow bounded rows use a horizontal scroll view to preserve
+  the minimum targets; unbounded rows keep their raw children.
+- A `BottomBarItem`'s `Text` label (with non-null `data`) is truncated to a
+  single line with an ellipsis. `Text.rich` and other label widgets are left
+  untouched.
+- `BottomBarItems.labelBehavior` (`BottomBarLabelBehavior.alwaysShow` by
+  default) controls when descendant labels render: `alwaysShow`,
+  `onlySelected`, or `alwaysHide`. An item used outside a `BottomBarItems`
+  row always shows its label.
 
 ## Migration from v1.x
 
@@ -343,6 +354,7 @@ animating.
 | `deltaThreshold` | `double` | `8` | Minimum absolute delta required before visibility can flip. |
 | `showAtStart` | `bool` | `false` | Forces the bar visible when a scrollable reaches its minimum extent. |
 | `showOnScrollEnd` | `bool` | `false` | Forces the bar visible when scrolling settles. |
+| `keepVisibleOnFocus` | `bool` | `true` | Skip scroll-hide while the floating child has focus. `BottomBarController.hide()` still hides it. |
 | `predicate` | `bool Function(ScrollNotification)?` | `null` | Skip notifications entirely when it returns false. |
 
 ### `BottomBarController`

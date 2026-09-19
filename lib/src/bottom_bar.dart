@@ -171,6 +171,10 @@ class _BottomBarState extends State<BottomBar>
   late ScrollNotificationDispatcher _dispatcher;
   late BottomBarMotion _motion;
   late BottomBarScrollBehavior _scrollBehavior;
+  final FocusNode _barFocusNode = FocusNode(
+    debugLabel: 'BottomBar child',
+    canRequestFocus: false,
+  );
 
   bool _targetVisible = true;
   BottomBarLayout _effectiveLayout(BottomBarThemeData theme) {
@@ -265,6 +269,12 @@ class _BottomBarState extends State<BottomBar>
   }) {
     if (!mounted) return;
     if (!visible && !_scrollBehavior.hideOnScroll && !fromController) {
+      return;
+    }
+    if (!visible &&
+        !fromController &&
+        _scrollBehavior.keepVisibleOnFocus &&
+        _barFocusNode.hasFocus) {
       return;
     }
     if (_targetVisible == visible) return;
@@ -404,6 +414,7 @@ class _BottomBarState extends State<BottomBar>
     _motionController.dispose();
     _barHeight.dispose();
     _isVisibleNotifier.dispose();
+    _barFocusNode.dispose();
     super.dispose();
   }
 
@@ -560,7 +571,7 @@ class _BottomBarState extends State<BottomBar>
             child: Material(
               color: Colors.transparent,
               borderRadius: _effectiveBarBorderRadius(theme, l),
-              child: widget.child,
+              child: Focus(focusNode: _barFocusNode, child: widget.child),
             ),
           ),
         );

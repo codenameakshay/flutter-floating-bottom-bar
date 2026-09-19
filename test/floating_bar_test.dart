@@ -1118,6 +1118,136 @@ void main() {
       expect(inner.pixels, morePreciselyEquals(innerBeforeEnd));
     },
   );
+
+  group('keepVisibleOnFocus', () {
+    testWidgets('focusing the floating child keeps the bar visible while '
+        'the body scrolls', (tester) async {
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+      final controller = BottomBarController();
+
+      await tester.pumpWidget(
+        buildHarness(
+          controller: controller,
+          child: TextField(focusNode: focusNode),
+        ),
+      );
+
+      focusNode.requestFocus();
+      await tester.pumpAndSettle();
+      expect(controller.isVisible, isTrue);
+
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+      await tester.pumpAndSettle();
+
+      expect(controller.isVisible, isTrue);
+    });
+
+    testWidgets('moving focus elsewhere restores scroll-driven hide', (
+      tester,
+    ) async {
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+      final elsewhereFocusNode = FocusNode();
+      addTearDown(elsewhereFocusNode.dispose);
+      final controller = BottomBarController();
+
+      await tester.pumpWidget(
+        Focus(
+          focusNode: elsewhereFocusNode,
+          child: buildHarness(
+            controller: controller,
+            child: TextField(focusNode: focusNode),
+          ),
+        ),
+      );
+
+      focusNode.requestFocus();
+      await tester.pumpAndSettle();
+      elsewhereFocusNode.requestFocus();
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+      await tester.pumpAndSettle();
+
+      expect(controller.isVisible, isFalse);
+    });
+
+    testWidgets('unfocusing the floating child restores scroll-driven hide', (
+      tester,
+    ) async {
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+      final controller = BottomBarController();
+
+      await tester.pumpWidget(
+        buildHarness(
+          controller: controller,
+          child: TextField(focusNode: focusNode),
+        ),
+      );
+
+      focusNode.requestFocus();
+      await tester.pumpAndSettle();
+      focusNode.unfocus();
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+      await tester.pumpAndSettle();
+
+      expect(controller.isVisible, isFalse);
+    });
+
+    testWidgets(
+      'keepVisibleOnFocus: false lets scroll hide the bar while focused',
+      (tester) async {
+        final focusNode = FocusNode();
+        addTearDown(focusNode.dispose);
+        final controller = BottomBarController();
+
+        await tester.pumpWidget(
+          buildHarness(
+            controller: controller,
+            scrollBehavior: const BottomBarScrollBehavior(
+              keepVisibleOnFocus: false,
+            ),
+            child: TextField(focusNode: focusNode),
+          ),
+        );
+
+        focusNode.requestFocus();
+        await tester.pumpAndSettle();
+
+        await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+        await tester.pumpAndSettle();
+
+        expect(controller.isVisible, isFalse);
+      },
+    );
+
+    testWidgets('controller.hide() still hides the bar while focused', (
+      tester,
+    ) async {
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+      final controller = BottomBarController();
+
+      await tester.pumpWidget(
+        buildHarness(
+          controller: controller,
+          child: TextField(focusNode: focusNode),
+        ),
+      );
+
+      focusNode.requestFocus();
+      await tester.pumpAndSettle();
+
+      controller.hide();
+      await tester.pumpAndSettle();
+
+      expect(controller.isVisible, isFalse);
+    });
+  });
 }
 
 Matcher morePreciselyEquals(double value) => closeTo(value, 0.5);

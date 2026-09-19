@@ -269,6 +269,309 @@ void main() {
     expect(find.byType(Row), findsOneWidget);
     expect(find.byType(BottomBarItem), findsNWidgets(2));
   });
+
+  group('BottomBarItems overflow safety', () {
+    testWidgets(
+      'wraps items in Expanded and ellipsizes labels instead of overflowing',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 320,
+                  child: BottomBarItems(
+                    children: List.generate(
+                      5,
+                      (_) => BottomBarItem(
+                        icon: const Icon(Icons.home),
+                        label: const Text('Settings'),
+                        onTap: () {},
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(Expanded), findsNWidgets(5));
+
+        final settingsTexts = tester.widgetList<Text>(
+          find.descendant(
+            of: find.byType(BottomBarItem),
+            matching: find.text('Settings'),
+          ),
+        );
+        for (final text in settingsTexts) {
+          expect(text.maxLines, 1);
+          expect(text.overflow, TextOverflow.ellipsis);
+        }
+      },
+    );
+
+    testWidgets(
+      'scrolls narrow bounded rows to preserve minimum item targets',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 320,
+                  child: BottomBarItems(
+                    children: List.generate(
+                      7,
+                      (_) => BottomBarItem(
+                        icon: const Icon(Icons.home),
+                        label: const Text('Settings'),
+                        onTap: () {},
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(SingleChildScrollView), findsOneWidget);
+        expect(find.byType(Expanded), findsNothing);
+        for (final inkWell in tester.widgetList<InkWell>(
+          find.byType(InkWell),
+        )) {
+          final size = tester.getSize(find.byWidget(inkWell));
+          expect(size.width, greaterThanOrEqualTo(48));
+          expect(size.height, greaterThanOrEqualTo(48));
+        }
+      },
+    );
+
+    testWidgets('preserves plain Text configuration while ellipsizing', (
+      tester,
+    ) async {
+      const labelKey = Key('configured-label');
+      const textScaler = TextScaler.linear(1.25);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 320,
+              child: BottomBarItems(
+                children: [
+                  BottomBarItem(
+                    icon: const Icon(Icons.home),
+                    label: const Text(
+                      'Settings',
+                      key: labelKey,
+                      style: TextStyle(color: Color(0xFFFF0000)),
+                      textAlign: TextAlign.end,
+                      textDirection: TextDirection.rtl,
+                      softWrap: false,
+                      textScaler: textScaler,
+                      maxLines: 3,
+                      overflow: TextOverflow.clip,
+                      semanticsLabel: 'Preferences',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final rendered = tester.widget<Text>(find.byKey(labelKey));
+      expect(rendered.semanticsLabel, 'Preferences');
+      expect(rendered.style, const TextStyle(color: Color(0xFFFF0000)));
+      expect(rendered.textAlign, TextAlign.end);
+      expect(rendered.textDirection, TextDirection.rtl);
+      expect(rendered.softWrap, isFalse);
+      expect(rendered.textScaler, textScaler);
+      expect(rendered.maxLines, 1);
+      expect(rendered.overflow, TextOverflow.ellipsis);
+    });
+
+    testWidgets('keeps children raw in an unbounded row', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: BottomBarItems(
+                children: [
+                  BottomBarItem(icon: const Icon(Icons.home)),
+                  BottomBarItem(icon: const Icon(Icons.search)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(Expanded), findsNothing);
+    });
+
+    testWidgets('keeps each item at least 48 by 48 inside a crowded row', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 320,
+                child: BottomBarItems(
+                  children: List.generate(
+                    5,
+                    (_) => BottomBarItem(
+                      icon: const Icon(Icons.home),
+                      label: const Text('Settings'),
+                      onTap: () {},
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      for (final inkWell in tester.widgetList<InkWell>(find.byType(InkWell))) {
+        final size = tester.getSize(find.byWidget(inkWell));
+        expect(size.width, greaterThanOrEqualTo(48));
+        expect(size.height, greaterThanOrEqualTo(48));
+      }
+    });
+
+    testWidgets('onlySelected shows only the selected item\'s label', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BottomBarItems(
+              labelBehavior: BottomBarLabelBehavior.onlySelected,
+              children: [
+                BottomBarItem(
+                  icon: const Icon(Icons.home),
+                  label: const Text('Home'),
+                ),
+                BottomBarItem(
+                  icon: const Icon(Icons.search),
+                  label: const Text('Search'),
+                  selected: true,
+                ),
+                BottomBarItem(
+                  icon: const Icon(Icons.person),
+                  label: const Text('Profile'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Home'), findsNothing);
+      expect(find.text('Profile'), findsNothing);
+      expect(find.text('Search'), findsOneWidget);
+    });
+
+    testWidgets('alwaysHide renders no labels', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BottomBarItems(
+              labelBehavior: BottomBarLabelBehavior.alwaysHide,
+              children: [
+                BottomBarItem(
+                  icon: const Icon(Icons.home),
+                  label: const Text('Home'),
+                  selected: true,
+                ),
+                BottomBarItem(
+                  icon: const Icon(Icons.search),
+                  label: const Text('Search'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Home'), findsNothing);
+      expect(find.text('Search'), findsNothing);
+    });
+
+    testWidgets(
+      'hidden plain Text labels stay accessible for onlySelected and alwaysHide',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        try {
+          for (final behavior in [
+            BottomBarLabelBehavior.onlySelected,
+            BottomBarLabelBehavior.alwaysHide,
+          ]) {
+            await tester.pumpWidget(
+              MaterialApp(
+                home: Scaffold(
+                  body: BottomBarItems(
+                    labelBehavior: behavior,
+                    children: [
+                      BottomBarItem(
+                        icon: const Icon(Icons.home),
+                        label: const Text('Home'),
+                        onTap: () {},
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+
+            final data = tester
+                .getSemantics(find.bySemanticsLabel('Home'))
+                .getSemanticsData();
+            expect(data.label, 'Home');
+            expect(data.flagsCollection.isButton, isTrue);
+            expect(data.hasAction(SemanticsAction.tap), isTrue);
+            expect(
+              semanticsLabels(tester).where((label) => label == 'Home'),
+              hasLength(1),
+            );
+            expect(find.text('Home'), findsNothing);
+          }
+        } finally {
+          semantics.dispose();
+        }
+      },
+    );
+
+    testWidgets(
+      'a lone BottomBarItem outside BottomBarItems still shows its label',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: BottomBarItem(
+                  icon: const Icon(Icons.home),
+                  label: const Text('Home'),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        expect(find.text('Home'), findsOneWidget);
+      },
+    );
+  });
 }
 
 Widget _buildItemHarness({
