@@ -38,8 +38,8 @@ class BottomBarController extends ChangeNotifier {
 
   /// Whether this controller is currently attached to a live [BottomBar].
   ///
-  /// [show], [hide], [toggle], [scrollToStart], and [scrollToEnd] are no-ops
-  /// when [isAttached] is `false`.
+  /// [show], [hide], [toggle], [reportScroll], [scrollToStart], and
+  /// [scrollToEnd] are no-ops when [isAttached] is `false`.
   bool get isAttached => _binding != null;
 
   /// Shows the bar, animating it into view if it is currently hidden.
