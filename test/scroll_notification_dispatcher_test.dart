@@ -284,6 +284,89 @@ void main() {
       expect(events, isEmpty);
     });
 
+    test('handleDelta absorbs deltas below threshold', () {
+      final events = <bool>[];
+      final dispatcher = ScrollNotificationDispatcher(
+        deltaThreshold: 50,
+        onShouldHide: events.add,
+      );
+
+      dispatcher.handleDelta(30);
+
+      expect(events, isEmpty);
+    });
+
+    test(
+      'handleDelta accumulates positive deltas until crossing the threshold',
+      () {
+        final events = <bool>[];
+        final dispatcher = ScrollNotificationDispatcher(
+          deltaThreshold: 8,
+          onShouldHide: events.add,
+        );
+
+        dispatcher.handleDelta(3);
+        dispatcher.handleDelta(3);
+        expect(events, isEmpty);
+
+        dispatcher.handleDelta(3);
+        expect(events, [isTrue]);
+      },
+    );
+
+    test('handleDelta emits show after a direction reversal crosses the '
+        'threshold', () {
+      final events = <bool>[];
+      final dispatcher = ScrollNotificationDispatcher(
+        deltaThreshold: 8,
+        onShouldHide: events.add,
+      );
+
+      dispatcher.handleDelta(20);
+      expect(events, [isTrue]);
+
+      dispatcher.handleDelta(-20);
+      expect(events, [isTrue, isFalse]);
+    });
+
+    test('handleDelta reverse=true inverts direction', () {
+      final events = <bool>[];
+      final dispatcher = ScrollNotificationDispatcher(
+        deltaThreshold: 8,
+        reverse: true,
+        onShouldHide: events.add,
+      );
+
+      dispatcher.handleDelta(20);
+
+      expect(events, [isFalse]);
+    });
+
+    test('handle and handleDelta track independent accumulators', () {
+      final events = <bool>[];
+      final dispatcher = ScrollNotificationDispatcher(
+        deltaThreshold: 8,
+        onShouldHide: events.add,
+      );
+      final context = _DummyBuildContext();
+
+      dispatcher.handle(
+        _FakeUpdate(depth: 0, axis: Axis.vertical, pixels: 0, context: context),
+      );
+      dispatcher.handle(
+        _FakeUpdate(depth: 0, axis: Axis.vertical, pixels: 6, context: context),
+      );
+      expect(events, isEmpty);
+
+      dispatcher.handleDelta(10);
+      expect(events, [isTrue]);
+
+      dispatcher.handle(
+        _FakeUpdate(depth: 0, axis: Axis.vertical, pixels: 8, context: context),
+      );
+      expect(events, [isTrue, isTrue]);
+    });
+
     test(
       'settling decisions reuse the predicate exactly once per notification',
       () {

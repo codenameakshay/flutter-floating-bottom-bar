@@ -152,6 +152,58 @@ void main() {
     expect(controller.isVisible, isFalse);
   });
 
+  testWidgets('reportScroll hides the bar like a body scroll would', (
+    tester,
+  ) async {
+    final controller = BottomBarController();
+    await tester.pumpWidget(buildHarness(controller: controller));
+    expect(controller.isVisible, isTrue);
+
+    controller.reportScroll(delta: 80);
+    await tester.pumpAndSettle();
+
+    expect(controller.isVisible, isFalse);
+  });
+
+  testWidgets('reportScroll shows the bar again on a negative delta', (
+    tester,
+  ) async {
+    final controller = BottomBarController();
+    await tester.pumpWidget(buildHarness(controller: controller));
+
+    controller.reportScroll(delta: 80);
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isFalse);
+
+    controller.reportScroll(delta: -80);
+    await tester.pumpAndSettle();
+
+    expect(controller.isVisible, isTrue);
+  });
+
+  testWidgets('reportScroll respects hideOnScroll: false', (tester) async {
+    final controller = BottomBarController();
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        scrollBehavior: const BottomBarScrollBehavior(hideOnScroll: false),
+      ),
+    );
+
+    controller.reportScroll(delta: 80);
+    await tester.pumpAndSettle();
+
+    expect(controller.isVisible, isTrue);
+  });
+
+  testWidgets('reportScroll on an unattached controller does not throw', (
+    tester,
+  ) async {
+    final controller = BottomBarController();
+
+    expect(() => controller.reportScroll(delta: 80), returnsNormally);
+  });
+
   testWidgets('showAtStart forces the bar visible at the top boundary', (
     tester,
   ) async {

@@ -8,6 +8,11 @@
   `Scaffold(resizeToAvoidBottomInset: false)`). No-op when insets are already
   zero, and does not affect `BottomBarScope.barHeight` or
   `BottomBarBodyPadding`.
+- `BottomBarController.reportScroll({required double delta})`: drives the
+  bar's threshold/reverse/`hideOnScroll` visibility rules from a scroll
+  source that never emits `ScrollNotification`s, such as an embedded WebView.
+  Visibility-only — it does not affect `scrollToStart()`/`scrollToEnd()`,
+  which still require a real `ScrollPosition`.
 
 ### Changed
 
@@ -27,6 +32,11 @@
 - `BottomBarLayout` and `BottomBarLayout.adaptive` now default
   `borderRadius` to 28 so passing `layout:` no longer squares the bar.
   Pass `BorderRadius.zero` to opt out.
+
+### Fixed
+
+- Hidden bar descendants are excluded from keyboard focus, so a `TextField`
+  in the floating child cannot be tab-focused while the bar is hidden.
 
 ## 2.1.0
 
