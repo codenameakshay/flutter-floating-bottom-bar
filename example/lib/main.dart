@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'demos/adaptive_navigation_demo.dart';
 import 'demos/ai_prompt_dock_demo.dart';
 import 'demos/badges_demo.dart';
 import 'demos/basic_demo.dart';
@@ -7,6 +8,8 @@ import 'demos/basic_tab_bar_demo.dart';
 import 'demos/custom_transition_demo.dart';
 import 'demos/issues_dock_demo.dart';
 import 'demos/nested_scroll_demo.dart';
+import 'demos/reader_demo.dart';
+import 'demos/scroll_under_demo.dart';
 
 void main() => runApp(const ExampleApp());
 
@@ -35,7 +38,10 @@ class _DemoPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     final demos = <(String, WidgetBuilder)>[
       ('Issues dock', (_) => const IssuesDockDemoPage()),
-      ('AI prompt dock', (_) => const AiPromptDockDemoPage()),
+      ('Composer', (_) => const AiPromptDockDemoPage()),
+      ('Reading controls', (_) => const ReaderDemoPage()),
+      ('Scroll under', (_) => const ScrollUnderDemoPage()),
+      ('Adaptive navigation', (_) => const AdaptiveNavigationDemoPage()),
       ('Basic TabBar', (_) => const BasicTabBarDemoPage()),
       ('Minimal API', (_) => const BasicDemoPage()),
       ('Nested scroll', (_) => const NestedScrollDemoPage()),
@@ -49,9 +55,9 @@ class _DemoPicker extends StatelessWidget {
           for (final (name, builder) in demos)
             ListTile(
               title: Text(name),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: builder),
-              ),
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: builder)),
             ),
         ],
       ),

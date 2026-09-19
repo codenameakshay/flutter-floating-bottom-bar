@@ -5,7 +5,10 @@ import 'package:flutter_floating_bottom_bar_example/main.dart';
 void main() {
   const demoNames = <String>[
     'Issues dock',
-    'AI prompt dock',
+    'Composer',
+    'Reading controls',
+    'Scroll under',
+    'Adaptive navigation',
     'Basic TabBar',
     'Minimal API',
     'Nested scroll',
@@ -31,8 +34,11 @@ void main() {
 
       tester.state<NavigatorState>(find.byType(Navigator)).pop();
       await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull,
-          reason: 'returning from $demoName');
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'returning from $demoName',
+      );
       expect(find.text('Demos'), findsOneWidget);
     }
   });
@@ -53,14 +59,14 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('AI prompt demo explains its empty state on phones', (
+  testWidgets('composer demo explains its empty state on phones', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(430, 932));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(const ExampleApp());
-    await tester.tap(find.text('AI prompt dock'));
+    await tester.tap(find.text('Composer'));
     await tester.pumpAndSettle();
 
     expect(find.text('Start with a prompt'), findsOneWidget);

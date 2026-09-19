@@ -1,5 +1,12 @@
 ## Unreleased
 
+### Added
+
+- Added five runnable recipes for contextual issue actions, a local composer,
+  reader controls, measured scroll-under padding, and adaptive navigation.
+- Added focus exclusion while the floating bar is hidden so hidden controls do
+  not remain keyboard reachable.
+
 ### Changed
 
 - Migrated from `package:flutter/material.dart` to the standalone

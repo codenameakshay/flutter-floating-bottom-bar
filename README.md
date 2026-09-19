@@ -23,9 +23,9 @@ surface, or any custom child.
   </a>
 </p>
 
-| ![Issues dock](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/1-issues-dock.gif) | ![AI prompt dock](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/2-ai-prompt-dock.gif) | ![Basic TabBar](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/3-basic-tab-bar.gif) |
+| ![Issues dock](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/1-issues-dock.gif) | ![Legacy prompt visual](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/2-ai-prompt-dock.gif) | ![Basic TabBar](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/3-basic-tab-bar.gif) |
 | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| **Issues dock**                                                                                                                 | **AI prompt dock**                                                                                                                    | **Basic TabBar**                                                                                                                    |
+| **Issues dock**                                                                                                                 | **Legacy prompt visual**                                                                                                              | **Basic TabBar**                                                                                                                    |
 | ![Minimal API](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/4-minimal-api.gif) | ![Nested scroll](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/5-nested-scroll.gif) | ![Badged nav](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/6-badged-nav.gif) |
 | **Minimal API**                                                                                                                 | **Nested scroll**                                                                                                                     | **Badged nav**                                                                                                                      |
 | ![Custom transition](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/7-custom-transition.gif) |                                                                                                                                       |                                                                                                                                     |
@@ -247,6 +247,25 @@ with built-in accessibility and RTL-aware badge placement.
   `tooltip`, otherwise descendant semantics.
 - When `semanticLabel` or `tooltip` provides the explicit accessible name,
   descendant semantics are excluded to avoid duplicate announcements.
+
+### Runnable recipe demos
+
+The example app includes five focused recipes with [source links in
+`EXAMPLES.md`](./EXAMPLES.md#recipe-demos):
+
+- [Contextual issue actions](./example/lib/demos/issues_dock_demo.dart) update
+  the dock from filters to selection actions using app state.
+- [Local composer](./example/lib/demos/ai_prompt_dock_demo.dart) keeps the
+  current draft and submitted transcript entries local; it has no AI response
+  engine.
+- [Reading controls](./example/lib/demos/reader_demo.dart) disables the
+  built-in hidden action and reveals the bar through `controller.show`.
+- [Scroll under](./example/lib/demos/scroll_under_demo.dart) reserves native
+  sliver space from the measured `BottomBarScope.barHeight`.
+- [Adaptive navigation](./example/lib/demos/adaptive_navigation_demo.dart)
+  uses a wrapping destination layout at standard text sizes and switches to
+  labeled rows for large text while preserving inherited text scaling and
+  selected destination state.
 
 ## Migration from v1.x
 

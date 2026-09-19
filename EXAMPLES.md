@@ -15,7 +15,7 @@ fvm flutter run
 Related runnable demo: `example/lib/demos/basic_demo.dart`.
 
 ```dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 
 class MinimalBottomBarExample extends StatelessWidget {
@@ -47,7 +47,7 @@ class MinimalBottomBarExample extends StatelessWidget {
 Related runnable demo: `example/lib/demos/badges_demo.dart`.
 
 ```dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 
 class BottomBarItemsExample extends StatefulWidget {
@@ -109,7 +109,7 @@ descendant semantics remain visible.
 Related runnable demo: `example/lib/demos/nested_scroll_demo.dart`.
 
 ```dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 
 class NestedScrollExample extends StatefulWidget {
@@ -170,7 +170,7 @@ class _NestedScrollExampleState extends State<NestedScrollExample> {
 Related runnable demo: `example/lib/demos/custom_transition_demo.dart`.
 
 ```dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 
 class CustomTransitionExample extends StatelessWidget {
@@ -211,12 +211,55 @@ class CustomTransitionExample extends StatelessWidget {
 `BottomBarMotion.motor(Motion.snappySpring())` does not require an extra import
 from `motor`.
 
+## Recipe demos
+
+These five runnable pages show the patterns that need a little more context
+than a short API snippet. Each link points to the source used by the example
+app.
+
+### Contextual issue actions
+
+[Issues dock source](example/lib/demos/issues_dock_demo.dart) keeps selection,
+filters, and the dock actions in the same app state. Selecting an issue changes
+the dock from filters to contextual archive and clear actions.
+
+### Local composer
+
+[Composer source](example/lib/demos/ai_prompt_dock_demo.dart) is a local draft
+and transcript example. It keeps the current draft in the composer and stores
+submitted text as local transcript entries; it has no AI response engine.
+
+### Reading controls
+
+[Reading controls source](example/lib/demos/reader_demo.dart) hides the built-in
+action with `showIcon: false` and calls `controller.show` from an explicit
+reading-controls button. This keeps the reveal action specific to the reader
+instead of presenting a generic scroll affordance.
+
+### Scroll under
+
+[Scroll under source](example/lib/demos/scroll_under_demo.dart) reads
+`BottomBarScope.of(context).barHeight` and feeds that measured value into the
+native `SliverPadding`. The measured footprint stays reserved while the bar is
+hidden, so the final row can scroll clear of the floating dock.
+
+### Adaptive navigation
+
+[Adaptive navigation source](example/lib/demos/adaptive_navigation_demo.dart)
+uses a wrapping destination layout at standard text sizes and switches to
+labeled rows for large text while preserving the inherited
+`MediaQuery.textScaler`. The selected destination is app state, and its content
+changes with the selected item.
+
 ## Demo index
 
 - `example/lib/demos/basic_demo.dart`
 - `example/lib/demos/basic_tab_bar_demo.dart`
 - `example/lib/demos/issues_dock_demo.dart`
 - `example/lib/demos/ai_prompt_dock_demo.dart`
+- `example/lib/demos/reader_demo.dart`
+- `example/lib/demos/scroll_under_demo.dart`
+- `example/lib/demos/adaptive_navigation_demo.dart`
 - `example/lib/demos/nested_scroll_demo.dart`
 - `example/lib/demos/badges_demo.dart`
 - `example/lib/demos/custom_transition_demo.dart`
@@ -235,7 +278,7 @@ Use these slugs so screenshots and docs stay aligned:
 | Demo | Slug |
 | --- | --- |
 | Issues dock | `1-issues-dock` |
-| AI prompt dock | `2-ai-prompt-dock` |
+| Legacy prompt visual | `2-ai-prompt-dock` |
 | Basic TabBar | `3-basic-tab-bar` |
 | Minimal API | `4-minimal-api` |
 | Nested scroll | `5-nested-scroll` |
