@@ -31,6 +31,8 @@ class ScrollNotificationDispatcher {
   final LinkedHashMap<int, _TrackedScrollState> _trackedScrollables =
       LinkedHashMap<int, _TrackedScrollState>();
 
+  _TrackedScrollState? _externalState;
+
   ScrollPosition? _lastActivePosition;
   ScrollPosition? get lastActivePosition => _lastActivePosition;
 
@@ -104,6 +106,29 @@ class ScrollNotificationDispatcher {
       return;
     }
 
+    _handlePixels(state, pixels);
+  }
+
+  /// Reports a scroll delta from a source that never emits
+  /// [ScrollNotification]s (e.g. an embedded WebView).
+  ///
+  /// [delta] is signed: positive moves toward the end (the usual hide
+  /// direction), negative moves toward the start (the usual show direction).
+  /// Applies the same [deltaThreshold]/[reverse] accumulation as [handle],
+  /// but tracks its own independent accumulator: it never runs [predicate],
+  /// never touches [lastActivePosition]/[lastActiveContext], and does not
+  /// share state with notification-tracked scrollables.
+  void handleDelta(double delta) {
+    if (delta == 0) return;
+
+    final state = _externalState ??= _TrackedScrollState(
+      anchorPixels: 0,
+      lastPixels: 0,
+    );
+    _handlePixels(state, state.lastPixels + delta);
+  }
+
+  void _handlePixels(_TrackedScrollState state, double pixels) {
     final delta = pixels - state.lastPixels;
     state.lastPixels = pixels;
     if (delta == 0) return;

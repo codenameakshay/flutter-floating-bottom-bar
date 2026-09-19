@@ -38,8 +38,8 @@ class BottomBarController extends ChangeNotifier {
 
   /// Whether this controller is currently attached to a live [BottomBar].
   ///
-  /// [show], [hide], [toggle], [scrollToStart], and [scrollToEnd] are no-ops
-  /// when [isAttached] is `false`.
+  /// [show], [hide], [toggle], [reportScroll], [scrollToStart], and
+  /// [scrollToEnd] are no-ops when [isAttached] is `false`.
   bool get isAttached => _binding != null;
 
   /// Shows the bar, animating it into view if it is currently hidden.
@@ -60,6 +60,24 @@ class BottomBarController extends ChangeNotifier {
       show();
     }
   }
+
+  /// Reports a scroll delta from a source that does not emit
+  /// [ScrollNotification]s, such as an embedded WebView.
+  ///
+  /// [delta] is signed: positive moves toward the end (the usual "hide"
+  /// direction), negative moves toward the start (the usual "show"
+  /// direction) — for example `newPixels - oldPixels` from the WebView's own
+  /// scroll callback. Drives the same threshold/reverse/
+  /// [BottomBarScrollBehavior.hideOnScroll] visibility rules as body
+  /// [ScrollNotification]s.
+  ///
+  /// This only affects visibility. It never affects [scrollToStart] or
+  /// [scrollToEnd], which require a real [ScrollPosition] to have been
+  /// observed via a [ScrollNotification] first.
+  ///
+  /// No-op if the controller is not attached.
+  void reportScroll({required double delta}) =>
+      _binding?.reportScroll(delta: delta);
 
   /// Animates the most-recently-active scrollable inside [BottomBar.body] to
   /// its [ScrollPosition.minScrollExtent] (i.e. the start/top boundary).
@@ -130,4 +148,5 @@ abstract class BottomBarBindingForController {
   bool get isVisible;
   void requestVisible(bool visible);
   Future<void> scrollToBoundary({required bool toEnd});
+  void reportScroll({required double delta});
 }
