@@ -18,6 +18,11 @@
   labels render. Exposed to `BottomBarItem` via the new public
   `BottomBarItemsScope` inherited widget; items outside a `BottomBarItems`
   row keep the `alwaysShow` default.
+- `BottomBarScrollBehavior.keepVisibleOnFocus` (default `true`): skips
+  scroll-driven hide while the floating `BottomBar.child` holds focus, so a
+  search field or composer in the bar isn't hidden mid-scroll while the user
+  is typing. `BottomBarController.hide()` still hides the bar regardless of
+  focus; the bar is not auto-shown on focus.
 
 ### Changed
 
