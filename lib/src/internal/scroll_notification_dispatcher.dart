@@ -106,23 +106,7 @@ class ScrollNotificationDispatcher {
       return;
     }
 
-    final delta = pixels - state.lastPixels;
-    state.lastPixels = pixels;
-    if (delta == 0) return;
-
-    final direction = delta.sign;
-    if (state.direction != direction) {
-      state
-        ..anchorPixels = state.lastPixels - delta
-        ..direction = direction;
-    }
-
-    final accumulatedDelta = pixels - state.anchorPixels;
-    if (accumulatedDelta.abs() < deltaThreshold) return;
-
-    final shouldHide = reverse ? accumulatedDelta < 0 : accumulatedDelta > 0;
-    state.anchorPixels = pixels;
-    onShouldHide(shouldHide);
+    _handlePixels(state, pixels);
   }
 
   /// Reports a scroll delta from a source that never emits
@@ -141,8 +125,13 @@ class ScrollNotificationDispatcher {
       anchorPixels: 0,
       lastPixels: 0,
     );
-    final pixels = state.lastPixels + delta;
+    _handlePixels(state, state.lastPixels + delta);
+  }
+
+  void _handlePixels(_TrackedScrollState state, double pixels) {
+    final delta = pixels - state.lastPixels;
     state.lastPixels = pixels;
+    if (delta == 0) return;
 
     final direction = delta.sign;
     if (state.direction != direction) {

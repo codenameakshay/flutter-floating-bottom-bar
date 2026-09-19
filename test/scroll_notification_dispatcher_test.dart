@@ -350,7 +350,6 @@ void main() {
       );
       final context = _DummyBuildContext();
 
-      // Notification-tracked scrollable accumulates 6 (below threshold).
       dispatcher.handle(
         _FakeUpdate(depth: 0, axis: Axis.vertical, pixels: 0, context: context),
       );
@@ -359,14 +358,9 @@ void main() {
       );
       expect(events, isEmpty);
 
-      // An external delta crossing the threshold on its own fires
-      // independently of the notification accumulator above.
       dispatcher.handleDelta(10);
       expect(events, [isTrue]);
 
-      // The notification accumulator is untouched by the external call: it
-      // still only needs 2 more pixels of movement to cross its own
-      // threshold.
       dispatcher.handle(
         _FakeUpdate(depth: 0, axis: Axis.vertical, pixels: 8, context: context),
       );
