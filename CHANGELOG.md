@@ -33,6 +33,11 @@
   `borderRadius` to 28 so passing `layout:` no longer squares the bar.
   Pass `BorderRadius.zero` to opt out.
 
+### Fixed
+
+- Hidden bar descendants are excluded from keyboard focus, so a `TextField`
+  in the floating child cannot be tab-focused while the bar is hidden.
+
 ## 2.1.0
 
 ### Added

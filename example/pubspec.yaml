@@ -13,7 +13,10 @@ dependencies:
   flutter_floating_bottom_bar:
     path: ../
 
-  material_ui: ^1.0.0
+  # Upper bounds mirror the parent package: material_ui 1.3.0 and
+  # cupertino_ui 1.1.0 need a newer Dart than Flutter 3.44.4 ships.
+  material_ui: ">=1.0.0 <1.3.0"
+  cupertino_ui: ">=1.0.0 <1.1.0"
 
 dev_dependencies:
   flutter_test:
