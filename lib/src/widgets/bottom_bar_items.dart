@@ -16,9 +16,11 @@ enum BottomBarLabelBehavior {
 /// A thin row layout helper for [BottomBarItem]s (or any other widgets).
 ///
 /// Arranges [children] horizontally with [spacing] as the main-axis alignment.
-/// Each child is wrapped in [Expanded], so all items share the available
-/// width equally — this keeps labels from overflowing the bar as the item
-/// count grows or text scales up. Designed to be passed as [BottomBar.child]:
+/// In bounded rows wide enough for each child's 48px minimum target, each
+/// child is wrapped in [Expanded] so all items share the available width
+/// equally. Narrow bounded rows use a horizontal [SingleChildScrollView] to
+/// preserve those targets. Unbounded rows keep their raw children. Designed
+/// to be passed as [BottomBar.child]:
 ///
 /// ```dart
 /// BottomBar(
@@ -45,9 +47,9 @@ class BottomBarItems extends StatelessWidget {
 
   /// Main-axis alignment applied to the [Row].
   ///
-  /// Defaults to [MainAxisAlignment.spaceAround]. Since every child is
-  /// wrapped in [Expanded], this only affects layout when [children] is
-  /// empty.
+  /// Defaults to [MainAxisAlignment.spaceAround]. In wide bounded rows, this
+  /// only affects layout when [children] is empty because each child is
+  /// expanded.
   final MainAxisAlignment spacing;
 
   /// Controls when descendant [BottomBarItem] labels are visible.
@@ -60,10 +62,25 @@ class BottomBarItems extends StatelessWidget {
   Widget build(BuildContext context) {
     return BottomBarItemsScope(
       labelBehavior: labelBehavior,
-      child: Row(
-        mainAxisAlignment: spacing,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [for (final child in children) Expanded(child: child)],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          Widget row(List<Widget> rowChildren) => Row(
+            mainAxisAlignment: spacing,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: rowChildren,
+          );
+
+          if (!constraints.hasBoundedWidth) {
+            return row(children);
+          }
+          if (constraints.maxWidth < children.length * 48) {
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: row(children),
+            );
+          }
+          return row([for (final child in children) Expanded(child: child)]);
+        },
       ),
     );
   }

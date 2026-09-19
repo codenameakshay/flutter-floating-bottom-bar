@@ -262,12 +262,13 @@ with built-in accessibility and RTL-aware badge placement.
   `tooltip`, otherwise descendant semantics.
 - When `semanticLabel` or `tooltip` provides the explicit accessible name,
   descendant semantics are excluded to avoid duplicate announcements.
-- `BottomBarItems` wraps every child in `Expanded`, so items always share the
-  row's width equally instead of overflowing as the item count grows or text
-  scales up.
+- In bounded rows wide enough for each item's 48x48 minimum target,
+  `BottomBarItems` wraps every child in `Expanded`, so items share the row's
+  width equally. Narrow bounded rows use a horizontal scroll view to preserve
+  the minimum targets; unbounded rows keep their raw children.
 - A `BottomBarItem`'s `Text` label (with non-null `data`) is truncated to a
-  single line with an ellipsis to fit that equal-width slot. `Text.rich` and
-  other label widgets are left untouched.
+  single line with an ellipsis. `Text.rich` and other label widgets are left
+  untouched.
 - `BottomBarItems.labelBehavior` (`BottomBarLabelBehavior.alwaysShow` by
   default) controls when descendant labels render: `alwaysShow`,
   `onlySelected`, or `alwaysHide`. An item used outside a `BottomBarItems`

@@ -44,9 +44,9 @@ class BottomBarItem extends StatelessWidget {
   ///
   /// Styled with `textTheme.labelSmall` tinted to [color] or [selectedColor].
   /// A `Text` label with non-null `data` is truncated to a single line with
-  /// an ellipsis, since items inside a [BottomBarItems] row share equal
-  /// width. Other widgets (including `Text.rich`) are left untouched. Label
-  /// visibility is controlled by the enclosing [BottomBarItems.labelBehavior].
+  /// an ellipsis. Other widgets (including `Text.rich`) are left untouched.
+  /// Label visibility is controlled by the enclosing
+  /// [BottomBarItems.labelBehavior].
   final Widget? label;
 
   /// Optional badge rendered in the top-end corner of the icon.
@@ -120,16 +120,31 @@ class BottomBarItem extends StatelessWidget {
     final currentLabel = label;
     Widget labelChild = currentLabel ?? const SizedBox.shrink();
     if (currentLabel is Text && currentLabel.data != null) {
-      // Ellipsize plain-text labels so they never overflow the equal-width
-      // slot Expanded gives each item inside a BottomBarItems row.
       labelChild = Text(
         currentLabel.data!,
+        key: currentLabel.key,
         style: currentLabel.style,
+        strutStyle: currentLabel.strutStyle,
+        textAlign: currentLabel.textAlign ?? TextAlign.center,
+        textDirection: currentLabel.textDirection,
+        locale: currentLabel.locale,
+        softWrap: currentLabel.softWrap,
+        textScaler: currentLabel.textScaler,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.center,
+        semanticsLabel: currentLabel.semanticsLabel,
+        semanticsIdentifier: currentLabel.semanticsIdentifier,
+        textWidthBasis: currentLabel.textWidthBasis,
+        textHeightBehavior: currentLabel.textHeightBehavior,
+        selectionColor: currentLabel.selectionColor,
       );
     }
+
+    final accessibleLabel =
+        explicitSemanticLabel ??
+        (!showLabel && currentLabel is Text && currentLabel.data != null
+            ? currentLabel.semanticsLabel ?? currentLabel.data
+            : null);
 
     final column = Column(
       mainAxisSize: MainAxisSize.min,
@@ -137,14 +152,19 @@ class BottomBarItem extends StatelessWidget {
         stack,
         if (currentLabel != null && showLabel) ...[
           const SizedBox(height: 2),
-          SizedBox(
-            width: double.infinity,
-            child: DefaultTextStyle(
-              style:
-                  (Theme.of(context).textTheme.labelSmall ?? const TextStyle())
-                      .copyWith(color: effectiveColor),
-              child: labelChild,
-            ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final text = DefaultTextStyle(
+                style:
+                    (Theme.of(context).textTheme.labelSmall ??
+                            const TextStyle())
+                        .copyWith(color: effectiveColor),
+                child: labelChild,
+              );
+              return constraints.hasBoundedWidth
+                  ? SizedBox(width: double.infinity, child: text)
+                  : text;
+            },
           ),
         ],
       ],
@@ -170,7 +190,7 @@ class BottomBarItem extends StatelessWidget {
       );
     }
 
-    if (explicitSemanticLabel != null) {
+    if (accessibleLabel != null) {
       child = ExcludeSemantics(child: child);
     }
 
@@ -178,8 +198,8 @@ class BottomBarItem extends StatelessWidget {
       button: true,
       enabled: onTap != null,
       selected: selected,
-      label: explicitSemanticLabel,
-      onTap: explicitSemanticLabel != null ? onTap : null,
+      label: accessibleLabel,
+      onTap: accessibleLabel != null ? onTap : null,
       child: child,
     );
   }

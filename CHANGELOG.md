@@ -26,11 +26,13 @@
 
 ### Changed
 
-- `BottomBarItems` now wraps every child in `Expanded`, so items share the
-  row's width equally instead of overflowing at higher item counts or larger
-  text scales. A `BottomBarItem`'s `Text` label (with non-null `data`) is
-  truncated to a single line with an ellipsis to fit; `Text.rich` and other
-  label widgets are unaffected.
+- In bounded rows wide enough for each item's 48x48 minimum target,
+  `BottomBarItems` wraps every child in `Expanded`, so items share the row's
+  width equally. Narrow bounded rows use a horizontal scroll view to preserve
+  the minimum targets; unbounded rows keep their raw children. A
+  `BottomBarItem`'s `Text` label (with non-null `data`) is truncated to a
+  single line with an ellipsis; `Text.rich` and other label widgets are
+  unaffected.
 
 - Migrated from `package:flutter/material.dart` to the standalone
   [`material_ui`](https://pub.dev/packages/material_ui) package. Material was
