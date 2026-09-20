@@ -20,10 +20,7 @@ class CustomTransitionDemoPage extends StatelessWidget {
             final value = anim.value.clamp(0.0, 1.0);
             return Opacity(
               opacity: value,
-              child: Transform.scale(
-                scale: 0.6 + 0.4 * value,
-                child: child,
-              ),
+              child: Transform.scale(scale: 0.6 + 0.4 * value, child: child),
             );
           },
         ),

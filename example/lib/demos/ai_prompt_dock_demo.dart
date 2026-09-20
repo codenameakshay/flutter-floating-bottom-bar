@@ -67,10 +67,7 @@ class AiPromptDockDemoPage extends StatelessWidget {
                     SizedBox(height: 6),
                     Text(
                       'Ask a question or imagine something new.',
-                      style: TextStyle(
-                        color: Color(0x99000000),
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: Color(0x99000000), fontSize: 14),
                     ),
                   ],
                 ),

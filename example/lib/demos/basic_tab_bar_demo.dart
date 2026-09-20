@@ -89,11 +89,8 @@ class _BasicTabBarDemoPageState extends State<BasicTabBarDemoPage>
           iconWidth: 34,
           iconHeight: 34,
         ),
-        icon: (width, height) => Icon(
-          Icons.arrow_upward_rounded,
-          color: foreground,
-          size: width,
-        ),
+        icon: (width, height) =>
+            Icon(Icons.arrow_upward_rounded, color: foreground, size: width),
         body: TabBarView(
           controller: _tabController,
           dragStartBehavior: DragStartBehavior.down,

@@ -31,8 +31,11 @@ void main() {
 
       tester.state<NavigatorState>(find.byType(Navigator)).pop();
       await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull,
-          reason: 'returning from $demoName');
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'returning from $demoName',
+      );
       expect(find.text('Demos'), findsOneWidget);
     }
   });

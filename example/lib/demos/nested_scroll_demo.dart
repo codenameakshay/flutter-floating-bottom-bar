@@ -29,7 +29,7 @@ class NestedScrollDemoPage extends StatelessWidget {
           ),
         ),
         body: NestedScrollView(
-          headerSliverBuilder: (_, __) => const [
+          headerSliverBuilder: (_, _) => const [
             SliverAppBar(
               expandedHeight: 200,
               pinned: true,
