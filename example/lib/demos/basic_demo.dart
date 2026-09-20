@@ -40,7 +40,7 @@ class BasicDemoPage extends StatelessWidget {
         body: ListView.separated(
           padding: const EdgeInsets.fromLTRB(28, 72, 28, 140),
           itemCount: 24,
-          separatorBuilder: (_, __) => const SizedBox(height: 18),
+          separatorBuilder: (_, _) => const SizedBox(height: 18),
           itemBuilder: (_, i) => _NoteTile(index: i),
         ),
         child: const Padding(

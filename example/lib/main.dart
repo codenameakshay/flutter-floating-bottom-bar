@@ -49,9 +49,9 @@ class _DemoPicker extends StatelessWidget {
           for (final (name, builder) in demos)
             ListTile(
               title: Text(name),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: builder),
-              ),
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: builder)),
             ),
         ],
       ),
