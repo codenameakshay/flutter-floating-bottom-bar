@@ -61,7 +61,7 @@ surface, or any custom child.
 
 Requires Dart `>=3.12.0` and Flutter `>=3.44.0`.
 
-See the [2.1.0 release notes](./CHANGELOG.md#210) for the complete list of new
+See the [3.0.0 release notes](./CHANGELOG.md#300) for the complete list of new
 layout, scrolling, accessibility, and reliability improvements.
 
 ```bash
@@ -77,11 +77,8 @@ import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 If you use [Claude Code](https://claude.ai/code), this repo ships a skill for
 integration, migration, and debugging help around this package.
 
-Install:
-
-```bash
-/install-skill https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/.claude/skills/flutter-floating-bottom-bar.skill
-```
+Install by copying [`.claude/skills/flutter-floating-bottom-bar/`](https://github.com/codenameakshay/flutter-floating-bottom-bar/tree/main/.claude/skills/flutter-floating-bottom-bar)
+into your Claude skills directory.
 
 ## Basic usage
 

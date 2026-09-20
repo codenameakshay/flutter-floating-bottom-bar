@@ -5,7 +5,7 @@ description: Integrate, replace, or migrate to the `flutter_floating_bottom_bar`
 
 # flutter_floating_bottom_bar integration & migration
 
-`flutter_floating_bottom_bar` (v2.x) is a Flutter package that floats any widget — `TabBar`, search bar, custom `Row`, `BottomBarItems` — above scrollable content and reacts to scroll notifications automatically. No `ScrollController` plumbing required.
+`flutter_floating_bottom_bar` (v3.x) is a Flutter package that floats any widget — `TabBar`, search bar, custom `Row`, `BottomBarItems` — above scrollable content and reacts to scroll notifications automatically. No `ScrollController` plumbing required.
 
 You're being invoked because the user wants to **integrate it into their app**, **replace an existing bottom bar**, **migrate from v1.x → v2.0**, **dial in motion that feels great**, or **fix a glitch**. Your job is to do the work end-to-end: read what they have, plan the change, apply it, and verify it analyses cleanly. Don't ask the user to write the code themselves — that's what they invoked you for.
 
@@ -27,7 +27,7 @@ Follow this sequence. Don't skip the discover step — applying a transformation
 
 Read what's actually in the user's project before touching anything.
 
-- **`pubspec.yaml`** — confirm `flutter_floating_bottom_bar` is (or isn't) listed; note any existing version. Also check Dart/Flutter SDK constraints — the package needs Dart `>=3.5.0` and Flutter `>=3.22.0`.
+- **`pubspec.yaml`** — confirm `flutter_floating_bottom_bar` is (or isn't) listed; note any existing version. Also check Dart/Flutter SDK constraints — the package needs Dart `>=3.12.0` and Flutter `>=3.44.0`.
 - **The file containing the bar they want to replace** — this is the load-bearing input. Identify the source pattern:
   - `BottomNavigationBar` (Material 2)
   - `NavigationBar` (Material 3)
@@ -59,7 +59,7 @@ Apply the transformation. Stick to these principles:
 - **Preserve their state management.** If they had `int _currentIndex` and `setState`, keep that. If they had Riverpod / Bloc / Provider, route the selection through the same channel — don't accidentally rewrite their state layer.
 - **Use the helper widgets when it fits.** `BottomBarItem` + `BottomBarItems` cover the icon + label + badge + tap pattern well. Don't reach for them when the user has a `TabBar`, search field, or anything more custom — pass the raw widget as `child` instead.
 - **Wrap, don't move.** The new `BottomBar` wraps the user's scrollable as its `body`. Don't push the scrollable into a new file or restructure the widget tree more than necessary.
-- **Add the import.** `import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';` at the top of the file. Update `pubspec.yaml` (`flutter pub add flutter_floating_bottom_bar` or a `^2.0.0` line) if the package isn't already a dependency.
+- **Add the import.** `import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';` at the top of the file. Update `pubspec.yaml` (`flutter pub add flutter_floating_bottom_bar` or a `^3.0.0` line) if the package isn't already a dependency.
 - **For migrations**, follow the v1→v2 mapping in [references/migration-v1-to-v2.md](references/migration-v1-to-v2.md) precisely. Don't half-migrate (mixing v1 `barColor` with v2 `BottomBarThemeData`).
 
 ### 4. Verify
