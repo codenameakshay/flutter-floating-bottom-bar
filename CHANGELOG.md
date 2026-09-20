@@ -1,5 +1,17 @@
 ## Unreleased
 
+## 3.0.0
+
+### Breaking
+
+- Requires Dart `>=3.12.0` and Flutter `>=3.44.0`.
+- Material imports now come from `package:material_ui/material_ui.dart`.
+  Apps still using the in-SDK Material must migrate their Material imports and
+  theme to `material_ui`; migrated apps no longer need
+  `MaterialUiCompatibilityBridge` for this package.
+- `BottomBarLayout` and `BottomBarLayout.adaptive` now default `borderRadius`
+  to 28. Pass `BorderRadius.zero` for a square bar.
+
 ### Added
 
 - `BottomBarLayout.avoidKeyboard` (default `true`): pads the bar and hidden
