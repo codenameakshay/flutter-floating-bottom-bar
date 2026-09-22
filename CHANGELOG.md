@@ -1,5 +1,8 @@
 ## Unreleased
 
+- Allow compatible 1.x releases of `material_ui` and `cupertino_ui`, including
+  their latest versions on Flutter 3.47, while retaining Flutter 3.44 support.
+
 ## 3.0.0
 
 ### Breaking

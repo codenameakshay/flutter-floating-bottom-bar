@@ -9,24 +9,28 @@ on:
 jobs:
   verify:
     runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        flutter: ['3.44.4', '3.47.0']
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up Flutter 3.44.4
+      - name: Set up Flutter ${{ matrix.flutter }}
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.44.4
+          flutter-version: ${{ matrix.flutter }}
           channel: stable
           cache: true
 
       - name: Install package dependencies
-        run: flutter pub get
+        run: flutter pub upgrade
 
       - name: Install example dependencies
         working-directory: example
-        run: flutter pub get
+        run: flutter pub upgrade
 
       - name: Run quality checks
         run: make check FLUTTER=flutter DART=dart

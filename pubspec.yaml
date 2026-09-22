@@ -11,11 +11,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  # Upper bounds are pinned because material_ui 1.3.0 and cupertino_ui 1.1.0
-  # use @awaitNotRequired, which the Dart shipped with Flutter 3.44.4
-  # cannot compile. Revert to open ranges after bumping past Flutter 3.44.
-  material_ui: ">=1.0.0 <1.3.0"
-  cupertino_ui: ">=1.0.0 <1.1.0"
+  material_ui: ^1.0.0
+  cupertino_ui: ^1.0.0
   motor: ^1.1.0
 
 dev_dependencies:
