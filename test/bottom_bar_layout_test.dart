@@ -275,10 +275,12 @@ void main() {
     await tester.pump(const Duration(milliseconds: 700));
 
     final iconTransform = tester.widget<Transform>(
-      find.ancestor(
-        of: findByTooltip('Scroll to top'),
-        matching: find.byType(Transform),
-      ),
+      find
+          .ancestor(
+            of: findByTooltip('Scroll to top'),
+            matching: find.byType(Transform),
+          )
+          .first,
     );
 
     expect(iconTransform.transform.getTranslation().y, iconOffset.dy);
@@ -303,6 +305,38 @@ void main() {
 
       expect(baseline - lifted, closeTo(300, 0.5));
     });
+
+    testWidgets(
+      'keeps a focused field in the bar alive as the keyboard opens',
+      (tester) async {
+        final focusNode = FocusNode();
+        addTearDown(focusNode.dispose);
+        final child = SizedBox(
+          key: const Key('bar-child'),
+          height: 56,
+          child: TextField(focusNode: focusNode),
+        );
+
+        await _pumpBottomBarWithViewInsets(
+          tester,
+          viewInsets: EdgeInsets.zero,
+          child: child,
+        );
+        await tester.tap(find.byType(TextField));
+        await tester.pump();
+        final editable = tester.state(find.byType(EditableText));
+        expect(focusNode.hasFocus, isTrue);
+
+        await _pumpBottomBarWithViewInsets(
+          tester,
+          viewInsets: const EdgeInsets.only(bottom: 300),
+          child: child,
+        );
+
+        expect(tester.state(find.byType(EditableText)), same(editable));
+        expect(focusNode.hasFocus, isTrue);
+      },
+    );
 
     testWidgets('avoidKeyboard: false does not lift the bar', (tester) async {
       const layout = BottomBarLayout(

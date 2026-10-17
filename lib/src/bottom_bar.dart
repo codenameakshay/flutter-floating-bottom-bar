@@ -481,13 +481,12 @@ class _BottomBarState extends State<BottomBar>
     }
     content = Align(alignment: l.alignment, child: content);
     if (l.avoidKeyboard) {
-      final inset = MediaQuery.viewInsetsOf(context).bottom;
-      if (inset > 0) {
-        content = Transform.translate(
-          offset: Offset(0, -inset),
-          child: content,
-        );
-      }
+      // Always wrap, even at zero inset: inserting the Transform only when the
+      // keyboard opens would remount the bar and drop a focused text field.
+      content = Transform.translate(
+        offset: Offset(0, -MediaQuery.viewInsetsOf(context).bottom),
+        child: content,
+      );
     }
     return content;
   }
