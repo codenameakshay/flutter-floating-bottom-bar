@@ -235,6 +235,41 @@ void main() {
     expect(controller.isVisible, isTrue);
   });
 
+  testWidgets(
+    'a fling back to the top keeps the bar visible after the bounce',
+    (tester) async {
+      final controller = BottomBarController();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BottomBar(
+              controller: controller,
+              body: ListView.builder(
+                physics: const BouncingScrollPhysics(),
+                itemCount: 200,
+                itemBuilder: (context, index) =>
+                    ListTile(title: Text('Item $index')),
+              ),
+              child: const SizedBox(height: 56),
+            ),
+          ),
+        ),
+      );
+      final list = find.byType(Scrollable).first;
+
+      await tester.drag(list, const Offset(0, -400));
+      await tester.pumpAndSettle();
+      expect(controller.isVisible, isFalse);
+
+      // Overshoots the top, then springs back down to it.
+      await tester.fling(list, const Offset(0, 600), 4000);
+      await tester.pumpAndSettle();
+
+      expect(tester.state<ScrollableState>(list).position.pixels, 0);
+      expect(controller.isVisible, isTrue);
+    },
+  );
+
   testWidgets('showOnScrollEnd forces the bar visible when scrolling settles', (
     tester,
   ) async {

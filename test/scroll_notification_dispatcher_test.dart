@@ -400,6 +400,67 @@ void main() {
         expect(events, isEmpty);
       },
     );
+
+    test('ignores the spring-back from overscroll at the start', () {
+      final events = <bool>[];
+      final dispatcher = ScrollNotificationDispatcher(onShouldHide: events.add);
+      final context = _DummyBuildContext();
+
+      for (final pixels in [300.0, 0.0, -60.0, -30.0, -8.0, 0.0]) {
+        dispatcher.handle(
+          _FakeUpdate(
+            depth: 0,
+            axis: Axis.vertical,
+            pixels: pixels,
+            context: context,
+          ),
+        );
+      }
+
+      expect(events, [isFalse]);
+    });
+
+    test('ignores the spring-back from overscroll at the end', () {
+      final events = <bool>[];
+      final dispatcher = ScrollNotificationDispatcher(onShouldHide: events.add);
+      final context = _DummyBuildContext();
+
+      for (final pixels in [700.0, 1000.0, 1060.0, 1030.0, 1008.0, 1000.0]) {
+        dispatcher.handle(
+          _FakeUpdate(
+            depth: 0,
+            axis: Axis.vertical,
+            pixels: pixels,
+            context: context,
+          ),
+        );
+      }
+
+      expect(events, [isTrue]);
+    });
+
+    test('shows the bar when scrolling comes to rest at the start', () {
+      final events = <bool>[];
+      final dispatcher = ScrollNotificationDispatcher(onShouldHide: events.add);
+
+      dispatcher.handle(_FakeEnd(axis: Axis.vertical, pixels: 120));
+      expect(events, isEmpty);
+
+      dispatcher.handle(_FakeEnd(axis: Axis.vertical, pixels: 0));
+      expect(events, [isFalse]);
+    });
+
+    test('reverse does not show the bar at rest at the start', () {
+      final events = <bool>[];
+      final dispatcher = ScrollNotificationDispatcher(
+        reverse: true,
+        onShouldHide: events.add,
+      );
+
+      dispatcher.handle(_FakeEnd(axis: Axis.vertical, pixels: 0));
+
+      expect(events, isEmpty);
+    });
   });
 }
 

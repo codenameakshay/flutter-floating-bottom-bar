@@ -62,8 +62,12 @@ class ScrollNotificationDispatcher {
     // to flip visibility.
     if (notification.metrics.axis != Axis.vertical) return;
 
+    final metrics = notification.metrics;
     if (notification is ScrollEndNotification) {
-      if (showOnScrollEnd) {
+      // Coming to rest at the start shows the bar, unless [reverse] makes
+      // scrolling toward the start the hide direction.
+      if (showOnScrollEnd ||
+          (!reverse && metrics.pixels <= metrics.minScrollExtent)) {
         onShouldHide(false);
       }
       return;
@@ -78,7 +82,12 @@ class ScrollNotificationDispatcher {
     _lastActivePosition = position;
     _lastActiveContext = notification.context;
     final key = _keyFor(notification, position);
-    final pixels = notification.metrics.pixels;
+    // Overscroll and its spring-back (BouncingScrollPhysics) aren't the user
+    // scrolling: pin tracking to the edge so the rebound off the top doesn't
+    // read as a scroll down.
+    final pixels = metrics.pixels
+        .clamp(metrics.minScrollExtent, metrics.maxScrollExtent)
+        .toDouble();
 
     // LRU touch.
     final state =

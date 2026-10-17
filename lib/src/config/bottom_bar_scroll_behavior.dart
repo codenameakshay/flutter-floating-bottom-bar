@@ -34,10 +34,14 @@ class BottomBarScrollBehavior {
   /// `ScrollNotification` is allowed to flip visibility. Suppresses jitter.
   final double deltaThreshold;
 
-  /// When true, reaching `minScrollExtent` forces the bar visible.
+  /// When true, reaching `minScrollExtent` forces the bar visible as soon as
+  /// it happens, even mid-scroll and even with [reverse].
   ///
-  /// This runs after [predicate] filtering and is useful when a screen should
-  /// always settle with the bar visible at the start boundary.
+  /// Without it, a scroll that comes to rest at the start still shows the
+  /// bar unless [reverse] is true. Overscroll past either end (and its
+  /// spring-back) never changes visibility.
+  ///
+  /// This runs after [predicate] filtering.
   final bool showAtStart;
 
   /// When true, [ScrollEndNotification] forces the bar visible.
