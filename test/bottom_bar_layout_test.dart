@@ -479,6 +479,16 @@ void main() {
           ),
         ),
       );
+      final shownRect = tester.getRect(find.byKey(barKey));
+      if (layout.alignment == Alignment.topCenter) {
+        expect(shownRect.top, closeTo(layout.offset, 0.5));
+      } else {
+        final bottomPadding = viewInsets.bottom > 0 ? 0 : 34;
+        expect(
+          shownRect.bottom,
+          closeTo(800 - layout.offset - bottomPadding - viewInsets.bottom, 0.5),
+        );
+      }
       controller.hide();
       await tester.pumpAndSettle();
       return controller;

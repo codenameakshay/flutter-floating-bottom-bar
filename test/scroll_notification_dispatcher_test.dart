@@ -393,7 +393,7 @@ void main() {
           ),
         );
         dispatcher.handle(
-          _FakeEnd(axis: Axis.vertical, pixels: 120, context: context),
+          _FakeEnd(axis: Axis.vertical, pixels: 0, context: context),
         );
 
         expect(predicateCalls, 2);
@@ -418,6 +418,66 @@ void main() {
       }
 
       expect(events, [isFalse]);
+    });
+
+    test('scroll start overscrolled at the top does not count spring-back', () {
+      final events = <bool>[];
+      final dispatcher = ScrollNotificationDispatcher(onShouldHide: events.add);
+      final context = _DummyBuildContext();
+
+      dispatcher.handle(
+        _FakeStart(axis: Axis.vertical, pixels: -60, context: context),
+      );
+      for (final pixels in [-30.0, -8.0, 0.0]) {
+        dispatcher.handle(
+          _FakeUpdate(
+            depth: 0,
+            axis: Axis.vertical,
+            pixels: pixels,
+            context: context,
+          ),
+        );
+      }
+
+      expect(events, isEmpty);
+
+      dispatcher.handle(
+        _FakeUpdate(
+          depth: 0,
+          axis: Axis.vertical,
+          pixels: 12,
+          context: context,
+        ),
+      );
+
+      expect(events, [isTrue]);
+    });
+
+    test('clamps updates when the scrollable has an infinite maximum', () {
+      final events = <bool>[];
+      final dispatcher = ScrollNotificationDispatcher(onShouldHide: events.add);
+      final context = _DummyBuildContext();
+
+      dispatcher.handle(
+        _FakeUpdate(
+          depth: 0,
+          axis: Axis.vertical,
+          pixels: 0,
+          context: context,
+          maxScrollExtent: double.infinity,
+        ),
+      );
+      dispatcher.handle(
+        _FakeUpdate(
+          depth: 0,
+          axis: Axis.vertical,
+          pixels: 100,
+          context: context,
+          maxScrollExtent: double.infinity,
+        ),
+      );
+
+      expect(events, [isTrue]);
     });
 
     test('ignores the spring-back from overscroll at the end', () {
@@ -461,12 +521,107 @@ void main() {
 
       expect(events, isEmpty);
     });
+
+    test('predicate can reject the default ScrollEnd-at-start show', () {
+      final events = <bool>[];
+      var predicateCalls = 0;
+      final dispatcher = ScrollNotificationDispatcher(
+        predicate: (_) {
+          predicateCalls += 1;
+          return false;
+        },
+        onShouldHide: events.add,
+      );
+
+      dispatcher.handle(_FakeEnd(axis: Axis.vertical, pixels: 0));
+
+      expect(predicateCalls, 1);
+      expect(events, isEmpty);
+    });
+
+    test('showAtStart remains active with reverse during top overscroll', () {
+      final events = <bool>[];
+      final dispatcher = ScrollNotificationDispatcher(
+        reverse: true,
+        showAtStart: true,
+        onShouldHide: events.add,
+      );
+
+      dispatcher.handle(_FakeStart(axis: Axis.vertical, pixels: -60));
+
+      expect(events, [isFalse]);
+    });
+
+    test('showAtStart reports visible while starting in top overscroll', () {
+      final events = <bool>[];
+      final dispatcher = ScrollNotificationDispatcher(
+        showAtStart: true,
+        onShouldHide: events.add,
+      );
+      final context = _DummyBuildContext();
+
+      dispatcher.handle(
+        _FakeStart(axis: Axis.vertical, pixels: -60, context: context),
+      );
+      for (final pixels in [-30.0, -8.0, 0.0]) {
+        dispatcher.handle(
+          _FakeUpdate(
+            depth: 0,
+            axis: Axis.vertical,
+            pixels: pixels,
+            context: context,
+          ),
+        );
+      }
+
+      // showAtStart intentionally reports show at the start edge, including
+      // during spring-back; the clamp prevents any intervening hide.
+      expect(events, [isFalse, isFalse, isFalse, isFalse]);
+    });
+
+    test(
+      'showOnScrollEnd takes precedence over reverse away from the start',
+      () {
+        final events = <bool>[];
+        final dispatcher = ScrollNotificationDispatcher(
+          reverse: true,
+          showOnScrollEnd: true,
+          onShouldHide: events.add,
+        );
+
+        dispatcher.handle(_FakeEnd(axis: Axis.vertical, pixels: 120));
+
+        expect(events, [isFalse]);
+      },
+    );
   });
 }
 
 class _FakeUpdate extends ScrollUpdateNotification {
   _FakeUpdate({
     required int depth,
+    required Axis axis,
+    required double pixels,
+    BuildContext? context,
+    double maxScrollExtent = 1000,
+  }) : super(
+         metrics: FixedScrollMetrics(
+           minScrollExtent: 0,
+           maxScrollExtent: maxScrollExtent,
+           pixels: pixels,
+           viewportDimension: 600,
+           axisDirection: axis == Axis.vertical
+               ? AxisDirection.down
+               : AxisDirection.right,
+           devicePixelRatio: 1.0,
+         ),
+         context: context ?? _DummyBuildContext(),
+         depth: depth,
+       );
+}
+
+class _FakeStart extends ScrollStartNotification {
+  _FakeStart({
     required Axis axis,
     required double pixels,
     BuildContext? context,
@@ -482,7 +637,6 @@ class _FakeUpdate extends ScrollUpdateNotification {
            devicePixelRatio: 1.0,
          ),
          context: context ?? _DummyBuildContext(),
-         depth: depth,
        );
 }
 
