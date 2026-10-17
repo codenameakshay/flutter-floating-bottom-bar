@@ -9,6 +9,13 @@
   dropped focus from text fields in `BottomBar.child` and closed the keyboard.
 - Fix the hidden action remounting on every hide/show, which reset state in
   a custom `icon`, and stop the action taking focus while the bar is visible.
+- Fix the hidden bar peeking above the screen edge when `layout.offset`, the
+  bottom safe area or the keyboard lift exceeded the slide distance. For
+  `BottomBarTransition.slide`, `slideStart` is now measured from the edge the
+  bar slides toward, so the default `Offset(0, 2)` always clears it.
+- Fix the bar hiding again after a fling to the top on bouncing scroll
+  physics: overscroll and its spring-back no longer count as scrolling, and a
+  scroll that comes to rest at the start shows the bar (unless `reverse`).
 
 ## 3.0.0
 
