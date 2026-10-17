@@ -2,6 +2,10 @@
 
 - Allow compatible 1.x releases of `material_ui` and `cupertino_ui`, including
   their latest versions on Flutter 3.47, while retaining Flutter 3.44 support.
+- Fix `BottomBarItem` growing to fill the screen height when used inside a
+  `BottomBar`, which turned `BottomBarItems` bars into full-height cards.
+- Fix `avoidKeyboard` remounting the bar when the keyboard opened, which
+  dropped focus from text fields in `BottomBar.child` and closed the keyboard.
 
 ## 3.0.0
 
