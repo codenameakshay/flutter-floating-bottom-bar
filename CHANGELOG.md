@@ -14,8 +14,7 @@
   `BottomBarTransition.slide`, `slideStart` is now measured from the edge the
   bar slides toward, so the default `Offset(0, 2)` always clears it.
   `slideAndFade` keeps its offset relative to the bar's resting position.
-- Keep accessibility bounds and tap targets aligned with a sliding bar during
-  its show animation.
+- Fix taps and accessibility bounds lagging behind a bar that is sliding in.
 - Fix the bar hiding again after a fling to the top on bouncing scroll
   physics: overscroll and its spring-back no longer count as scrolling, and a
   scroll that comes to rest at the start shows the bar (unless `reverse`).
