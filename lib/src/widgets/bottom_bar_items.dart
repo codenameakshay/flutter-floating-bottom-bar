@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+import '../internal/bottom_bar_item_height.dart';
+
 /// Controls when a [BottomBarItem]'s label is visible when it is placed
 /// inside a [BottomBarItems] row.
 enum BottomBarLabelBehavior {
@@ -64,6 +66,13 @@ class BottomBarItems extends StatelessWidget {
       labelBehavior: labelBehavior,
       child: LayoutBuilder(
         builder: (context, constraints) {
+          Widget withItemHeight(Widget child) => BottomBarItemHeightScope(
+            minHeight: constraints.hasTightHeight && constraints.maxHeight > 48
+                ? constraints.maxHeight
+                : 48,
+            child: child,
+          );
+
           Widget row(List<Widget> rowChildren) => Row(
             mainAxisAlignment: spacing,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -71,15 +80,19 @@ class BottomBarItems extends StatelessWidget {
           );
 
           if (!constraints.hasBoundedWidth) {
-            return row(children);
+            return withItemHeight(row(children));
           }
           if (constraints.maxWidth < children.length * 48) {
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: row(children),
+            return withItemHeight(
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: row(children),
+              ),
             );
           }
-          return row([for (final child in children) Expanded(child: child)]);
+          return withItemHeight(
+            row([for (final child in children) Expanded(child: child)]),
+          );
         },
       ),
     );

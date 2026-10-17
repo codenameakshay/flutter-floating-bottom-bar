@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+import 'package:flutter_floating_bottom_bar/src/internal/visibility_animator.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers/semantics.dart';
@@ -233,6 +234,41 @@ void main() {
 
     expect(controller.isVisible, isTrue);
   });
+
+  testWidgets(
+    'a fling back to the top keeps the bar visible after the bounce',
+    (tester) async {
+      final controller = BottomBarController();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BottomBar(
+              controller: controller,
+              body: ListView.builder(
+                physics: const BouncingScrollPhysics(),
+                itemCount: 200,
+                itemBuilder: (context, index) =>
+                    ListTile(title: Text('Item $index')),
+              ),
+              child: const SizedBox(height: 56),
+            ),
+          ),
+        ),
+      );
+      final list = find.byType(Scrollable).first;
+
+      await tester.drag(list, const Offset(0, -400));
+      await tester.pumpAndSettle();
+      expect(controller.isVisible, isFalse);
+
+      // Overshoots the top, then springs back down to it.
+      await tester.fling(list, const Offset(0, 600), 4000);
+      await tester.pumpAndSettle();
+
+      expect(tester.state<ScrollableState>(list).position.pixels, 0);
+      expect(controller.isVisible, isTrue);
+    },
+  );
 
   testWidgets('showOnScrollEnd forces the bar visible when scrolling settles', (
     tester,
@@ -1253,9 +1289,5 @@ void main() {
 Matcher morePreciselyEquals(double value) => closeTo(value, 0.5);
 
 double _barProgress(WidgetTester tester) {
-  final slide = tester
-      .widgetList<SlideTransition>(find.byType(SlideTransition))
-      .where((widget) => widget.child is Container)
-      .first;
-  return 1 - (slide.position.value.dy / 2);
+  return tester.widget<EdgeSlide>(find.byType(EdgeSlide)).progress;
 }

@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
-import 'package:flutter/semantics.dart';
+import 'package:flutter/rendering.dart';
 import 'package:motor/motor.dart';
 
 import 'bottom_bar_controller.dart';
@@ -175,6 +175,7 @@ class _BottomBarState extends State<BottomBar>
     debugLabel: 'BottomBar child',
     canRequestFocus: false,
   );
+  final GlobalKey _barRenderKey = GlobalKey();
 
   bool _targetVisible = true;
   BottomBarLayout _effectiveLayout(BottomBarThemeData theme) {
@@ -424,6 +425,24 @@ class _BottomBarState extends State<BottomBar>
   Widget build(BuildContext context) {
     final theme = _resolvedTheme(context);
     final l = _effectiveLayout(theme);
+    final slideOutsideLayout =
+        _motion.transition == BottomBarTransition.slide &&
+        _motion.transitionBuilder == null;
+
+    Widget bar = _wrapWithSafeArea(
+      l,
+      onSizeChanged: _handleBarFootprintChanged,
+      child: _buildBottomBar(theme, l, animate: !slideOutsideLayout),
+    );
+    if (slideOutsideLayout) {
+      bar = VisibilityAnimator(
+        animation: _motionController,
+        isVisible: _targetVisible,
+        motion: _motion,
+        slideTargetResolver: _resolveBarRenderBox,
+        child: bar,
+      );
+    }
 
     return Stack(
       fit: l.fit,
@@ -444,11 +463,7 @@ class _BottomBarState extends State<BottomBar>
             translate: l.iconOffset,
             child: _buildIcon(theme),
           ),
-        _wrapWithSafeArea(
-          l,
-          onSizeChanged: _handleBarFootprintChanged,
-          child: _buildBottomBar(theme, l),
-        ),
+        bar,
       ],
     );
   }
@@ -481,13 +496,12 @@ class _BottomBarState extends State<BottomBar>
     }
     content = Align(alignment: l.alignment, child: content);
     if (l.avoidKeyboard) {
-      final inset = MediaQuery.viewInsetsOf(context).bottom;
-      if (inset > 0) {
-        content = Transform.translate(
-          offset: Offset(0, -inset),
-          child: content,
-        );
-      }
+      // Always wrap, even at zero inset: inserting the Transform only when the
+      // keyboard opens would remount the bar and drop a focused text field.
+      content = Transform.translate(
+        offset: Offset(0, -MediaQuery.viewInsetsOf(context).bottom),
+        child: content,
+      );
     }
     return content;
   }
@@ -558,22 +572,34 @@ class _BottomBarState extends State<BottomBar>
     );
   }
 
-  Widget _buildBottomBar(BottomBarThemeData theme, BottomBarLayout l) {
+  RenderBox? _resolveBarRenderBox() {
+    final renderObject = _barRenderKey.currentContext?.findRenderObject();
+    return renderObject is RenderBox ? renderObject : null;
+  }
+
+  Widget _buildBottomBar(
+    BottomBarThemeData theme,
+    BottomBarLayout l, {
+    required bool animate,
+  }) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final bar = Container(
+          key: _barRenderKey,
+          width: _effectiveBarWidth(constraints, l),
+          decoration: _effectiveBarDecoration(theme, l),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: _effectiveBarBorderRadius(theme, l),
+            child: Focus(focusNode: _barFocusNode, child: widget.child),
+          ),
+        );
+        if (!animate) return bar;
         return VisibilityAnimator(
           animation: _motionController,
           isVisible: _targetVisible,
           motion: _motion,
-          child: Container(
-            width: _effectiveBarWidth(constraints, l),
-            decoration: _effectiveBarDecoration(theme, l),
-            child: Material(
-              color: Colors.transparent,
-              borderRadius: _effectiveBarBorderRadius(theme, l),
-              child: Focus(focusNode: _barFocusNode, child: widget.child),
-            ),
-          ),
+          child: bar,
         );
       },
     );

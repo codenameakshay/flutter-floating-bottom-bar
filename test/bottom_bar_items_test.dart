@@ -196,6 +196,33 @@ void main() {
       expect(size.height, greaterThanOrEqualTo(48));
     });
 
+    testWidgets('sizes to its content inside a floating BottomBar', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BottomBar(
+              body: const SizedBox.expand(),
+              child: BottomBarItems(
+                children: [
+                  BottomBarItem(
+                    icon: const Icon(Icons.home),
+                    label: const Text('Home'),
+                  ),
+                  BottomBarItem(icon: const Icon(Icons.inbox)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final size = tester.getSize(find.byType(BottomBarItem).first);
+      expect(size.height, greaterThanOrEqualTo(48));
+      expect(size.height, lessThan(100));
+    });
+
     testWidgets('onTap fires on tap', (tester) async {
       var taps = 0;
       await tester.pumpWidget(
@@ -271,6 +298,280 @@ void main() {
   });
 
   group('BottomBarItems overflow safety', () {
+    testWidgets('fixed-height rows preserve the full item hit area', (
+      tester,
+    ) async {
+      for (final behavior in BottomBarLabelBehavior.values) {
+        var taps = 0;
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 300,
+                height: 80,
+                child: BottomBarItems(
+                  labelBehavior: behavior,
+                  children: [
+                    BottomBarItem(
+                      icon: const Icon(Icons.home),
+                      label: const Text('Home'),
+                      selected: true,
+                      onTap: () => taps++,
+                    ),
+                    BottomBarItem(
+                      icon: const Icon(Icons.search),
+                      label: const Text('Search'),
+                      onTap: () => taps++,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+
+        final itemRects = tester
+            .widgetList<InkWell>(find.byType(InkWell))
+            .map((inkWell) => tester.getRect(find.byWidget(inkWell)))
+            .toList();
+        expect(itemRects, hasLength(2));
+        for (final rect in itemRects) {
+          expect(rect.height, 80);
+          expect(rect.width, 150);
+          await tester.tapAt(Offset(rect.center.dx, rect.top + 1));
+          await tester.tapAt(Offset(rect.center.dx, rect.bottom - 1));
+          await tester.tapAt(Offset(rect.left + 1, rect.center.dy));
+          await tester.tapAt(Offset(rect.right - 1, rect.center.dy));
+        }
+        expect(taps, 8);
+      }
+    });
+
+    testWidgets('fixed-height rows keep arbitrary children centered', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 300,
+              height: 80,
+              child: BottomBarItems(
+                children: [
+                  SizedBox(
+                    key: const Key('small-child'),
+                    width: 20,
+                    height: 20,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final rect = tester.getRect(find.byKey(const Key('small-child')));
+      expect(rect.size, const Size(300, 20));
+      expect(rect.center.dx, 150);
+      expect(rect.center.dy, 40);
+    });
+
+    testWidgets('fixed-height rows size wrapped BottomBarItems', (
+      tester,
+    ) async {
+      var taps = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 300,
+              height: 80,
+              child: BottomBarItems(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: BottomBarItem(
+                      icon: const Icon(Icons.home),
+                      onTap: () => taps++,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final slot = tester.getRect(find.byType(Padding).first);
+      final item = tester.getRect(find.byType(InkWell));
+      expect(slot.height, 80);
+      expect(item.height, 72);
+      await tester.tapAt(Offset(item.center.dx, item.top + 1));
+      expect(taps, 1);
+    });
+
+    testWidgets('item height follows a tight-to-loose parent change', (
+      tester,
+    ) async {
+      Widget build({required bool tight}) => MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 300,
+            height: tight ? 80 : null,
+            child: const BottomBarItems(
+              children: [BottomBarItem(icon: Icon(Icons.home))],
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(build(tight: true));
+      expect(tester.getSize(find.byType(InkWell)).height, 80);
+
+      await tester.pumpWidget(build(tight: false));
+      final height = tester.getSize(find.byType(InkWell)).height;
+      expect(height, greaterThanOrEqualTo(48));
+      expect(height, lessThan(80));
+    });
+
+    testWidgets('fixed-height narrow rows scroll in RTL with full hit areas', (
+      tester,
+    ) async {
+      var tappedIndex = -1;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Directionality(
+              textDirection: TextDirection.rtl,
+              child: SizedBox(
+                width: 100,
+                height: 80,
+                child: BottomBarItems(
+                  children: List.generate(
+                    3,
+                    (index) => BottomBarItem(
+                      icon: const Icon(Icons.home),
+                      onTap: () => tappedIndex = index,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(SingleChildScrollView), findsOneWidget);
+      var rects = tester
+          .widgetList<InkWell>(find.byType(InkWell))
+          .map((inkWell) => tester.getRect(find.byWidget(inkWell)))
+          .toList();
+      expect(rects, hasLength(3));
+      expect(rects[0].center.dx, greaterThan(rects[1].center.dx));
+      for (final rect in rects) {
+        expect(rect.height, 80);
+        expect(rect.width, greaterThanOrEqualTo(48));
+      }
+      await tester.tapAt(Offset(rects[0].center.dx, rects[0].center.dy));
+      expect(tappedIndex, 0);
+
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(80, 0),
+      );
+      await tester.pumpAndSettle();
+      rects = tester
+          .widgetList<InkWell>(find.byType(InkWell))
+          .map((inkWell) => tester.getRect(find.byWidget(inkWell)))
+          .toList();
+      expect(rects[2].left, greaterThanOrEqualTo(0));
+      expect(rects[2].right, lessThanOrEqualTo(100));
+      await tester.tapAt(Offset(rects[2].center.dx, rects[2].top + 1));
+      expect(tappedIndex, 2);
+    });
+
+    testWidgets('fixed-height unbounded rows stretch items across the slot', (
+      tester,
+    ) async {
+      var taps = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              height: 80,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: BottomBarItems(
+                  children: [
+                    BottomBarItem(
+                      icon: const Icon(Icons.home),
+                      onTap: () => taps++,
+                    ),
+                    BottomBarItem(
+                      icon: const Icon(Icons.search),
+                      onTap: () => taps++,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(Expanded), findsNothing);
+      final itemRects = tester
+          .widgetList<InkWell>(find.byType(InkWell))
+          .map((inkWell) => tester.getRect(find.byWidget(inkWell)))
+          .toList();
+      expect(itemRects, hasLength(2));
+      for (final rect in itemRects) {
+        expect(rect.height, 80);
+        await tester.tapAt(Offset(rect.center.dx, rect.top + 1));
+        await tester.tapAt(Offset(rect.center.dx, rect.bottom - 1));
+      }
+      expect(taps, 4);
+    });
+
+    testWidgets('loose-height rows remain content-tall for every label mode', (
+      tester,
+    ) async {
+      for (final behavior in BottomBarLabelBehavior.values) {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 300,
+                child: BottomBarItems(
+                  labelBehavior: behavior,
+                  children: [
+                    BottomBarItem(
+                      icon: const Icon(Icons.home),
+                      label: const Text('Home'),
+                      selected: true,
+                    ),
+                    BottomBarItem(
+                      icon: const Icon(Icons.search),
+                      label: const Text('Search'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+
+        for (final item in tester.widgetList<BottomBarItem>(
+          find.byType(BottomBarItem),
+        )) {
+          final size = tester.getSize(find.byWidget(item));
+          expect(size.height, greaterThanOrEqualTo(48));
+          expect(size.height, lessThan(100));
+        }
+      }
+    });
+
     testWidgets(
       'wraps items in Expanded and ellipsizes labels instead of overflowing',
       (tester) async {
