@@ -4,12 +4,11 @@
   their latest versions on Flutter 3.47, while retaining Flutter 3.44 support.
 - Fix `BottomBarItem` growing to fill the screen height when used inside a
   `BottomBar`, which turned `BottomBarItems` bars into full-height cards.
+  Items in an explicitly sized `BottomBarItems` row still fill its height.
 - Fix `avoidKeyboard` remounting the bar when the keyboard opened, which
   dropped focus from text fields in `BottomBar.child` and closed the keyboard.
-- Preserve full-height tap areas for `BottomBarItems` in explicitly sized
-  rows while keeping default floating bars content-sized.
-- Preserve custom hidden-action state across hide/show scrolling and prevent
-  the disabled action from receiving focus.
+- Fix the hidden action remounting on every hide/show, which reset state in
+  a custom `icon`, and stop the action taking focus while the bar is visible.
 
 ## 3.0.0
 
