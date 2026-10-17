@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../internal/bottom_bar_item_height.dart';
 import 'bottom_bar_items.dart';
 
 /// A simple, opinionated nav-item widget for use inside [BottomBar.child].
@@ -102,6 +103,7 @@ class BottomBarItem extends StatelessWidget {
         ? (selectedColor ?? cs.primary)
         : (color ?? cs.onSurfaceVariant);
     final explicitSemanticLabel = semanticLabel ?? tooltip;
+    final minHeight = BottomBarItemHeightScope.maybeOf(context) ?? 48;
 
     final iconWidget = selected ? (selectedIcon ?? icon) : icon;
 
@@ -174,7 +176,7 @@ class BottomBarItem extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+        constraints: BoxConstraints(minWidth: 48, minHeight: minHeight),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           // heightFactor keeps the item content-tall when the bar hands it

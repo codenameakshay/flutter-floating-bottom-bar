@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:material_ui/material_ui.dart';
 
 /// Internal back action with a stable hit target and animated visual child.
-class BottomBarAction extends StatelessWidget {
+class BottomBarAction extends StatefulWidget {
   const BottomBarAction({
     super.key,
     required this.animation,
@@ -28,23 +28,36 @@ class BottomBarAction extends StatelessWidget {
   final Widget Function(double width, double height) visualBuilder;
 
   @override
+  State<BottomBarAction> createState() => _BottomBarActionState();
+}
+
+class _BottomBarActionState extends State<BottomBarAction> {
+  final _actionSubtreeKey = GlobalKey();
+
+  @override
   Widget build(BuildContext context) {
-    final targetExtent = math.max(48.0, math.max(visualWidth, visualHeight));
+    final targetExtent = math.max(
+      48.0,
+      math.max(widget.visualWidth, widget.visualHeight),
+    );
 
     Widget child = SizedBox(
+      // TooltipVisibility changes Material's internal RawTooltip ancestry.
+      // Preserve this subtree across that wrapper transition.
+      key: _actionSubtreeKey,
       width: targetExtent,
       height: targetExtent,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: enabled ? onTap : null,
+          onTap: widget.enabled ? widget.onTap : null,
           child: Center(
             child: AnimatedBuilder(
-              animation: animation,
+              animation: widget.animation,
               builder: (context, _) {
-                final progress = animation.value.clamp(0.0, 1.0);
-                final width = visualWidth * progress;
-                final height = visualHeight * progress;
+                final progress = widget.animation.value.clamp(0.0, 1.0);
+                final width = widget.visualWidth * progress;
+                final height = widget.visualHeight * progress;
                 return Opacity(
                   opacity: progress,
                   child: SizedBox(
@@ -52,8 +65,8 @@ class BottomBarAction extends StatelessWidget {
                     height: height,
                     child: ClipOval(
                       child: DecoratedBox(
-                        decoration: decoration,
-                        child: visualBuilder(width, height),
+                        decoration: widget.decoration,
+                        child: widget.visualBuilder(width, height),
                       ),
                     ),
                   ),
@@ -65,16 +78,25 @@ class BottomBarAction extends StatelessWidget {
       ),
     );
 
-    if (!enabled) {
-      return IgnorePointer(child: ExcludeSemantics(child: child));
-    }
-    return Semantics(
-      button: true,
-      label: semanticLabel,
-      child: Tooltip(
-        excludeFromSemantics: true,
-        message: tooltip,
-        child: child,
+    return ExcludeFocus(
+      excluding: !widget.enabled,
+      child: IgnorePointer(
+        ignoring: !widget.enabled,
+        child: ExcludeSemantics(
+          excluding: !widget.enabled,
+          child: Semantics(
+            button: true,
+            label: widget.semanticLabel,
+            child: TooltipVisibility(
+              visible: widget.enabled && TooltipVisibility.of(context),
+              child: Tooltip(
+                excludeFromSemantics: true,
+                message: widget.tooltip,
+                child: child,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

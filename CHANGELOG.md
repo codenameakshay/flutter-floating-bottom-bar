@@ -6,6 +6,10 @@
   `BottomBar`, which turned `BottomBarItems` bars into full-height cards.
 - Fix `avoidKeyboard` remounting the bar when the keyboard opened, which
   dropped focus from text fields in `BottomBar.child` and closed the keyboard.
+- Preserve full-height tap areas for `BottomBarItems` in explicitly sized
+  rows while keeping default floating bars content-sized.
+- Preserve custom hidden-action state across hide/show scrolling and prevent
+  the disabled action from receiving focus.
 
 ## 3.0.0
 
