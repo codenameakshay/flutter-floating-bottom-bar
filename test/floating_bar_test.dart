@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+import 'package:flutter_floating_bottom_bar/src/internal/visibility_animator.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers/semantics.dart';
@@ -1253,9 +1254,5 @@ void main() {
 Matcher morePreciselyEquals(double value) => closeTo(value, 0.5);
 
 double _barProgress(WidgetTester tester) {
-  final slide = tester
-      .widgetList<SlideTransition>(find.byType(SlideTransition))
-      .where((widget) => widget.child is Container)
-      .first;
-  return 1 - (slide.position.value.dy / 2);
+  return tester.widget<EdgeSlide>(find.byType(EdgeSlide)).progress;
 }

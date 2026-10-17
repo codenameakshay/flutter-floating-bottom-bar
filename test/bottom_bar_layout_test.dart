@@ -444,6 +444,76 @@ void main() {
       expect(baseline - lifted, closeTo(300, 0.5));
     });
   });
+
+  group('hidden slide', () {
+    const barKey = Key('bar-child');
+
+    Future<BottomBarController> pumpAndHide(
+      WidgetTester tester, {
+      BottomBarLayout layout = const BottomBarLayout(offset: 32),
+      BottomBarMotion motion = const BottomBarMotion(),
+      EdgeInsets viewInsets = EdgeInsets.zero,
+    }) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final controller = BottomBarController();
+      await tester.pumpWidget(
+        MediaQuery(
+          data: MediaQueryData(
+            size: const Size(400, 800),
+            padding: EdgeInsets.only(bottom: viewInsets.bottom > 0 ? 0 : 34),
+            viewInsets: viewInsets,
+          ),
+          child: MaterialApp(
+            home: Scaffold(
+              resizeToAvoidBottomInset: false,
+              body: BottomBar(
+                controller: controller,
+                layout: layout,
+                motion: motion,
+                body: const SizedBox.expand(),
+                child: const SizedBox(key: barKey, height: 54),
+              ),
+            ),
+          ),
+        ),
+      );
+      controller.hide();
+      await tester.pumpAndSettle();
+      return controller;
+    }
+
+    testWidgets('clears the bottom edge past offset and safe area', (
+      tester,
+    ) async {
+      await pumpAndHide(tester);
+
+      // Default slideStart (0, 2): one bar height of clearance past the edge.
+      expect(tester.getRect(find.byKey(barKey)).top, closeTo(800 + 54, 0.5));
+    });
+
+    testWidgets('clears the bottom edge from above the keyboard', (
+      tester,
+    ) async {
+      await pumpAndHide(tester, viewInsets: const EdgeInsets.only(bottom: 300));
+
+      expect(tester.getRect(find.byKey(barKey)).top, closeTo(800 + 54, 0.5));
+    });
+
+    testWidgets('clears the top edge when sliding up', (tester) async {
+      await pumpAndHide(
+        tester,
+        layout: const BottomBarLayout(
+          offset: 32,
+          alignment: Alignment.topCenter,
+        ),
+        motion: const BottomBarMotion(slideStart: Offset(0, -2)),
+      );
+
+      expect(tester.getRect(find.byKey(barKey)).bottom, closeTo(-54, 0.5));
+    });
+  });
 }
 
 Future<void> _pumpBottomBarWithViewInsets(

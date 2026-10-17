@@ -219,8 +219,15 @@ class BottomBarMotion {
   transitionBuilder;
 
   /// Slide source offset (used by `BottomBarTransition.slide` and
-  /// `BottomBarTransition.slideAndFade`). Expressed in the same units as
-  /// `SlideTransition.position` — multiples of the child size.
+  /// `BottomBarTransition.slideAndFade`), in multiples of the bar's size.
+  ///
+  /// For `slide`, it is measured from where the bar sits flush against the
+  /// edge of the [BottomBar] it slides toward, so `Offset(0, 1)` hides the
+  /// bar exactly and the default `Offset(0, 2)` leaves one bar height of
+  /// clearance (room for shadows or children painted outside the bar),
+  /// whatever the layout offset, safe-area padding or keyboard lift.
+  /// For `slideAndFade` it is measured from the bar's resting position, as
+  /// in `SlideTransition.position`, since the fade already hides the bar.
   final Offset slideStart;
 
   /// Slide rest offset (the visible position).
