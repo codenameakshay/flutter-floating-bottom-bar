@@ -335,8 +335,8 @@ removes an existing cap.
 | `cupertinoPreset` | `BottomBarCupertinoMotion` | `snappy` | Default Cupertino preset. |
 | `transition` | `BottomBarTransition` | `slide` | Built-in transition when `transitionBuilder` is null. |
 | `transitionBuilder` | `Widget Function(BuildContext, Animation<double>, Widget)?` | `null` | Overrides the enum. Must preserve layout footprint and stay paint-only. |
-| `slideStart` | `Offset` | `Offset(0, 2)` | Hidden offset for `slide` and `slideAndFade`, in bar sizes. For `slide` it is measured from the edge the bar slides toward, so `Offset(0, 1)` just hides the bar. |
-| `slideEnd` | `Offset` | `Offset.zero` | Visible offset for `slide` and `slideAndFade`. |
+| `slideStart` | `Offset` | `Offset(0, 2)` | Hidden offset in bar sizes. For `slide`, measured from the owning `BottomBar` edge the bar slides toward, so `Offset(0, 1)` just hides the bar. For `slideAndFade`, measured from the bar's resting position. |
+| `slideEnd` | `Offset` | `Offset.zero` | Visible offset for `slide` and `slideAndFade`, in bar sizes from the resting position. |
 
 Reduced-motion environments snap to the target shown/hidden state instead of
 animating.
@@ -364,6 +364,9 @@ animating.
 | `scrollToStart()` | Always scrolls the last active scrollable to its minimum extent. |
 | `scrollToEnd()` | Always scrolls the last active scrollable to its maximum extent. |
 | `reportScroll(delta: ...)` | Drives visibility from a source that doesn't emit `ScrollNotification`s (e.g. WebView). Visibility only; doesn't affect `scrollToStart`/`scrollToEnd`. |
+
+`hide()` does not lock visibility. Later accepted scroll notifications can show
+the bar again, including when scrolling settles at the start unless `reverse`.
 
 A controller can own only one live bar at a time. Double-attach fails in both
 debug and release, and visibility updates are accepted only from the owning bar

@@ -38,8 +38,9 @@ class BottomBarScrollBehavior {
   /// it happens, even mid-scroll and even with [reverse].
   ///
   /// Without it, a scroll that comes to rest at the start still shows the
-  /// bar unless [reverse] is true. Overscroll past either end (and its
-  /// spring-back) never changes visibility.
+  /// bar unless [reverse] is true. Direction tracking ignores overscroll
+  /// past either end and its spring-back. [showAtStart] still forces the
+  /// bar visible at or beyond the start.
   ///
   /// This runs after [predicate] filtering.
   final bool showAtStart;

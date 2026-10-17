@@ -15,12 +15,14 @@ class VisibilityAnimator extends StatelessWidget {
     required this.isVisible,
     required this.motion,
     required this.child,
+    this.slideTargetResolver,
   });
 
   final Animation<double> animation;
   final bool isVisible;
   final BottomBarMotion motion;
   final Widget child;
+  final RenderBox? Function()? slideTargetResolver;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +48,7 @@ class VisibilityAnimator extends StatelessWidget {
               start: motion.slideStart,
               end: motion.slideEnd,
               progress: animation.value,
+              targetResolver: slideTargetResolver,
               child: child,
             ),
           ),
@@ -98,18 +101,18 @@ class _ClampedAnimation extends Animation<double>
 }
 
 /// Slides [child] from [start] (hidden, at [progress] 0) to [end] (shown, at
-/// [progress] 1), in multiples of the child's size.
+/// [progress] 1), in multiples of the resolved target's size.
 ///
-/// [start] is measured from where the child sits flush against the edge of
-/// the enclosing [BottomBar] stack that it moves toward, so `Offset(0, 1)`
-/// hides it fully whatever layout offset, safe-area padding or keyboard lift
-/// sits between the bar and that edge.
+/// When [targetResolver] is supplied, it identifies the visual bar inside the
+/// larger layout child. This keeps its layout footprint stable while the
+/// entire subtree is translated for paint and hit testing.
 class EdgeSlide extends SingleChildRenderObjectWidget {
   const EdgeSlide({
     super.key,
     required this.start,
     required this.end,
     required this.progress,
+    this.targetResolver,
     super.child,
   });
 
@@ -117,9 +120,18 @@ class EdgeSlide extends SingleChildRenderObjectWidget {
   final Offset end;
   final double progress;
 
+  /// Resolves the box whose size and bounds define this slide, if distinct
+  /// from the layout child.
+  final RenderBox? Function()? targetResolver;
+
   @override
   RenderEdgeSlide createRenderObject(BuildContext context) {
-    return RenderEdgeSlide(start: start, end: end, progress: progress);
+    return RenderEdgeSlide(
+      start: start,
+      end: end,
+      progress: progress,
+      targetResolver: targetResolver,
+    );
   }
 
   @override
@@ -127,16 +139,17 @@ class EdgeSlide extends SingleChildRenderObjectWidget {
     renderObject
       ..start = start
       ..end = end
-      ..progress = progress;
+      ..progress = progress
+      ..targetResolver = targetResolver;
   }
 }
 
-/// Render object for [EdgeSlide].
 class RenderEdgeSlide extends RenderProxyBox {
   RenderEdgeSlide({
     required this._start,
     required this._end,
     required this._progress,
+    required this._targetResolver,
   });
 
   Offset _start;
@@ -144,6 +157,7 @@ class RenderEdgeSlide extends RenderProxyBox {
     if (value == _start) return;
     _start = value;
     markNeedsPaint();
+    markNeedsSemanticsUpdate();
   }
 
   Offset _end;
@@ -151,6 +165,7 @@ class RenderEdgeSlide extends RenderProxyBox {
     if (value == _end) return;
     _end = value;
     markNeedsPaint();
+    markNeedsSemanticsUpdate();
   }
 
   double _progress;
@@ -158,29 +173,54 @@ class RenderEdgeSlide extends RenderProxyBox {
     if (value == _progress) return;
     _progress = value;
     markNeedsPaint();
+    markNeedsSemanticsUpdate();
+  }
+
+  RenderBox? Function()? _targetResolver;
+  set targetResolver(RenderBox? Function()? value) {
+    if (value == _targetResolver) return;
+    _targetResolver = value;
+    markNeedsPaint();
+    markNeedsSemanticsUpdate();
   }
 
   Offset get translation {
+    final targetRect = _targetRect;
     final hidden =
-        Offset(_start.dx * size.width, _start.dy * size.height) +
-        _gapToHostEdge(_start);
-    final shown = Offset(_end.dx * size.width, _end.dy * size.height);
+        Offset(_start.dx * targetRect.width, _start.dy * targetRect.height) +
+        _gapToHostEdge(_start, targetRect);
+    final shown = Offset(
+      _end.dx * targetRect.width,
+      _end.dy * targetRect.height,
+    );
     return hidden + (shown - hidden) * _progress;
   }
 
-  // Distance from this box to the edge of the BottomBar's Stack (the nearest
-  // RenderStack ancestor) along each axis [direction] moves on.
-  Offset _gapToHostEdge(Offset direction) {
+  Rect get _targetRect {
+    final currentChild = child;
+    final target = _targetResolver?.call();
+    if (currentChild == null ||
+        target == null ||
+        !currentChild.attached ||
+        !target.attached) {
+      return Offset.zero & size;
+    }
+    return MatrixUtils.transformRect(
+      target.getTransformTo(currentChild),
+      Offset.zero & target.size,
+    );
+  }
+
+  // Distance from the target bounds to the nearest host Stack edge along the
+  // axes [direction] moves on.
+  Offset _gapToHostEdge(Offset direction, Rect targetRect) {
     if (direction == Offset.zero) return Offset.zero;
     var host = parent;
     while (host != null && host is! RenderStack) {
       host = host.parent;
     }
     if (host is! RenderStack || !host.hasSize) return Offset.zero;
-    final rect = MatrixUtils.transformRect(
-      getTransformTo(host),
-      Offset.zero & size,
-    );
+    final rect = MatrixUtils.transformRect(getTransformTo(host), targetRect);
     return Offset(
       direction.dx > 0
           ? host.size.width - rect.right
