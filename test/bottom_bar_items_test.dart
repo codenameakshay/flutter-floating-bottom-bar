@@ -196,6 +196,35 @@ void main() {
       expect(size.height, greaterThanOrEqualTo(48));
     });
 
+    testWidgets('sizes to its content inside a floating BottomBar', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BottomBar(
+              body: const SizedBox.expand(),
+              child: BottomBarItems(
+                children: [
+                  BottomBarItem(
+                    icon: const Icon(Icons.home),
+                    label: const Text('Home'),
+                  ),
+                  BottomBarItem(icon: const Icon(Icons.inbox)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // The bar gives its child loose height up to the screen; items must
+      // not grow to fill it.
+      final size = tester.getSize(find.byType(BottomBarItem).first);
+      expect(size.height, greaterThanOrEqualTo(48));
+      expect(size.height, lessThan(100));
+    });
+
     testWidgets('onTap fires on tap', (tester) async {
       var taps = 0;
       await tester.pumpWidget(

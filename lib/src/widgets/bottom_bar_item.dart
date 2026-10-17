@@ -177,7 +177,9 @@ class BottomBarItem extends StatelessWidget {
         constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Center(child: column),
+          // heightFactor keeps the item content-tall when the bar hands it
+          // loose height up to the full screen.
+          child: Center(heightFactor: 1, child: column),
         ),
       ),
     );
