@@ -4,6 +4,7 @@ import 'package:flutter_floating_bottom_bar_example/main.dart';
 
 void main() {
   const demoNames = <String>[
+    'Indicators',
     'Issues dock',
     'AI prompt dock',
     'Basic TabBar',
@@ -25,6 +26,7 @@ void main() {
     }
 
     for (final demoName in demoNames) {
+      await tester.ensureVisible(find.text(demoName));
       await tester.tap(find.text(demoName));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull, reason: 'opening $demoName');
@@ -237,6 +239,7 @@ void main() {
     await tester.pumpWidget(const ExampleApp());
 
     for (final demoName in demoNames) {
+      await tester.ensureVisible(find.text(demoName));
       await tester.tap(find.text(demoName));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull, reason: 'opening $demoName');

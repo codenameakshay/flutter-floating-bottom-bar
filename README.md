@@ -277,6 +277,35 @@ with built-in accessibility and RTL-aware badge placement.
   `onlySelected`, or `alwaysHide`. An item used outside a `BottomBarItems`
   row always shows its label.
 
+### Indicators
+
+`BottomBarItems` can own selection and draw an indicator that slides between
+items on a spring. The indicator keeps its velocity when you tap again
+mid-flight, and it jumps under reduced motion.
+
+```dart
+int index = 0;
+
+BottomBarItems(
+  selectedIndex: index,
+  onSelected: (i) => setState(() => index = i),
+  indicator: const BottomBarIndicator.pill(),
+  children: [
+    BottomBarItem(icon: const Icon(Icons.home), label: const Text('Home')),
+    BottomBarItem(icon: const Icon(Icons.search), label: const Text('Search')),
+  ],
+)
+```
+
+- `BottomBarIndicator.pill(stretch: true)` for an elastic pill.
+- `BottomBarIndicator.underline()` for a bar under the selected item.
+- `BottomBarIndicator.dot()` for a dot under the selected icon.
+- `BottomBarIndicator.builder((context, rect, settled) => ...)` for your own indicator, placed at the animated rect.
+
+When `selectedIndex` is set, it wins over `BottomBarItem.selected`. Tapping an
+item runs its `onTap`, then `onSelected`. With the default pill, the selected
+item uses `onSecondaryContainer` unless it sets `selectedColor`.
+
 ## Migration from v1.x
 
 | v1.x | v2.x | Migration |

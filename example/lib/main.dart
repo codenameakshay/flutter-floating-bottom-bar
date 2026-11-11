@@ -5,6 +5,7 @@ import 'demos/badges_demo.dart';
 import 'demos/basic_demo.dart';
 import 'demos/basic_tab_bar_demo.dart';
 import 'demos/custom_transition_demo.dart';
+import 'demos/indicators_demo.dart';
 import 'demos/issues_dock_demo.dart';
 import 'demos/nested_scroll_demo.dart';
 
@@ -12,6 +13,11 @@ void main() => runApp(const ExampleApp());
 
 /// Every demo, keyed by the slug used in its deep link (`/#/<slug>` on web).
 final demos = <({String slug, String title, WidgetBuilder builder})>[
+  (
+    slug: 'indicators',
+    title: 'Indicators',
+    builder: (_) => const IndicatorsDemoPage(),
+  ),
   (
     slug: 'issues-dock',
     title: 'Issues dock',

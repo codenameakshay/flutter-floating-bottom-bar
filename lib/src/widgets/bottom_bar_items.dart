@@ -1,6 +1,9 @@
-import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:motor/motor.dart';
 
 import '../internal/bottom_bar_item_height.dart';
+import '../internal/reduce_motion.dart';
+import 'bottom_bar_indicator.dart';
 
 /// Controls when a [BottomBarItem]'s label is visible when it is placed
 /// inside a [BottomBarItems] row.
@@ -35,6 +38,21 @@ enum BottomBarLabelBehavior {
 ///   body: ...,
 /// )
 /// ```
+///
+/// Set [selectedIndex] to let the row own selection: each child learns its
+/// index and whether it is selected through [BottomBarItemSelectionScope],
+/// a [BottomBarItem] uses that over its own [BottomBarItem.selected], and
+/// tapping an item calls its own `onTap` and then [onSelected]. Add an
+/// [indicator] to draw a selection indicator that slides between items:
+///
+/// ```dart
+/// BottomBarItems(
+///   selectedIndex: index,
+///   onSelected: (i) => setState(() => index = i),
+///   indicator: const BottomBarIndicator.pill(),
+///   children: [...],
+/// )
+/// ```
 class BottomBarItems extends StatelessWidget {
   /// Creates a [BottomBarItems] row.
   const BottomBarItems({
@@ -42,6 +60,10 @@ class BottomBarItems extends StatelessWidget {
     required this.children,
     this.spacing = MainAxisAlignment.spaceAround,
     this.labelBehavior = BottomBarLabelBehavior.alwaysShow,
+    this.selectedIndex,
+    this.onSelected,
+    this.indicator,
+    this.indicatorMotion,
   });
 
   /// The widgets to display in the row — typically [BottomBarItem] instances.
@@ -60,8 +82,52 @@ class BottomBarItems extends StatelessWidget {
   /// [BottomBarLabelBehavior.alwaysShow].
   final BottomBarLabelBehavior labelBehavior;
 
+  /// The index of the selected child, or null to leave selection to each
+  /// child (for example [BottomBarItem.selected]).
+  ///
+  /// When non-null, it takes precedence over [BottomBarItem.selected]. An
+  /// out-of-range index asserts in debug builds and shows no indicator in
+  /// release builds.
+  final int? selectedIndex;
+
+  /// Called with a child's index when it is tapped, after the child's own
+  /// `onTap`. Only used when [selectedIndex] is non-null.
+  final ValueChanged<int>? onSelected;
+
+  /// The selection indicator drawn behind the selected child. Only used when
+  /// [selectedIndex] is non-null.
+  final BottomBarIndicator? indicator;
+
+  /// The spring the [indicator] moves on.
+  ///
+  /// Defaults to a snappy Cupertino spring. Reduced motion skips the
+  /// animation.
+  final Motion? indicatorMotion;
+
   @override
   Widget build(BuildContext context) {
+    final index = selectedIndex;
+    assert(
+      index == null || (index >= 0 && index < children.length),
+      'selectedIndex $index is out of range for ${children.length} children',
+    );
+    if (index != null) return _SelectableItems(items: this);
+    return _layout(children, null);
+  }
+
+  Widget _layout(
+    List<Widget> children,
+    Widget Function(Widget row, {required bool reveal})? track,
+  ) {
+    Widget row(List<Widget> rowChildren, {bool reveal = false}) {
+      final row = Row(
+        mainAxisAlignment: spacing,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: rowChildren,
+      );
+      return track == null ? row : track(row, reveal: reveal);
+    }
+
     return BottomBarItemsScope(
       labelBehavior: labelBehavior,
       child: LayoutBuilder(
@@ -73,12 +139,6 @@ class BottomBarItems extends StatelessWidget {
             child: child,
           );
 
-          Widget row(List<Widget> rowChildren) => Row(
-            mainAxisAlignment: spacing,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: rowChildren,
-          );
-
           if (!constraints.hasBoundedWidth) {
             return withItemHeight(row(children));
           }
@@ -86,7 +146,7 @@ class BottomBarItems extends StatelessWidget {
             return withItemHeight(
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                child: row(children),
+                child: row(children, reveal: true),
               ),
             );
           }
@@ -96,6 +156,137 @@ class BottomBarItems extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+class _SelectableItems extends StatefulWidget {
+  const _SelectableItems({required this.items});
+
+  final BottomBarItems items;
+
+  @override
+  State<_SelectableItems> createState() => _SelectableItemsState();
+}
+
+class _SelectableItemsState extends State<_SelectableItems>
+    with TickerProviderStateMixin {
+  static const _defaultMotion = CupertinoMotion.snappy(
+    duration: Duration(milliseconds: 450),
+  );
+
+  late final IndicatorMotion _motion;
+
+  @override
+  void initState() {
+    super.initState();
+    _motion = IndicatorMotion(
+      vsync: this,
+      index: widget.items.selectedIndex!,
+      motion: widget.items.indicatorMotion ?? _defaultMotion,
+    );
+  }
+
+  @override
+  void didUpdateWidget(_SelectableItems oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final items = widget.items;
+    final old = oldWidget.items;
+    _motion.motion = items.indicatorMotion ?? _defaultMotion;
+    final index = items.selectedIndex!;
+    final moved = index != old.selectedIndex;
+    if (items.children.length != old.children.length ||
+        (moved && reduceMotion(context))) {
+      _motion.jumpTo(index);
+    } else if (moved) {
+      _motion.animateTo(index);
+    }
+  }
+
+  @override
+  void dispose() {
+    _motion.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final items = widget.items;
+    final indicator = items.indicator;
+    final selectedIndex = items.selectedIndex!;
+    final onSelected = items.onSelected;
+    final foreground = indicatorForeground(
+      indicator,
+      Theme.of(context).colorScheme,
+    );
+    final children = [
+      for (var i = 0; i < items.children.length; i++)
+        IndicatorAnchor(
+          role: IndicatorAnchorRole.slot,
+          child: BottomBarItemSelectionScope(
+            index: i,
+            selected: i == selectedIndex,
+            onSelect: onSelected == null ? null : () => onSelected(i),
+            selectedForegroundColor: foreground,
+            child: items.children[i],
+          ),
+        ),
+    ];
+    return items._layout(
+      children,
+      indicator == null
+          ? null
+          : (row, {required reveal}) => IndicatorTrack(
+              motion: _motion,
+              indicator: indicator,
+              reveal: reveal,
+              row: row,
+            ),
+    );
+  }
+}
+
+/// Tells a child of a [BottomBarItems] row with a
+/// [BottomBarItems.selectedIndex] its index and whether it is selected.
+///
+/// [BottomBarItem] reads it automatically. Custom children can read it with
+/// [BottomBarItemSelectionScope.maybeOf] and call [onSelect] when tapped.
+class BottomBarItemSelectionScope extends InheritedWidget {
+  /// Creates a [BottomBarItemSelectionScope].
+  const BottomBarItemSelectionScope({
+    super.key,
+    required this.index,
+    required this.selected,
+    this.onSelect,
+    this.selectedForegroundColor,
+    required super.child,
+  });
+
+  /// The child's index in the row.
+  final int index;
+
+  /// Whether the child is the selected one.
+  final bool selected;
+
+  /// Reports this child as selected through [BottomBarItems.onSelected].
+  /// Null when the row has no [BottomBarItems.onSelected].
+  final VoidCallback? onSelect;
+
+  /// The content colour a selected child should use so it contrasts with
+  /// the row's [BottomBarItems.indicator], or null to keep its own default.
+  final Color? selectedForegroundColor;
+
+  /// Returns the nearest enclosing scope, or `null` if there isn't one.
+  static BottomBarItemSelectionScope? maybeOf(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<BottomBarItemSelectionScope>();
+  }
+
+  @override
+  bool updateShouldNotify(BottomBarItemSelectionScope oldWidget) {
+    return index != oldWidget.index ||
+        selected != oldWidget.selected ||
+        (onSelect == null) != (oldWidget.onSelect == null) ||
+        selectedForegroundColor != oldWidget.selectedForegroundColor;
   }
 }
 

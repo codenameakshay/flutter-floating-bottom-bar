@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../internal/bottom_bar_item_height.dart';
+import 'bottom_bar_indicator.dart';
 import 'bottom_bar_items.dart';
 
 /// A simple, opinionated nav-item widget for use inside [BottomBar.child].
@@ -16,8 +17,9 @@ import 'bottom_bar_items.dart';
 /// accessible name fallback. If neither is provided, the child's own semantics
 /// remain visible.
 ///
-/// No internal selection state — pass [selected] from your own state and
-/// handle [onTap].
+/// No internal selection state. Pass [selected] from your own state and
+/// handle [onTap], or let a [BottomBarItems] with a
+/// [BottomBarItems.selectedIndex] select it.
 class BottomBarItem extends StatelessWidget {
   const BottomBarItem({
     super.key,
@@ -59,9 +61,15 @@ class BottomBarItem extends StatelessWidget {
   ///
   /// Does not maintain state internally — pass from your own state and update
   /// in [onTap].
+  ///
+  /// Ignored inside a [BottomBarItems] with a non-null
+  /// [BottomBarItems.selectedIndex], which decides selection instead.
   final bool selected;
 
   /// Called when the item is tapped.
+  ///
+  /// Inside a [BottomBarItems] with a [BottomBarItems.selectedIndex], this
+  /// runs first and [BottomBarItems.onSelected] runs after it.
   final VoidCallback? onTap;
 
   /// Explicit accessible name for this item.
@@ -85,12 +93,23 @@ class BottomBarItem extends StatelessWidget {
 
   /// Icon and label colour when [selected] is `true`.
   ///
-  /// Defaults to `colorScheme.primary`.
+  /// Defaults to `colorScheme.primary`, or to a colour that contrasts with
+  /// the row's [BottomBarItems.indicator] (`colorScheme.onSecondaryContainer`
+  /// over the default pill).
   final Color? selectedColor;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final selection = BottomBarItemSelectionScope.maybeOf(context);
+    final selected = selection?.selected ?? this.selected;
+    final onSelect = selection?.onSelect;
+    final onTap = onSelect == null
+        ? this.onTap
+        : () {
+            this.onTap?.call();
+            onSelect();
+          };
     final labelBehavior =
         BottomBarItemsScope.maybeOf(context) ??
         BottomBarLabelBehavior.alwaysShow;
@@ -100,14 +119,14 @@ class BottomBarItem extends StatelessWidget {
       BottomBarLabelBehavior.alwaysHide => false,
     };
     final effectiveColor = selected
-        ? (selectedColor ?? cs.primary)
+        ? (selectedColor ?? selection?.selectedForegroundColor ?? cs.primary)
         : (color ?? cs.onSurfaceVariant);
     final explicitSemanticLabel = semanticLabel ?? tooltip;
     final minHeight = BottomBarItemHeightScope.maybeOf(context) ?? 48;
 
     final iconWidget = selected ? (selectedIcon ?? icon) : icon;
 
-    final stack = Stack(
+    Widget stack = Stack(
       clipBehavior: Clip.none,
       children: [
         IconTheme.merge(
@@ -118,6 +137,10 @@ class BottomBarItem extends StatelessWidget {
           PositionedDirectional(top: -4, end: -4, child: badge!),
       ],
     );
+
+    if (selection != null) {
+      stack = IndicatorAnchor(role: IndicatorAnchorRole.icon, child: stack);
+    }
 
     final currentLabel = label;
     Widget labelChild = currentLabel ?? const SizedBox.shrink();
@@ -161,7 +184,15 @@ class BottomBarItem extends StatelessWidget {
                     (Theme.of(context).textTheme.labelSmall ??
                             const TextStyle())
                         .copyWith(color: effectiveColor),
-                child: labelChild,
+                child: selection == null
+                    ? labelChild
+                    : Center(
+                        heightFactor: 1,
+                        child: IndicatorAnchor(
+                          role: IndicatorAnchorRole.label,
+                          child: labelChild,
+                        ),
+                      ),
               );
               return constraints.hasBoundedWidth
                   ? SizedBox(width: double.infinity, child: text)

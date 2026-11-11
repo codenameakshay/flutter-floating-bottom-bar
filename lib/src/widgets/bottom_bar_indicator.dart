@@ -1,0 +1,727 @@
+import 'dart:math' as math;
+
+import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:motor/motor.dart';
+
+/// Builds a custom selection indicator at [rect].
+///
+/// [rect] is the animated indicator rect in the coordinates of the
+/// [BottomBarItems] row. [settled] is `true` once the indicator has come to
+/// rest on the selected item.
+typedef BottomBarIndicatorBuilder =
+    Widget Function(BuildContext context, Rect rect, bool settled);
+
+/// The selection indicator drawn behind the selected item of a
+/// [BottomBarItems] row.
+///
+/// Pass one to [BottomBarItems.indicator] together with
+/// [BottomBarItems.selectedIndex]. The indicator slides between items on a
+/// spring ([BottomBarItems.indicatorMotion]), keeps its velocity when the
+/// selection changes mid-flight, and jumps when the platform asks for reduced
+/// motion. It paints behind the items and is excluded from hit testing and
+/// semantics.
+///
+/// Geometry is read after layout, so the indicator is placed correctly in the
+/// same frame as a resize, a label change or an item insert or remove.
+sealed class BottomBarIndicator {
+  const BottomBarIndicator._();
+
+  /// A filled pill that hugs the item's content: its icon plus its visible
+  /// label.
+  ///
+  /// [color] defaults to `colorScheme.secondaryContainer`. [borderRadius]
+  /// defaults to a 16px radius, and [padding] (around the content) to 12px
+  /// horizontally and 4px vertically.
+  ///
+  /// With [stretch], the edge in the direction of travel moves first and the
+  /// trailing edge follows on a slower spring, so fast moves look elastic.
+  /// Neither edge overshoots its target.
+  ///
+  /// The selected item's content uses `colorScheme.onSecondaryContainer` (or
+  /// black or white over a custom [color]) unless the item sets
+  /// [BottomBarItem.selectedColor].
+  const factory BottomBarIndicator.pill({
+    Color? color,
+    BorderRadiusGeometry borderRadius,
+    EdgeInsetsGeometry padding,
+    bool stretch,
+  }) = _PillIndicator;
+
+  /// A bar along the bottom of the item's content.
+  ///
+  /// [color] defaults to `colorScheme.primary` and [thickness] to 3. A null
+  /// [width] matches the content width. [borderRadius] defaults to fully
+  /// rounded ends.
+  const factory BottomBarIndicator.underline({
+    Color? color,
+    double thickness,
+    double? width,
+    BorderRadiusGeometry? borderRadius,
+  }) = _UnderlineIndicator;
+
+  /// A dot centred under the item's icon, below its visible label.
+  ///
+  /// [color] defaults to `colorScheme.primary` and [size] to 5.
+  const factory BottomBarIndicator.dot({Color? color, double size}) =
+      _DotIndicator;
+
+  /// A custom indicator. [builder] runs for every animation frame and its
+  /// widget is positioned at the animated rect, which follows the item's
+  /// content (icon plus visible label).
+  const factory BottomBarIndicator.builder(BottomBarIndicatorBuilder builder) =
+      _BuilderIndicator;
+
+  Rect _target(IndicatorGeometry geometry, TextDirection direction);
+
+  void _paint(
+    Canvas canvas,
+    Rect rect,
+    ColorScheme colors,
+    TextDirection direction,
+  ) {}
+
+  bool get _stretch => false;
+
+  Color? _selectedForeground(ColorScheme colors) => null;
+}
+
+/// The colour selected content should use over [indicator], if it differs
+/// from the item's default.
+Color? indicatorForeground(BottomBarIndicator? indicator, ColorScheme colors) =>
+    indicator?._selectedForeground(colors);
+
+final class _PillIndicator extends BottomBarIndicator {
+  const _PillIndicator({
+    this.color,
+    this.borderRadius = const BorderRadius.all(Radius.circular(16)),
+    this.padding = const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+    this.stretch = false,
+  }) : super._();
+
+  final Color? color;
+  final BorderRadiusGeometry borderRadius;
+  final EdgeInsetsGeometry padding;
+  final bool stretch;
+
+  @override
+  bool get _stretch => stretch;
+
+  @override
+  Rect _target(IndicatorGeometry geometry, TextDirection direction) =>
+      padding.resolve(direction).inflateRect(geometry.content);
+
+  @override
+  void _paint(
+    Canvas canvas,
+    Rect rect,
+    ColorScheme colors,
+    TextDirection direction,
+  ) {
+    canvas.drawRRect(
+      borderRadius.resolve(direction).toRRect(rect),
+      Paint()..color = color ?? colors.secondaryContainer,
+    );
+  }
+
+  @override
+  Color? _selectedForeground(ColorScheme colors) => switch (color) {
+    null => colors.onSecondaryContainer,
+    final c =>
+      ThemeData.estimateBrightnessForColor(c) == Brightness.dark
+          ? Colors.white
+          : Colors.black,
+  };
+}
+
+final class _UnderlineIndicator extends BottomBarIndicator {
+  const _UnderlineIndicator({
+    this.color,
+    this.thickness = 3,
+    this.width,
+    this.borderRadius,
+  }) : super._();
+
+  final Color? color;
+  final double thickness;
+  final double? width;
+  final BorderRadiusGeometry? borderRadius;
+
+  @override
+  Rect _target(IndicatorGeometry geometry, TextDirection direction) {
+    final content = geometry.content;
+    final w = width ?? content.width;
+    return Rect.fromLTWH(
+      content.center.dx - w / 2,
+      content.bottom + 2,
+      w,
+      thickness,
+    );
+  }
+
+  @override
+  void _paint(
+    Canvas canvas,
+    Rect rect,
+    ColorScheme colors,
+    TextDirection direction,
+  ) {
+    final radius =
+        borderRadius ?? BorderRadius.all(Radius.circular(thickness / 2));
+    canvas.drawRRect(
+      radius.resolve(direction).toRRect(rect),
+      Paint()..color = color ?? colors.primary,
+    );
+  }
+}
+
+final class _DotIndicator extends BottomBarIndicator {
+  const _DotIndicator({this.color, this.size = 5}) : super._();
+
+  final Color? color;
+  final double size;
+
+  @override
+  Rect _target(IndicatorGeometry geometry, TextDirection direction) =>
+      Rect.fromCenter(
+        center: Offset(
+          geometry.icon.center.dx,
+          geometry.content.bottom + 3 + size / 2,
+        ),
+        width: size,
+        height: size,
+      );
+
+  @override
+  void _paint(
+    Canvas canvas,
+    Rect rect,
+    ColorScheme colors,
+    TextDirection direction,
+  ) {
+    canvas.drawOval(rect, Paint()..color = color ?? colors.primary);
+  }
+}
+
+final class _BuilderIndicator extends BottomBarIndicator {
+  const _BuilderIndicator(this.builder) : super._();
+
+  final BottomBarIndicatorBuilder builder;
+
+  @override
+  Rect _target(IndicatorGeometry geometry, TextDirection direction) =>
+      geometry.content;
+}
+
+/// Where one item sits in the row, in the row's coordinates.
+typedef IndicatorGeometry = ({Rect slot, Rect content, Rect icon});
+
+/// What an [IndicatorAnchor] marks inside a [BottomBarItems] row.
+enum IndicatorAnchorRole { slot, icon, label }
+
+/// Marks a box whose geometry the selection indicator follows.
+class IndicatorAnchor extends SingleChildRenderObjectWidget {
+  const IndicatorAnchor({super.key, required this.role, super.child});
+
+  final IndicatorAnchorRole role;
+
+  @override
+  RenderIndicatorAnchor createRenderObject(BuildContext context) =>
+      RenderIndicatorAnchor(role);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    RenderIndicatorAnchor renderObject,
+  ) {
+    renderObject.role = role;
+  }
+}
+
+class RenderIndicatorAnchor extends RenderProxyBox {
+  RenderIndicatorAnchor(this.role);
+
+  IndicatorAnchorRole role;
+
+  // Recorded here because an ancestor may not read a grandchild's size
+  // during its own layout.
+  Size _laidOutSize = Size.zero;
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    _laidOutSize = size;
+  }
+}
+
+double _edge(Rect rect, int edge) => switch (edge) {
+  0 => rect.left,
+  1 => rect.top,
+  2 => rect.right,
+  _ => rect.bottom,
+};
+
+/// The indicator's spring state.
+///
+/// Each edge of the indicator (left, top, right, bottom) moves from a
+/// weighted blend of item rects toward the selected item's rect. The weights
+/// refer to items by index and resolve against the latest geometry, so a
+/// resize or a label change mid-flight never leaves the indicator behind.
+/// Retargeting folds the current position into a new blend and carries the
+/// edges' velocity over.
+class IndicatorMotion extends ChangeNotifier {
+  IndicatorMotion({
+    required TickerProvider vsync,
+    required int index,
+    required Motion motion,
+  }) : _to = index,
+       _lead = SingleMotionController(
+         motion: motion,
+         vsync: vsync,
+         initialValue: 1,
+       ),
+       _trail = SingleMotionController(
+         motion: _trailFor(motion),
+         vsync: vsync,
+         initialValue: 1,
+       ) {
+    _from = List.generate(4, (_) => {index: 1.0});
+    _reveal = (index: index, animated: false);
+    _lead.addListener(notifyListeners);
+    _trail.addListener(notifyListeners);
+  }
+
+  final SingleMotionController _lead;
+  final SingleMotionController _trail;
+  late final List<Map<int, double>> _from;
+  final List<bool> _trails = List.filled(4, false);
+  int _to;
+  List<Rect> _rects = const [];
+  ({int index, bool animated})? _reveal;
+
+  /// Whether a stretching indicator is in use: one edge leads, the other
+  /// trails, and neither overshoots.
+  bool stretch = false;
+
+  set motion(Motion value) {
+    if (_lead.motion == value) return;
+    _lead.motion = value;
+    _trail.motion = _trailFor(value);
+  }
+
+  static Motion _trailFor(Motion lead) => lead is CupertinoMotion
+      ? CupertinoMotion(duration: lead.duration * 1.6)
+      : const CupertinoMotion.smooth(duration: Duration(milliseconds: 700));
+
+  bool get settled => !_lead.isAnimating && !_trail.isAnimating;
+
+  SingleMotionController _controller(int edge) =>
+      _trails[edge] ? _trail : _lead;
+
+  double _progress(int edge) {
+    if (settled) return 1;
+    final value = _controller(edge).value;
+    return stretch ? math.min(value, 1) : value;
+  }
+
+  double _velocity(int edge) {
+    if (settled) return 0;
+    final controller = _controller(edge);
+    return stretch && controller.value >= 1 ? 0 : controller.velocity;
+  }
+
+  bool _covers(List<Rect> rects) =>
+      _to < rects.length &&
+      _from.every((blend) => blend.keys.every((i) => i < rects.length));
+
+  static double _blend(Map<int, double> blend, int edge, List<Rect> rects) {
+    var sum = 0.0;
+    blend.forEach((i, weight) => sum += weight * _edge(rects[i], edge));
+    return sum;
+  }
+
+  double _value(int edge, List<Rect> rects) {
+    final from = _blend(_from[edge], edge, rects);
+    return from + (_edge(rects[_to], edge) - from) * _progress(edge);
+  }
+
+  /// The indicator rect for the item [rects], or null when the selected
+  /// index has no item.
+  Rect? resolve(List<Rect> rects) {
+    _rects = rects;
+    if (_to < 0 || _to >= rects.length) return null;
+    if (settled || !_covers(rects)) return rects[_to];
+    return Rect.fromLTRB(
+      _value(0, rects),
+      _value(1, rects),
+      _value(2, rects),
+      _value(3, rects),
+    );
+  }
+
+  /// Places the indicator on [index] without animating.
+  void jumpTo(int index) {
+    _to = index;
+    for (var edge = 0; edge < 4; edge++) {
+      _from[edge] = {index: 1.0};
+    }
+    _reveal = (index: index, animated: false);
+    _trail.value = 1;
+    _lead.value = 1;
+  }
+
+  /// Springs the indicator to [index], keeping its current velocity.
+  void animateTo(int index) {
+    final rects = _rects;
+    if (index == _to) return;
+    if (index < 0 || index >= rects.length || !_covers(rects)) {
+      jumpTo(index);
+      return;
+    }
+
+    final current = List<double>.filled(4, 0);
+    final velocity = List<double>.filled(4, 0);
+    for (var edge = 0; edge < 4; edge++) {
+      final p = _progress(edge);
+      final from = _blend(_from[edge], edge, rects);
+      final to = _edge(rects[_to], edge);
+      current[edge] = from + (to - from) * p;
+      velocity[edge] = _velocity(edge) * (to - from);
+      _from[edge] = {
+        for (final MapEntry(:key, :value) in _from[edge].entries)
+          key: value * (1 - p),
+      }..update(_to, (w) => w + p, ifAbsent: () => p);
+      _from[edge].removeWhere((_, w) => w.abs() < 1e-9);
+    }
+
+    _to = index;
+    final target = rects[index];
+    final travel = target.center.dx - (current[0] + current[2]) / 2;
+    _trails
+      ..[0] = stretch && travel > 0
+      ..[2] = stretch && travel < 0;
+
+    for (final (controller, trailing) in [(_lead, false), (_trail, true)]) {
+      var dot = 0.0;
+      var span = 0.0;
+      for (var edge = 0; edge < 4; edge++) {
+        if (_trails[edge] != trailing) continue;
+        final distance = _edge(target, edge) - current[edge];
+        dot += velocity[edge] * distance;
+        span += distance * distance;
+      }
+      if (trailing && !_trails.contains(true)) {
+        controller.value = 1;
+      } else {
+        controller.animateTo(
+          1,
+          from: 0,
+          withVelocity: span > 1e-6 ? dot / span : 0,
+        );
+      }
+    }
+    _reveal = (index: index, animated: true);
+  }
+
+  ({int index, bool animated})? _takeReveal() {
+    final reveal = _reveal;
+    _reveal = null;
+    return reveal;
+  }
+
+  @override
+  void dispose() {
+    _lead.dispose();
+    _trail.dispose();
+    super.dispose();
+  }
+}
+
+/// Box constraints that also carry the builder indicator's frame, so the
+/// layout-time builder reruns whenever the animated rect changes.
+class _FrameConstraints extends BoxConstraints {
+  _FrameConstraints(super.size, this.rect, this.settled) : super.tight();
+
+  final Rect? rect;
+  final bool settled;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _FrameConstraints &&
+      super == other &&
+      other.rect == rect &&
+      other.settled == settled;
+
+  @override
+  int get hashCode => Object.hash(super.hashCode, rect, settled);
+}
+
+/// Paints [indicator] behind [row] at the item geometry read after layout.
+class IndicatorTrack extends MultiChildRenderObjectWidget {
+  IndicatorTrack({
+    super.key,
+    required this.motion,
+    required this.indicator,
+    required this.reveal,
+    required Widget row,
+  }) : super(children: [_layer(indicator), row]);
+
+  final IndicatorMotion motion;
+  final BottomBarIndicator indicator;
+
+  /// Whether selecting an item scrolls it into view.
+  final bool reveal;
+
+  static Widget _layer(BottomBarIndicator indicator) => IgnorePointer(
+    child: ExcludeSemantics(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (indicator is! _BuilderIndicator ||
+              constraints is! _FrameConstraints) {
+            return const SizedBox.shrink();
+          }
+          final rect = constraints.rect;
+          if (rect == null) return const SizedBox.shrink();
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned.fromRect(
+                rect: rect,
+                child: indicator.builder(context, rect, constraints.settled),
+              ),
+            ],
+          );
+        },
+      ),
+    ),
+  );
+
+  @override
+  RenderIndicatorTrack createRenderObject(BuildContext context) =>
+      RenderIndicatorTrack(
+        motion: motion,
+        indicator: indicator,
+        reveal: reveal,
+        colors: Theme.of(context).colorScheme,
+        textDirection: Directionality.of(context),
+      );
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    RenderIndicatorTrack renderObject,
+  ) {
+    renderObject
+      ..motion = motion
+      ..indicator = indicator
+      ..reveal = reveal
+      ..colors = Theme.of(context).colorScheme
+      ..textDirection = Directionality.of(context);
+  }
+}
+
+class _TrackParentData extends ContainerBoxParentData<RenderBox> {}
+
+class RenderIndicatorTrack extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _TrackParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _TrackParentData> {
+  RenderIndicatorTrack({
+    required this._motion,
+    required this._indicator,
+    required this._reveal,
+    required this._colors,
+    required this._textDirection,
+  });
+
+  IndicatorMotion _motion;
+  set motion(IndicatorMotion value) {
+    if (identical(value, _motion)) return;
+    if (attached) _motion.removeListener(_onTick);
+    _motion = value;
+    if (attached) _motion.addListener(_onTick);
+    markNeedsLayout();
+  }
+
+  BottomBarIndicator _indicator;
+  set indicator(BottomBarIndicator value) {
+    if (identical(value, _indicator)) return;
+    _indicator = value;
+    _motion.stretch = value._stretch;
+    markNeedsLayout();
+  }
+
+  bool _reveal;
+  set reveal(bool value) {
+    if (value == _reveal) return;
+    _reveal = value;
+    markNeedsLayout();
+  }
+
+  ColorScheme _colors;
+  set colors(ColorScheme value) {
+    if (value == _colors) return;
+    _colors = value;
+    markNeedsPaint();
+  }
+
+  TextDirection _textDirection;
+  set textDirection(TextDirection value) {
+    if (value == _textDirection) return;
+    _textDirection = value;
+    markNeedsLayout();
+  }
+
+  Rect? _builderRect;
+
+  bool get _usesBuilder => _indicator is _BuilderIndicator;
+
+  RenderBox get _layer => firstChild!;
+  RenderBox get _row => lastChild!;
+
+  void _onTick() => _usesBuilder ? markNeedsLayout() : markNeedsPaint();
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _TrackParentData) {
+      child.parentData = _TrackParentData();
+    }
+  }
+
+  @override
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    _motion.stretch = _indicator._stretch;
+    _motion.addListener(_onTick);
+  }
+
+  @override
+  void detach() {
+    _motion.removeListener(_onTick);
+    super.detach();
+  }
+
+  Rect _rectOf(RenderIndicatorAnchor anchor) => MatrixUtils.transformRect(
+    anchor.getTransformTo(this),
+    Offset.zero & anchor._laidOutSize,
+  );
+
+  List<RenderIndicatorAnchor> get _slots {
+    final slots = <RenderIndicatorAnchor>[];
+    _row.visitChildren((child) {
+      if (child is RenderIndicatorAnchor) slots.add(child);
+    });
+    return slots;
+  }
+
+  IndicatorGeometry _geometry(RenderIndicatorAnchor slot) {
+    RenderIndicatorAnchor? icon;
+    RenderIndicatorAnchor? label;
+    void visit(RenderObject node) {
+      if (node is RenderIndicatorAnchor) {
+        switch (node.role) {
+          case IndicatorAnchorRole.icon:
+            icon ??= node;
+          case IndicatorAnchorRole.label:
+            label ??= node;
+          case IndicatorAnchorRole.slot:
+            break;
+        }
+      }
+      node.visitChildren(visit);
+    }
+
+    slot.visitChildren(visit);
+    final slotRect = _rectOf(slot);
+    final iconRect = icon == null ? slotRect : _rectOf(icon!);
+    return (
+      slot: slotRect,
+      icon: iconRect,
+      content: label == null
+          ? iconRect
+          : iconRect.expandToInclude(_rectOf(label!)),
+    );
+  }
+
+  Rect? _resolve() => _motion.resolve([
+    for (final slot in _slots)
+      _indicator._target(_geometry(slot), _textDirection),
+  ]);
+
+  @override
+  void performLayout() {
+    final row = _row;
+    row.layout(constraints.loosen(), parentUsesSize: true);
+    size = constraints.constrain(row.size);
+    (row.parentData! as _TrackParentData).offset = Alignment.center.alongOffset(
+      size - row.size as Offset,
+    );
+
+    _builderRect = _usesBuilder ? _resolve() : null;
+    _layer.layout(
+      _usesBuilder
+          ? _FrameConstraints(size, _builderRect, _motion.settled)
+          : BoxConstraints.tight(size),
+    );
+
+    final reveal = _motion._takeReveal();
+    if (_reveal && reveal != null) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        final slots = attached ? _slots : const <RenderIndicatorAnchor>[];
+        if (reveal.index >= slots.length) return;
+        slots[reveal.index].showOnScreen(
+          duration: reveal.animated
+              ? const Duration(milliseconds: 350)
+              : Duration.zero,
+          curve: Curves.easeOutCubic,
+        );
+      });
+    }
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    final rect = _resolve();
+    if (rect != null) {
+      _indicator._paint(
+        context.canvas,
+        rect.shift(offset),
+        _colors,
+        _textDirection,
+      );
+    }
+    if (_usesBuilder && rect != _builderRect) {
+      // A relayout boundary inside an item moved it without relaying out
+      // this track; catch the builder up on the next frame.
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (attached) markNeedsLayout();
+      });
+    }
+    defaultPaint(context, offset);
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      defaultHitTestChildren(result, position: position);
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) =>
+      constraints.constrain(_row.getDryLayout(constraints.loosen()));
+
+  @override
+  double computeMinIntrinsicWidth(double height) =>
+      _row.getMinIntrinsicWidth(height);
+
+  @override
+  double computeMaxIntrinsicWidth(double height) =>
+      _row.getMaxIntrinsicWidth(height);
+
+  @override
+  double computeMinIntrinsicHeight(double width) =>
+      _row.getMinIntrinsicHeight(width);
+
+  @override
+  double computeMaxIntrinsicHeight(double width) =>
+      _row.getMaxIntrinsicHeight(width);
+}

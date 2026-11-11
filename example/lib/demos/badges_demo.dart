@@ -57,28 +57,25 @@ class _BadgesDemoPageState extends State<BadgesDemoPage> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           child: BottomBarItems(
+            selectedIndex: _index,
+            onSelected: (i) => setState(() => _index = i),
+            indicator: const BottomBarIndicator.pill(),
             children: [
               BottomBarItem(
                 icon: const Icon(Icons.home_outlined),
                 selectedIcon: const Icon(Icons.home),
                 label: const Text('Home'),
-                selected: _index == 0,
-                onTap: () => setState(() => _index = 0),
               ),
               BottomBarItem(
                 icon: const Icon(Icons.inbox_outlined),
                 selectedIcon: const Icon(Icons.inbox),
                 label: const Text('Inbox'),
                 badge: _badge('3'),
-                selected: _index == 1,
-                onTap: () => setState(() => _index = 1),
               ),
               BottomBarItem(
                 icon: const Icon(Icons.person_outline),
                 selectedIcon: const Icon(Icons.person),
                 label: const Text('Profile'),
-                selected: _index == 2,
-                onTap: () => setState(() => _index = 2),
               ),
             ],
           ),
