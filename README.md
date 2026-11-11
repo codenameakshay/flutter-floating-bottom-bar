@@ -5,6 +5,10 @@ scrolling. Use it as a tab bar, bottom navigation bar, search bar, command
 surface, or any custom child.
 
 <p align="center">
+  <a href="https://codenameakshay.github.io/flutter-floating-bottom-bar/">
+    <img src="https://img.shields.io/badge/Try_it-live-0A7CFF?logo=flutter"
+      alt="Try it live" />
+  </a>
   <a href="https://flutter.dev">
     <img src="https://img.shields.io/badge/Platform-Flutter-02569B?logo=flutter"
       alt="Platform" />
@@ -22,6 +26,8 @@ surface, or any custom child.
       alt="Donate" />
   </a>
 </p>
+
+**[Try it live](https://codenameakshay.github.io/flutter-floating-bottom-bar/)**. Every demo runs in your browser. Link one demo with `#/<demo>`, for example [`#/issues-dock`](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/issues-dock).
 
 | ![Issues dock](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/1-issues-dock.gif) | ![AI prompt dock](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/2-ai-prompt-dock.gif) | ![Basic TabBar](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/3-basic-tab-bar.gif) |
 | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
