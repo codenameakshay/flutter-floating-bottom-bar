@@ -28,3 +28,6 @@ coverage/
 .omx/
 .DS_Store
 clips/
+
+# Golden test diff output
+test/goldens/failures/

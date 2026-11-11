@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../internal/bottom_bar_item_height.dart';
+import 'bottom_bar_indicator.dart';
 import 'bottom_bar_items.dart';
 
 /// A simple, opinionated nav-item widget for use inside [BottomBar.child].
@@ -16,8 +17,9 @@ import 'bottom_bar_items.dart';
 /// accessible name fallback. If neither is provided, the child's own semantics
 /// remain visible.
 ///
-/// No internal selection state — pass [selected] from your own state and
-/// handle [onTap].
+/// No internal selection state. Pass [selected] from your own state and
+/// handle [onTap], or let a [BottomBarItems] with a
+/// [BottomBarItems.selectedIndex] select it.
 class BottomBarItem extends StatelessWidget {
   const BottomBarItem({
     super.key,
@@ -59,9 +61,15 @@ class BottomBarItem extends StatelessWidget {
   ///
   /// Does not maintain state internally — pass from your own state and update
   /// in [onTap].
+  ///
+  /// Ignored inside a [BottomBarItems] with a non-null
+  /// [BottomBarItems.selectedIndex], which decides selection instead.
   final bool selected;
 
   /// Called when the item is tapped.
+  ///
+  /// Inside a [BottomBarItems] with a [BottomBarItems.selectedIndex], this
+  /// runs first and [BottomBarItems.onSelected] runs after it.
   final VoidCallback? onTap;
 
   /// Explicit accessible name for this item.
@@ -85,12 +93,23 @@ class BottomBarItem extends StatelessWidget {
 
   /// Icon and label colour when [selected] is `true`.
   ///
-  /// Defaults to `colorScheme.primary`.
+  /// Defaults to `colorScheme.primary`, or to a colour that contrasts with
+  /// the row's [BottomBarItems.indicator] (`colorScheme.onPrimary`
+  /// over the default pill).
   final Color? selectedColor;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final selection = BottomBarItemSelectionScope.maybeOf(context);
+    final selected = selection?.selected ?? this.selected;
+    final onSelect = selection?.onSelect;
+    final onTap = onSelect == null
+        ? this.onTap
+        : () {
+            this.onTap?.call();
+            onSelect();
+          };
     final labelBehavior =
         BottomBarItemsScope.maybeOf(context) ??
         BottomBarLabelBehavior.alwaysShow;
@@ -99,25 +118,11 @@ class BottomBarItem extends StatelessWidget {
       BottomBarLabelBehavior.onlySelected => selected,
       BottomBarLabelBehavior.alwaysHide => false,
     };
-    final effectiveColor = selected
-        ? (selectedColor ?? cs.primary)
-        : (color ?? cs.onSurfaceVariant);
+    final plainColor = color ?? cs.onSurfaceVariant;
+    final selectedLookColor =
+        selectedColor ?? selection?.selectedForegroundColor ?? cs.primary;
     final explicitSemanticLabel = semanticLabel ?? tooltip;
     final minHeight = BottomBarItemHeightScope.maybeOf(context) ?? 48;
-
-    final iconWidget = selected ? (selectedIcon ?? icon) : icon;
-
-    final stack = Stack(
-      clipBehavior: Clip.none,
-      children: [
-        IconTheme.merge(
-          data: IconThemeData(color: effectiveColor),
-          child: iconWidget,
-        ),
-        if (badge != null)
-          PositionedDirectional(top: -4, end: -4, child: badge!),
-      ],
-    );
 
     final currentLabel = label;
     Widget labelChild = currentLabel ?? const SizedBox.shrink();
@@ -148,28 +153,115 @@ class BottomBarItem extends StatelessWidget {
             ? currentLabel.semanticsLabel ?? currentLabel.data
             : null);
 
-    final column = Column(
-      mainAxisSize: MainAxisSize.min,
+    // The reveal mounts the icon and label twice, which a GlobalKey forbids.
+    final ink =
+        (selection?.ink ?? false) &&
+        ![icon, selectedIcon, label].any((part) => part?.key is GlobalKey);
+
+    Widget reveal(Widget plain, Widget selected) => Stack(
       children: [
-        stack,
-        if (currentLabel != null && showLabel) ...[
-          const SizedBox(height: 2),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final text = DefaultTextStyle(
-                style:
-                    (Theme.of(context).textTheme.labelSmall ??
-                            const TextStyle())
-                        .copyWith(color: effectiveColor),
-                child: labelChild,
-              );
-              return constraints.hasBoundedWidth
-                  ? SizedBox(width: double.infinity, child: text)
-                  : text;
-            },
+        plain,
+        Positioned.fill(
+          child: IgnorePointer(
+            child: ExcludeFocus(
+              child: ExcludeSemantics(child: IndicatorInk(child: selected)),
+            ),
           ),
-        ],
+        ),
       ],
+    );
+
+    Widget content({
+      required Color color,
+      required Widget icon,
+      required bool anchors,
+    }) {
+      Widget iconStack(double? maxIconWidth) => Stack(
+        clipBehavior: Clip.none,
+        children: [
+          if (ink)
+            reveal(
+              IconTheme.merge(
+                data: IconThemeData(color: color),
+                child: icon,
+              ),
+              IconTheme.merge(
+                data: IconThemeData(color: selectedLookColor),
+                child: OverflowBox(
+                  minWidth: 0,
+                  maxWidth: maxIconWidth,
+                  child: selectedIcon ?? icon,
+                ),
+              ),
+            )
+          else
+            IconTheme.merge(
+              data: IconThemeData(color: color),
+              child: icon,
+            ),
+          if (badge != null)
+            PositionedDirectional(top: -4, end: -4, child: badge!),
+        ],
+      );
+      Widget stack = ink
+          ? LayoutBuilder(
+              builder: (context, constraints) =>
+                  iconStack(constraints.maxWidth),
+            )
+          : iconStack(null);
+      if (anchors) {
+        stack = IndicatorAnchor(role: IndicatorAnchorRole.icon, child: stack);
+      }
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          stack,
+          if (currentLabel != null && showLabel) ...[
+            const SizedBox(height: 2),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final text = DefaultTextStyle(
+                  style:
+                      (Theme.of(context).textTheme.labelSmall ??
+                              const TextStyle())
+                          .copyWith(color: color),
+                  child: selection == null
+                      ? labelChild
+                      : Center(
+                          heightFactor: 1,
+                          child: anchors
+                              ? IndicatorAnchor(
+                                  role: IndicatorAnchorRole.label,
+                                  child: ink
+                                      ? reveal(
+                                          labelChild,
+                                          DefaultTextStyle.merge(
+                                            style: TextStyle(
+                                              color: selectedLookColor,
+                                            ),
+                                            child: labelChild,
+                                          ),
+                                        )
+                                      : labelChild,
+                                )
+                              : labelChild,
+                        ),
+                );
+                return constraints.hasBoundedWidth
+                    ? SizedBox(width: double.infinity, child: text)
+                    : text;
+              },
+            ),
+          ],
+        ],
+      );
+    }
+
+    final anchors = selection != null;
+    final column = content(
+      color: !ink && selected ? selectedLookColor : plainColor,
+      icon: !ink && selected ? (selectedIcon ?? icon) : icon,
+      anchors: anchors,
     );
 
     Widget child = InkWell(

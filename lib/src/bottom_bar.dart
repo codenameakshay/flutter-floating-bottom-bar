@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
-import 'package:flutter/rendering.dart';
 import 'package:motor/motor.dart';
 
 import 'bottom_bar_controller.dart';
@@ -9,6 +8,7 @@ import 'bottom_bar_scope.dart';
 import 'bottom_bar_theme.dart';
 import 'config/bottom_bar_layout.dart';
 import 'config/bottom_bar_motion.dart';
+import 'internal/reduce_motion.dart';
 import 'config/bottom_bar_scroll_behavior.dart';
 import 'internal/scroll_notification_dispatcher.dart';
 import 'internal/size_observer.dart';
@@ -560,15 +560,7 @@ class _BottomBarState extends State<BottomBar>
     _motionController.animateTo(target, forward: visible);
   }
 
-  bool get _disableAnimations {
-    return SemanticsBinding.instance.disableAnimations ||
-        WidgetsBinding
-            .instance
-            .platformDispatcher
-            .accessibilityFeatures
-            .disableAnimations ||
-        (MediaQuery.maybeDisableAnimationsOf(context) ?? false);
-  }
+  bool get _disableAnimations => reduceMotion(context);
 
   Widget _buildIconChild(double iconWidth, double iconHeight) {
     if (widget.icon != null) {
