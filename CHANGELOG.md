@@ -8,6 +8,7 @@
   that is no longer on screen, such as an inactive `IndexedStack` child or a
   disposed list. They now target the most recently scrolled list that is
   still attached and visible.
+- Drop the unused `cupertino_ui` dependency.
 
 ## 3.0.1
 

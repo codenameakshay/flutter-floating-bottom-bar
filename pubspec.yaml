@@ -3,6 +3,22 @@ description: An adaptable Flutter floating bottom bar for navigation, search, an
 version: 3.0.1
 homepage: https://hashstudios.in
 repository: https://github.com/codenameakshay/flutter-floating-bottom-bar
+issue_tracker: https://github.com/codenameakshay/flutter-floating-bottom-bar/issues
+funding:
+  - https://www.paypal.me/codenameakshay
+topics:
+  - bottom-navigation
+  - navigation-bar
+  - tab-bar
+  - floating
+  - animation
+screenshots:
+  - description: An issues list with a floating dock that hides on scroll.
+    path: screenshots/pub/1-issues-dock.webp
+  - description: An AI prompt dock that hides on scroll and leaves a scroll-to-top action.
+    path: screenshots/pub/2-ai-prompt-dock.webp
+  - description: A floating TabBar that switches pages and hides on scroll.
+    path: screenshots/pub/3-basic-tab-bar.webp
 
 environment:
   sdk: ">=3.12.0 <4.0.0"
@@ -12,7 +28,6 @@ dependencies:
   flutter:
     sdk: flutter
   material_ui: ^1.0.0
-  cupertino_ui: ^1.0.0
   motor: ^1.1.0
 
 dev_dependencies:

@@ -27,3 +27,4 @@ coverage/
 *.log
 .omx/
 .DS_Store
+clips/
