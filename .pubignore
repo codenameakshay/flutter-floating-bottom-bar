@@ -11,7 +11,10 @@ build/
 Makefile
 tool/
 .github/
-screenshots/
+/screenshots/*
+!/screenshots/pub/
+clips/
+RELEASING.md
 
 # FVM (Flutter Version Management) — local toolchain, not needed by consumers
 .fvm/

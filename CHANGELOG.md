@@ -1,5 +1,7 @@
 ## Unreleased
 
+- Drop the unused `cupertino_ui` dependency.
+
 ## 3.0.1
 
 - Allow compatible 1.x releases of `material_ui` and `cupertino_ui`, including
