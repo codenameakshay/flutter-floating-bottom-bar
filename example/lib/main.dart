@@ -66,6 +66,10 @@ class ExampleApp extends StatelessWidget {
         '/': (_) => const _DemoPicker(),
         for (final demo in demos) '/${demo.slug}': demo.builder,
       },
+      onUnknownRoute: (_) => MaterialPageRoute<void>(
+        settings: const RouteSettings(name: '/'),
+        builder: (_) => const _DemoPicker(),
+      ),
       builder: (context, child) => _DeviceFrame(child: child!),
     );
   }
@@ -85,12 +89,13 @@ class _DeviceFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
-      builder: (context, constraints) =>
-          constraints.maxWidth < _phoneBreakpoint ? child : _framed(context),
+      builder: (context, constraints) => constraints.maxWidth < _phoneBreakpoint
+          ? child
+          : _framed(context, constraints.biggest),
     );
   }
 
-  Widget _framed(BuildContext context) {
+  Widget _framed(BuildContext context, Size outerSize) {
     final media = MediaQuery.of(context);
     return ColoredBox(
       color: const Color(0xFFE9E9E4),
@@ -120,14 +125,35 @@ class _DeviceFrame extends StatelessWidget {
                 child: ClipRRect(
                   borderRadius: _radius,
                   child: LayoutBuilder(
-                    builder: (context, constraints) => MediaQuery(
-                      data: media.copyWith(
-                        size: constraints.biggest,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        viewPadding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      child: child,
-                    ),
+                    builder: (context, constraints) {
+                      final frameSize = constraints.biggest;
+                      final hostInsets = media.viewInsets;
+                      final viewInsets = _insetsWithinFrame(
+                        hostInsets,
+                        outerSize,
+                        frameSize,
+                      );
+                      const viewPadding = EdgeInsets.symmetric(vertical: 12);
+                      final padding = EdgeInsets.only(
+                        top: (viewPadding.top - viewInsets.top).clamp(
+                          0.0,
+                          viewPadding.top,
+                        ),
+                        bottom: (viewPadding.bottom - viewInsets.bottom).clamp(
+                          0.0,
+                          viewPadding.bottom,
+                        ),
+                      );
+                      return MediaQuery(
+                        data: media.copyWith(
+                          size: frameSize,
+                          padding: padding,
+                          viewPadding: viewPadding,
+                          viewInsets: viewInsets,
+                        ),
+                        child: child,
+                      );
+                    },
                   ),
                 ),
               ),
@@ -135,6 +161,21 @@ class _DeviceFrame extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  EdgeInsets _insetsWithinFrame(
+    EdgeInsets hostInsets,
+    Size outerSize,
+    Size frameSize,
+  ) {
+    final horizontalGap = (outerSize.width - frameSize.width) / 2;
+    final verticalGap = (outerSize.height - frameSize.height) / 2;
+    return EdgeInsets.fromLTRB(
+      (hostInsets.left - horizontalGap).clamp(0.0, frameSize.width),
+      (hostInsets.top - verticalGap).clamp(0.0, frameSize.height),
+      (hostInsets.right - horizontalGap).clamp(0.0, frameSize.width),
+      (hostInsets.bottom - verticalGap).clamp(0.0, frameSize.height),
     );
   }
 }
