@@ -174,11 +174,11 @@ ValueListenableBuilder<double>(
 
 Don't read `.value` directly in `build` and expect a real number on first frame.
 
-## "scrollToStart called before any scroll notification was observed"
+## "scrollToStart/scrollToEnd found no attached, visible scrollable"
 
 **Symptoms:** `controller.scrollToStart()` (or `.scrollToEnd()`) prints a `FlutterError` and does nothing.
 
-**Cause:** the dispatcher hasn't seen a single `ScrollNotification` yet — usually because the user hasn't scrolled at all. The bar can't scroll a scrollable it doesn't know about.
+**Cause:** no scrollable that is still mounted and on screen has sent a `ScrollNotification`. Usually the user hasn't scrolled yet, the scrolled list was disposed (body swapped), it sits in an inactive `IndexedStack` child, or the body only uses `reportScroll`. The bar can't scroll a scrollable it doesn't know about. The built-in hidden action still shows the bar in this case.
 
 **Fix:** if you legitimately need to scroll programmatically before any user interaction, pass a `ScrollController` directly to the scrollable and call `.animateTo` on it yourself. Don't rely on `BottomBarController.scrollToStart` as the *only* way to scroll.
 

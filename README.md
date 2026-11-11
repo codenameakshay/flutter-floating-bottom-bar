@@ -5,6 +5,10 @@ scrolling. Use it as a tab bar, bottom navigation bar, search bar, command
 surface, or any custom child.
 
 <p align="center">
+  <a href="https://codenameakshay.github.io/flutter-floating-bottom-bar/">
+    <img src="https://img.shields.io/badge/Try_it-live-0A7CFF?logo=flutter"
+      alt="Try it live" />
+  </a>
   <a href="https://flutter.dev">
     <img src="https://img.shields.io/badge/Platform-Flutter-02569B?logo=flutter"
       alt="Platform" />
@@ -22,6 +26,8 @@ surface, or any custom child.
       alt="Donate" />
   </a>
 </p>
+
+**[Try it live](https://codenameakshay.github.io/flutter-floating-bottom-bar/)**. Every demo runs in your browser. Link one demo with `#/<demo>`, for example [`#/issues-dock`](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/issues-dock).
 
 | ![Issues dock](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/1-issues-dock.gif) | ![AI prompt dock](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/2-ai-prompt-dock.gif) | ![Basic TabBar](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/3-basic-tab-bar.gif) |
 | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
@@ -305,6 +311,8 @@ No backward-compatibility shim ships with v2.
 
 The hidden action is only interactive while the bar is hidden. While the bar is
 visible it is ignored for hit testing and removed from the semantics tree.
+Tapping it scrolls the newest eligible scrollable, then shows the bar. If no
+scrollable is eligible, it still shows the bar.
 
 ### `BottomBarLayout`
 
@@ -361,9 +369,16 @@ animating.
 | `isVisible` | Tracks the currently attached bar's visibility. |
 | `isAttached` | Whether the controller is attached to a live bar. |
 | `show()` / `hide()` / `toggle()` | Imperative visibility controls. |
-| `scrollToStart()` | Always scrolls the last active scrollable to its minimum extent. |
-| `scrollToEnd()` | Always scrolls the last active scrollable to its maximum extent. |
+| `scrollToStart()` | Scrolls the newest eligible scrollable to its minimum extent, then shows the bar. |
+| `scrollToEnd()` | Scrolls the newest eligible scrollable to its maximum extent, then shows the bar. |
 | `reportScroll(delta: ...)` | Drives visibility from a source that doesn't emit `ScrollNotification`s (e.g. WebView). Visibility only; doesn't affect `scrollToStart`/`scrollToEnd`. |
+
+Boundary actions choose the most recently observed scrollable that still owns
+its position, has laid out, and is mounted and on stage. Disposed lists and
+scrollables hidden by `Visibility` or disabled `TickerMode` are skipped. The
+controller methods do nothing, including leaving bar visibility unchanged,
+when no eligible scrollable has been observed. They also report a `FlutterError`
+in debug mode.
 
 `hide()` does not lock visibility. Later accepted scroll notifications can show
 the bar again, including when scrolling settles at the start unless `reverse`.

@@ -86,8 +86,9 @@ class BottomBarController extends ChangeNotifier {
   /// [BottomBarScrollBehavior.scrollOpposite], which only changes the built-in
   /// hidden action's direction.
   ///
-  /// No-op and logs a [FlutterError] in debug mode if no scroll notification
-  /// has been observed yet.
+  /// No-op and logs a [FlutterError] in debug mode if no attached, visible
+  /// scrollable has been observed. Scrollables that were disposed, or that
+  /// sit in an inactive [IndexedStack] child or a covered route, are skipped.
   Future<void> scrollToStart() async {
     await _binding?.scrollToBoundary(toEnd: false);
   }
@@ -99,8 +100,9 @@ class BottomBarController extends ChangeNotifier {
   /// [BottomBarScrollBehavior.scrollOpposite], which only changes the built-in
   /// hidden action's direction.
   ///
-  /// No-op and logs a [FlutterError] in debug mode if no scroll notification
-  /// has been observed yet.
+  /// No-op and logs a [FlutterError] in debug mode if no attached, visible
+  /// scrollable has been observed. Scrollables that were disposed, or that
+  /// sit in an inactive [IndexedStack] child or a covered route, are skipped.
   Future<void> scrollToEnd() async {
     await _binding?.scrollToBoundary(toEnd: true);
   }
