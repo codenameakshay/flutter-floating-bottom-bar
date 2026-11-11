@@ -108,6 +108,131 @@ void main() {
     },
   );
 
+  for (final useController in [false, true]) {
+    testWidgets(
+      '${useController ? 'controller boundary call' : 'hidden action'} '
+      'completes when its position is disposed during animation',
+      (tester) async {
+        final controller = BottomBarController();
+        addTearDown(controller.dispose);
+        final showList = ValueNotifier<bool>(true);
+        addTearDown(showList.dispose);
+        var acceptNotifications = true;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: BottomBar(
+                controller: controller,
+                layout: const BottomBarLayout(respectSafeArea: false),
+                motion: const BottomBarMotion.curved(
+                  duration: Duration(seconds: 1),
+                ),
+                scrollBehavior: BottomBarScrollBehavior(
+                  predicate: (_) => acceptNotifications,
+                ),
+                body: ValueListenableBuilder<bool>(
+                  valueListenable: showList,
+                  builder: (_, visible, _) => visible
+                      ? ListView.builder(
+                          key: const ValueKey('animated-list'),
+                          itemCount: 200,
+                          itemBuilder: (_, i) => ListTile(title: Text('$i')),
+                        )
+                      : const SizedBox.expand(),
+                ),
+                child: const SizedBox(height: 56),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.drag(
+          find.byKey(const ValueKey('animated-list')),
+          const Offset(0, -500),
+        );
+        await tester.pumpAndSettle();
+        expect(controller.isVisible, isFalse);
+        acceptNotifications = false;
+
+        Future<void>? completion;
+        if (useController) {
+          completion = controller.scrollToStart();
+        } else {
+          await tester.tap(findByTooltip('Scroll to top'));
+        }
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(controller.isVisible, isFalse);
+
+        showList.value = false;
+        await tester.pumpAndSettle();
+        if (completion != null) await completion;
+
+        expect(find.byKey(const ValueKey('animated-list')), findsNothing);
+        expect(tester.takeException(), isNull);
+        expect(controller.isVisible, isTrue);
+      },
+    );
+  }
+
+  testWidgets(
+    'controller no-target call stays hidden and can retry on a new list',
+    (tester) async {
+      final controller = BottomBarController();
+      addTearDown(controller.dispose);
+      final showList = ValueNotifier<bool>(false);
+      addTearDown(showList.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BottomBar(
+              controller: controller,
+              body: ValueListenableBuilder<bool>(
+                valueListenable: showList,
+                builder: (_, visible, _) => visible
+                    ? ListView.builder(
+                        key: const ValueKey('retry-list'),
+                        itemCount: 200,
+                        itemBuilder: (_, i) => ListTile(title: Text('$i')),
+                      )
+                    : const SizedBox.expand(),
+              ),
+              child: const SizedBox(height: 56),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      controller.hide();
+      await tester.pumpAndSettle();
+
+      await controller.scrollToStart();
+      expect(tester.takeException(), isFlutterError);
+      expect(controller.isVisible, isFalse);
+
+      showList.value = true;
+      await tester.pumpAndSettle();
+      await tester.drag(
+        find.byKey(const ValueKey('retry-list')),
+        const Offset(0, -500),
+      );
+      await tester.pumpAndSettle();
+      final position = tester
+          .state<ScrollableState>(find.byType(Scrollable))
+          .position;
+      expect(position.pixels, greaterThan(0));
+      final completion = controller.scrollToStart();
+      await tester.pumpAndSettle();
+      await completion;
+
+      expect(position.pixels, closeTo(position.minScrollExtent, 0.5));
+      expect(controller.isVisible, isTrue);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   group('IndexedStack scrolls only the visible list', () {
     Widget buildHarness({
       required BottomBarController controller,
