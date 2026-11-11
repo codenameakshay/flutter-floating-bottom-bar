@@ -1,5 +1,14 @@
 ## Unreleased
 
+- Fix the hidden action doing nothing when the body has no scrollable to
+  scroll, such as a WebView driven by `reportScroll`, or after the scrolled
+  list was disposed by a body swap. Tapping it now always shows the bar.
+  Fixes #7.
+- Fix the hidden action and `scrollToStart`/`scrollToEnd` scrolling a list
+  that is no longer on screen, such as an inactive `IndexedStack` child or a
+  disposed list. They now target the most recently scrolled list that is
+  still attached and visible.
+
 ## 3.0.1
 
 - Allow compatible 1.x releases of `material_ui` and `cupertino_ui`, including

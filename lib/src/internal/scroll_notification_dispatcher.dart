@@ -6,8 +6,9 @@ import 'package:flutter/widgets.dart';
 ///
 /// Tracks per-scrollable last offset, applies a delta threshold, and calls
 /// `onShouldHide(true)` when the bar should hide and `onShouldHide(false)`
-/// when it should show. Also tracks the most recently observed
-/// [ScrollPosition] for `BottomBarController.scrollToStart`/`scrollToEnd`.
+/// when it should show. Also remembers each scrollable's [ScrollPosition] so
+/// [activeScrollable] can pick the target for
+/// `BottomBarController.scrollToStart`/`scrollToEnd`.
 ///
 /// Bounded to 16 tracked scrollables (LRU eviction).
 class ScrollNotificationDispatcher {
@@ -33,18 +34,34 @@ class ScrollNotificationDispatcher {
 
   _TrackedScrollState? _externalState;
 
-  ScrollPosition? _lastActivePosition;
-  ScrollPosition? get lastActivePosition => _lastActivePosition;
-
-  BuildContext? _lastActiveContext;
-
-  /// The [BuildContext] of the most recently active scrollable.
+  /// The most recently scrolled scrollable that is still attached and on
+  /// stage, or `null` when there is none.
   ///
-  /// Used by `BottomBarController.scrollToStart`/`scrollToEnd` to locate an
-  /// enclosing [NestedScrollView], whose header and body scroll on two
-  /// coordinated [ScrollPosition]s that must both be animated to fully return
-  /// to the top.
-  BuildContext? get lastActiveContext => _lastActiveContext;
+  /// Drops tracked scrollables that were disposed or got a new position.
+  /// Skips ones hidden by an ancestor [Visibility] (such as an inactive
+  /// [IndexedStack] child) or a disabled [TickerMode] (such as a route covered
+  /// by an opaque one). The returned context lets callers locate an enclosing
+  /// [NestedScrollView].
+  ({ScrollPosition position, BuildContext context})? activeScrollable() {
+    for (final key in _trackedScrollables.keys.toList().reversed) {
+      final state = _trackedScrollables[key]!;
+      final position = state.position;
+      final context = state.context;
+      if (position == null || context == null) continue;
+      if (!context.mounted ||
+          !identical(Scrollable.maybeOf(context)?.position, position)) {
+        _trackedScrollables.remove(key);
+        continue;
+      }
+      if (position.hasPixels &&
+          position.hasContentDimensions &&
+          TickerMode.getValuesNotifier(context).value.enabled &&
+          Visibility.of(context)) {
+        return (position: position, context: context);
+      }
+    }
+    return null;
+  }
 
   int _keyFor(ScrollNotification n, ScrollPosition? position) {
     if (position != null) return identityHashCode(position);
@@ -78,9 +95,10 @@ class ScrollNotificationDispatcher {
       return;
     }
 
-    final position = _maybePositionOf(notification);
-    _lastActivePosition = position;
-    _lastActiveContext = notification.context;
+    final context = notification.context;
+    final position = context != null && context.mounted
+        ? Scrollable.maybeOf(context)?.position
+        : null;
     final key = _keyFor(notification, position);
     // Overscroll and its spring-back (BouncingScrollPhysics) aren't the user
     // scrolling: pin tracking to the edge so the rebound off the top doesn't
@@ -93,7 +111,9 @@ class ScrollNotificationDispatcher {
     final state =
         _trackedScrollables.remove(key) ??
         _TrackedScrollState(anchorPixels: pixels, lastPixels: pixels);
-    _trackedScrollables[key] = state;
+    _trackedScrollables[key] = state
+      ..position = position
+      ..context = context;
 
     // Evict oldest if over capacity.
     while (_trackedScrollables.length > _maxTracked) {
@@ -125,8 +145,8 @@ class ScrollNotificationDispatcher {
   /// direction), negative moves toward the start (the usual show direction).
   /// Applies the same [deltaThreshold]/[reverse] accumulation as [handle],
   /// but tracks its own independent accumulator: it never runs [predicate],
-  /// never touches [lastActivePosition]/[lastActiveContext], and does not
-  /// share state with notification-tracked scrollables.
+  /// never changes [activeScrollable], and does not share state with
+  /// notification-tracked scrollables.
   void handleDelta(double delta) {
     if (delta == 0) return;
 
@@ -157,12 +177,6 @@ class ScrollNotificationDispatcher {
     onShouldHide(shouldHide);
   }
 
-  ScrollPosition? _maybePositionOf(ScrollNotification n) {
-    final ctx = n.context;
-    if (ctx == null || !ctx.mounted) return _lastActivePosition;
-    return Scrollable.maybeOf(ctx)?.position;
-  }
-
   void _resetState(_TrackedScrollState state, double pixels) {
     state
       ..anchorPixels = pixels
@@ -177,4 +191,6 @@ class _TrackedScrollState {
   double anchorPixels;
   double lastPixels;
   double? direction;
+  ScrollPosition? position;
+  BuildContext? context;
 }

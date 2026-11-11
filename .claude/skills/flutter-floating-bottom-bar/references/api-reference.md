@@ -221,8 +221,14 @@ Extends `ChangeNotifier`.
 | `void show()` | Show. Fires `onBottomBarShown`. |
 | `void hide()` | Hide. Fires `onBottomBarHidden`. Bypasses `hideOnScroll: false`. |
 | `void toggle()` | Toggle. |
-| `Future<void> scrollToStart()` | Scrolls last-active scrollable to start. No-op if none observed. |
-| `Future<void> scrollToEnd()` | Scrolls to end. |
+| `Future<void> scrollToStart()` | Scrolls the newest eligible scrollable to start, then shows the bar. |
+| `Future<void> scrollToEnd()` | Scrolls the newest eligible scrollable to end, then shows the bar. |
+
+Boundary actions select the most recently observed scrollable that is still
+mounted, owns its position, has laid out, and is on stage. They skip disposed
+lists and scrollables hidden by `Visibility` or disabled `TickerMode`. With no
+eligible target, the controller methods leave visibility unchanged and report a
+`FlutterError` in debug mode. The built-in hidden action still shows the bar.
 
 **Cannot be attached to two `BottomBar`s simultaneously.** Double-attach asserts in debug. If you need two bars, use two controllers.
 
