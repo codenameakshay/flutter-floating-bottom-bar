@@ -89,18 +89,20 @@ Widget _translatedItem(ValueNotifier<Offset> offset) =>
           Transform.translate(offset: offset, child: child),
     );
 
-void _expectPillAtFirstIcon(WidgetTester tester) {
-  final content = tester.getRect(find.byKey(_firstIconKey));
+void _expectUnderlineAtFirstIcon(WidgetTester tester) {
+  final content = tester.getRect(find.byKey(_firstIconKey).first);
   final origin = tester.getTopLeft(find.byType(BottomBarItems));
   expect(
     find.byType(BottomBarItems),
     paints..rrect(
       rrect: RRect.fromRectAndRadius(
-        const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 4,
-        ).inflateRect(content).shift(-origin),
-        const Radius.circular(16),
+        Rect.fromLTWH(
+          content.center.dx - content.width / 2,
+          content.bottom + 4,
+          content.width,
+          3,
+        ).shift(-origin),
+        const Radius.circular(1.5),
       ),
     ),
   );
@@ -122,12 +124,12 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    final initial = tester.getRect(find.byKey(_firstIconKey));
+    final initial = tester.getRect(find.byKey(_firstIconKey).first);
     expect(tester.getRect(find.byKey(_indicatorKey)), initial);
 
     offset.value = const Offset(20, 8);
     await tester.pump();
-    final translated = tester.getRect(find.byKey(_firstIconKey));
+    final translated = tester.getRect(find.byKey(_firstIconKey).first);
     expect(translated, initial.shift(const Offset(20, 8)));
     expect(
       tester.getRect(find.byKey(_indicatorKey)),
@@ -153,12 +155,12 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final initial = tester.getRect(find.byKey(_firstIconKey));
+      final initial = tester.getRect(find.byKey(_firstIconKey).first);
       expect(tester.getRect(find.byKey(_indicatorKey)), initial);
 
       offset.value = const Offset(20, 8);
       await tester.pump();
-      final translated = tester.getRect(find.byKey(_firstIconKey));
+      final translated = tester.getRect(find.byKey(_firstIconKey).first);
       expect(translated, initial.shift(const Offset(20, 8)));
       expect(
         tester.getRect(find.byKey(_indicatorKey)),
@@ -170,43 +172,52 @@ void main() {
     },
   );
 
-  testWidgets('pill follows a local translation inside a repaint boundary', (
-    tester,
-  ) async {
-    final offset = ValueNotifier<Offset>(Offset.zero);
-    addTearDown(offset.dispose);
-    await tester.pumpWidget(
-      _app(
-        firstItem: RepaintBoundary(child: _translatedItem(offset)),
-        indicator: const BottomBarIndicator.pill(color: Colors.red),
-      ),
-    );
-    await tester.pumpAndSettle();
-    final initial = tester.getRect(find.byKey(_firstIconKey));
-    expect(
-      (await _pixelAt(tester, initial.center)).toARGB32(),
-      Colors.red.toARGB32(),
-    );
-    final newlyCoveredPoint = Offset(initial.right + 27, initial.center.dy + 8);
-    expect(
-      (await _pixelAt(tester, newlyCoveredPoint)).toARGB32(),
-      isNot(Colors.red.toARGB32()),
-    );
+  testWidgets(
+    'underline follows a local translation inside a repaint boundary',
+    (tester) async {
+      final offset = ValueNotifier<Offset>(Offset.zero);
+      addTearDown(offset.dispose);
+      await tester.pumpWidget(
+        _app(
+          firstItem: RepaintBoundary(child: _translatedItem(offset)),
+          indicator: const BottomBarIndicator.underline(color: Colors.red),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final initial = tester.getRect(find.byKey(_firstIconKey).first);
+      // The bar sits 4px below the icon and is 3px thick.
+      final barCenterY = initial.bottom + 4 + 1.5;
+      expect(
+        (await _pixelAt(
+          tester,
+          Offset(initial.center.dx, barCenterY),
+        )).toARGB32(),
+        Colors.red.toARGB32(),
+      );
+      final newlyCoveredPoint = Offset(initial.center.dx + 20, barCenterY);
+      expect(
+        (await _pixelAt(tester, newlyCoveredPoint)).toARGB32(),
+        isNot(Colors.red.toARGB32()),
+      );
 
-    offset.value = const Offset(20, 8);
-    await tester.pump();
-    expect(
-      tester.getRect(find.byKey(_firstIconKey)),
-      initial.shift(const Offset(20, 8)),
-    );
-    expect(
-      (await _pixelAt(tester, newlyCoveredPoint)).toARGB32(),
-      Colors.red.toARGB32(),
-      reason: 'The retained layer must contain the translated pill too.',
-    );
-    _expectPillAtFirstIcon(tester);
-    expect(tester.takeException(), isNull);
-  });
+      offset.value = const Offset(20, 8);
+      await tester.pump();
+      expect(
+        tester.getRect(find.byKey(_firstIconKey).first),
+        initial.shift(const Offset(20, 8)),
+      );
+      expect(
+        (await _pixelAt(
+          tester,
+          Offset(initial.center.dx + 20, barCenterY + 8),
+        )).toARGB32(),
+        Colors.red.toARGB32(),
+        reason: 'The retained layer must contain the translated bar too.',
+      );
+      _expectUnderlineAtFirstIcon(tester);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('selected item remains visible when a wide row becomes narrow', (
     tester,
@@ -215,7 +226,7 @@ void main() {
     await tester.pumpWidget(_app(indicator: indicator, selectedIndex: 2));
     await tester.pumpAndSettle();
     final wide = tester.getRect(find.byType(BottomBarItems));
-    final initiallySelected = tester.getRect(find.byKey(_lastIconKey));
+    final initiallySelected = tester.getRect(find.byKey(_lastIconKey).first);
     expect(initiallySelected.left, greaterThanOrEqualTo(wide.left));
     expect(initiallySelected.right, lessThanOrEqualTo(wide.right));
 
@@ -224,7 +235,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     final viewport = tester.getRect(find.byType(SingleChildScrollView));
-    final selected = tester.getRect(find.byKey(_lastIconKey));
+    final selected = tester.getRect(find.byKey(_lastIconKey).first);
     expect(selected.left, greaterThanOrEqualTo(viewport.left));
     expect(selected.right, lessThanOrEqualTo(viewport.right));
     expect(tester.takeException(), isNull);
@@ -246,7 +257,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester.getRect(find.byKey(_indicatorKey)),
-        tester.getRect(find.byKey(_firstIconKey)),
+        tester.getRect(find.byKey(_firstIconKey).first),
       );
       expect(settled, isTrue);
       final observer =
@@ -266,7 +277,7 @@ void main() {
 
       await tester.pumpWidget(_app(indicator: indicator, selectedIndex: 2));
       await tester.pump(const Duration(milliseconds: 60));
-      final target = tester.getRect(find.byKey(_lastIconKey));
+      final target = tester.getRect(find.byKey(_lastIconKey).first);
       expect(tester.getRect(find.byKey(_indicatorKey)), isNot(target));
       expect(settled, isFalse);
       expect(tester.binding.transientCallbackCount, greaterThan(0));
@@ -281,7 +292,7 @@ void main() {
       await tester.pumpWidget(_app(indicator: indicator));
       expect(
         tester.getRect(find.byKey(_indicatorKey)),
-        tester.getRect(find.byKey(_firstIconKey)),
+        tester.getRect(find.byKey(_firstIconKey).first),
       );
       expect(settled, isTrue);
       expect(tester.binding.hasScheduledFrame, isFalse);
@@ -314,14 +325,14 @@ void main() {
     });
     await tester.pumpWidget(_app(indicator: indicator, reducedMotion: true));
     await tester.pumpAndSettle();
-    final initial = tester.getRect(find.byKey(_firstIconKey));
+    final initial = tester.getRect(find.byKey(_firstIconKey).first);
     expect(tester.getRect(find.byKey(_indicatorKey)), initial);
     expect(settled, isTrue);
 
     await tester.pumpWidget(
       _app(indicator: indicator, selectedIndex: 2, reducedMotion: false),
     );
-    final target = tester.getRect(find.byKey(_lastIconKey));
+    final target = tester.getRect(find.byKey(_lastIconKey).first);
     expect(
       tester.getRect(find.byKey(_indicatorKey)),
       isNot(target),
@@ -350,7 +361,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester.getRect(find.byKey(_indicatorKey)),
-      tester.getRect(find.byKey(_firstIconKey)),
+      tester.getRect(find.byKey(_firstIconKey).first),
     );
     expect(tester.binding.hasScheduledFrame, isFalse);
 
@@ -364,7 +375,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester.getRect(find.byKey(_indicatorKey)),
-      tester.getRect(find.byKey(_firstIconKey)),
+      tester.getRect(find.byKey(_firstIconKey).first),
     );
     expect(tester.binding.hasScheduledFrame, isFalse);
 

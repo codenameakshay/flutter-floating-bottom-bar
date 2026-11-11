@@ -1,7 +1,17 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 
-enum _Style { pill, stretch, underline, dot, blob }
+enum _Style {
+  pill('Pill'),
+  stretch('Stretch'),
+  tint('Tint'),
+  underline('Underline'),
+  dot('Dot'),
+  tubelight('Tubelight');
+
+  const _Style(this.label);
+  final String label;
+}
 
 class IndicatorsDemoPage extends StatefulWidget {
   const IndicatorsDemoPage({super.key});
@@ -17,25 +27,12 @@ class _IndicatorsDemoPageState extends State<IndicatorsDemoPage> {
   BottomBarIndicator get _indicator => switch (_style) {
     _Style.pill => const BottomBarIndicator.pill(),
     _Style.stretch => const BottomBarIndicator.pill(stretch: true),
+    _Style.tint => const BottomBarIndicator.tint(stretch: true),
     _Style.underline => const BottomBarIndicator.underline(),
     _Style.dot => const BottomBarIndicator.dot(),
-    _Style.blob => BottomBarIndicator.builder(
-      (context, rect, settled) => OverflowBox(
-        maxWidth: rect.width + 12,
-        maxHeight: rect.height + 12,
-        child: SizedBox(
-          width: rect.width + 12,
-          height: rect.height + 12,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFFC2E0), Color(0xFFC7D2FE)],
-              ),
-            ),
-          ),
-        ),
-      ),
+    _Style.tubelight => BottomBarIndicator.builder(
+      (context, rect, settled) =>
+          _Tubelight(rect: rect, color: Theme.of(context).colorScheme.primary),
     ),
   };
 
@@ -66,21 +63,19 @@ class _IndicatorsDemoPageState extends State<IndicatorsDemoPage> {
           children: [
             Padding(
               padding: const EdgeInsets.all(16),
-              child: SegmentedButton<_Style>(
+              child: Wrap(
                 key: const Key('indicator-style'),
-                segments: const [
-                  ButtonSegment(value: _Style.pill, label: Text('Pill')),
-                  ButtonSegment(value: _Style.stretch, label: Text('Stretch')),
-                  ButtonSegment(
-                    value: _Style.underline,
-                    label: Text('Underline'),
-                  ),
-                  ButtonSegment(value: _Style.dot, label: Text('Dot')),
-                  ButtonSegment(value: _Style.blob, label: Text('Blob')),
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final style in _Style.values)
+                    ChoiceChip(
+                      label: Text(style.label),
+                      selected: style == _style,
+                      showCheckmark: false,
+                      onSelected: (_) => setState(() => _style = style),
+                    ),
                 ],
-                selected: {_style},
-                showSelectedIcon: false,
-                onSelectionChanged: (s) => setState(() => _style = s.first),
               ),
             ),
             Expanded(
@@ -125,4 +120,76 @@ class _IndicatorsDemoPageState extends State<IndicatorsDemoPage> {
       ),
     );
   }
+}
+
+/// A lit bar on the bar's top edge that casts a soft beam down onto the
+/// selected item.
+class _Tubelight extends StatelessWidget {
+  const _Tubelight({required this.rect, required this.color});
+
+  /// Reach above the content, up to the bar's top edge.
+  static const _rise = 12.0;
+
+  final Rect rect;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return OverflowBox(
+      alignment: Alignment.bottomCenter,
+      minWidth: 0,
+      minHeight: 0,
+      maxWidth: rect.width + 12,
+      maxHeight: rect.height + _rise,
+      child: CustomPaint(
+        size: Size(rect.width + 12, rect.height + _rise),
+        painter: _TubelightPainter(color),
+      ),
+    );
+  }
+}
+
+class _TubelightPainter extends CustomPainter {
+  const _TubelightPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const lampWidth = 32.0;
+    final left = (size.width - lampWidth) / 2;
+    final beam = Path()
+      ..moveTo(left, 2)
+      ..lineTo(left + lampWidth, 2)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(
+      beam,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [color.withValues(alpha: 0.22), color.withValues(alpha: 0)],
+        ).createShader(Offset.zero & size),
+    );
+    final lamp = RRect.fromLTRBR(
+      left,
+      0,
+      left + lampWidth,
+      4,
+      const Radius.circular(2),
+    );
+    canvas.drawRRect(
+      lamp.inflate(3),
+      Paint()
+        ..color = color.withValues(alpha: 0.45)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+    );
+    canvas.drawRRect(lamp, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(_TubelightPainter oldDelegate) =>
+      oldDelegate.color != color;
 }

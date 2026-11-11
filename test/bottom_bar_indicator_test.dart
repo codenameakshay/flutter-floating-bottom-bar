@@ -92,12 +92,17 @@ Widget _bar({
 Rect _indicatorRect(WidgetTester tester) =>
     tester.getRect(find.byKey(_ringKey));
 
+Rect _slotRect(WidgetTester tester, int index) =>
+    tester.getRect(find.byKey(ValueKey(index)));
+
 Rect _contentRect(WidgetTester tester, int index, String label) {
   final icon = find.descendant(
     of: find.byKey(ValueKey(index)),
     matching: find.byType(Icon),
   );
-  return tester.getRect(icon).expandToInclude(tester.getRect(find.text(label)));
+  return tester
+      .getRect(icon.first)
+      .expandToInclude(tester.getRect(find.text(label).first));
 }
 
 void _expectRect(Rect actual, Rect expected) {
@@ -107,21 +112,37 @@ void _expectRect(Rect actual, Rect expected) {
   expect(actual.bottom, closeTo(expected.bottom, 0.01));
 }
 
-void _expectPill(WidgetTester tester, Rect content) {
+void _expectPill(WidgetTester tester, Rect slot) {
+  final rect = const EdgeInsets.all(
+    2,
+  ).deflateRect(slot).shift(-tester.getTopLeft(find.byType(BottomBarItems)));
   expect(
     find.byType(BottomBarItems),
     paints..rrect(
       rrect: RRect.fromRectAndRadius(
-        const EdgeInsets.symmetric(horizontal: 12, vertical: 4)
-            .inflateRect(content)
-            .shift(-tester.getTopLeft(find.byType(BottomBarItems))),
-        const Radius.circular(16),
+        rect,
+        Radius.circular(rect.shortestSide / 2),
       ),
     ),
   );
 }
 
-Rect _pillRect(WidgetTester tester) {
+void _expectUnderline(WidgetTester tester, Rect content) {
+  final origin = tester.getTopLeft(find.byType(BottomBarItems));
+  final bar = Rect.fromLTWH(
+    content.center.dx - content.width / 2,
+    content.bottom + 4,
+    content.width,
+    3,
+  ).shift(-origin);
+  expect(
+    find.byType(BottomBarItems),
+    paints
+      ..rrect(rrect: RRect.fromRectAndRadius(bar, const Radius.circular(1.5))),
+  );
+}
+
+Rect _paintedRect(WidgetTester tester) {
   late Rect rect;
   expect(
     find.byType(BottomBarItems),
@@ -134,11 +155,15 @@ Rect _pillRect(WidgetTester tester) {
   return rect;
 }
 
-Color? _iconColor(WidgetTester tester, int index) {
-  final icon = find.descendant(
+/// The colour of the icon in item [index]. A pill, tint or underline item
+/// paints two icons: the plain copy first ([plain]) and the selected copy
+/// last. Dot and builder items paint one icon, which is the last one.
+Color? _iconColor(WidgetTester tester, int index, {bool plain = false}) {
+  final icons = find.descendant(
     of: find.byKey(ValueKey(index)),
     matching: find.byType(Icon),
   );
+  final icon = plain ? icons.first : icons.last;
   return IconTheme.of(tester.element(icon)).color;
 }
 
@@ -166,7 +191,7 @@ void main() {
       _expectRect(_indicatorRect(tester), _contentRect(tester, 0, 'Home'));
       expect(
         _indicatorRect(tester).center.dx,
-        greaterThan(tester.getCenter(find.text('Search')).dx),
+        greaterThan(tester.getCenter(find.text('Search').first).dx),
       );
     },
   );
@@ -287,7 +312,7 @@ void main() {
         _app(
           _bar(
             selectedIndex: 1,
-            indicator: const BottomBarIndicator.pill(),
+            indicator: const BottomBarIndicator.underline(),
             labelBehavior: BottomBarLabelBehavior.alwaysShow,
           ),
         ),
@@ -298,13 +323,13 @@ void main() {
         _app(
           _bar(
             selectedIndex: 1,
-            indicator: const BottomBarIndicator.pill(),
+            indicator: const BottomBarIndicator.underline(),
             labelBehavior: BottomBarLabelBehavior.onlySelected,
           ),
         ),
       );
 
-      _expectPill(tester, _contentRect(tester, 1, 'Search'));
+      _expectUnderline(tester, _contentRect(tester, 1, 'Search'));
     },
   );
 
@@ -361,16 +386,13 @@ void main() {
           ),
         );
         final origin = tester.getTopLeft(find.byType(BottomBarItems));
-        final start = _pillRect(tester).shift(origin);
-        final end = const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 4,
-        ).inflateRect(_contentRect(tester, 3, 'Profile'));
+        final start = _paintedRect(tester).shift(origin);
+        final end = const EdgeInsets.all(2).deflateRect(_slotRect(tester, 3));
         final towardEnd = end.center.dx > start.center.dx;
         var widest = 0.0;
         for (var frame = 0; frame < 40; frame++) {
           await tester.pump(const Duration(milliseconds: 16));
-          final pill = _pillRect(tester).shift(origin);
+          final pill = _paintedRect(tester).shift(origin);
           widest = pill.width > widest ? pill.width : widest;
           if (towardEnd) {
             expect(pill.right, lessThanOrEqualTo(end.right + 0.01));
@@ -382,7 +404,7 @@ void main() {
         expect(tester.takeException(), isNull);
 
         await tester.pumpAndSettle();
-        _expectPill(tester, _contentRect(tester, 3, 'Profile'));
+        _expectPill(tester, _slotRect(tester, 3));
       },
     );
   }
@@ -543,7 +565,7 @@ void main() {
   );
 
   testWidgets(
-    'pill selected content uses onSecondaryContainer when no selectedColor is set',
+    'pill default: selected copy uses onPrimary, plain copy uses onSurfaceVariant',
     (tester) async {
       await tester.pumpWidget(
         _app(
@@ -555,31 +577,45 @@ void main() {
       final colors = Theme.of(
         tester.element(find.byType(BottomBarItems)),
       ).colorScheme;
-      expect(_iconColor(tester, 1), colors.onSecondaryContainer);
+      expect(_iconColor(tester, 1), colors.onPrimary);
+      expect(_iconColor(tester, 1, plain: true), colors.onSurfaceVariant);
     },
   );
 
-  testWidgets('pill selected content uses the item selectedColor when set', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _app(
-        _bar(
-          indicator: const BottomBarIndicator.pill(),
-          selectedIndex: 1,
-          children: [
-            _item(0, _five[0]),
-            _item(1, _five[1], selectedColor: Colors.green),
-          ],
+  testWidgets(
+    'pill with selectedColor: selected copy is the item selectedColor',
+    (tester) async {
+      await tester.pumpWidget(
+        _app(
+          _bar(
+            indicator: const BottomBarIndicator.pill(),
+            selectedIndex: 1,
+            children: [
+              _item(0, _five[0]),
+              _item(1, _five[1], selectedColor: Colors.green),
+            ],
+          ),
         ),
-      ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(_iconColor(tester, 1), Colors.green);
+    },
+  );
+
+  testWidgets('tint: selected copy uses colorScheme.primary', (tester) async {
+    await tester.pumpWidget(
+      _app(_bar(selectedIndex: 1, indicator: const BottomBarIndicator.tint())),
     );
     await tester.pumpAndSettle();
 
-    expect(_iconColor(tester, 1), Colors.green);
+    final colors = Theme.of(
+      tester.element(find.byType(BottomBarItems)),
+    ).colorScheme;
+    expect(_iconColor(tester, 1), colors.primary);
   });
 
-  testWidgets('underline selected content uses colorScheme.primary', (
+  testWidgets('underline: selected copy uses colorScheme.primary', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -595,6 +631,27 @@ void main() {
     expect(_iconColor(tester, 1), colors.primary);
   });
 
+  testWidgets('dot: the single selected icon uses colorScheme.primary', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(_bar(selectedIndex: 1, indicator: const BottomBarIndicator.dot())),
+    );
+    await tester.pumpAndSettle();
+
+    final colors = Theme.of(
+      tester.element(find.byType(BottomBarItems)),
+    ).colorScheme;
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey(1)),
+        matching: find.byType(Icon),
+      ),
+      findsOneWidget,
+    );
+    expect(_iconColor(tester, 1), colors.primary);
+  });
+
   testWidgets('out-of-range selectedIndex asserts in debug', (tester) async {
     await tester.pumpWidget(
       _app(_bar(tabs: _three, selectedIndex: 9, indicator: _ring)),
@@ -602,4 +659,95 @@ void main() {
 
     expect(tester.takeException(), isAssertionError);
   });
+
+  testWidgets(
+    'pill ink reveal clips the selected copy while the pill crosses item 2',
+    (tester) async {
+      await tester.pumpWidget(
+        _app(
+          _bar(selectedIndex: 0, indicator: const BottomBarIndicator.pill()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        _app(
+          _bar(selectedIndex: 4, indicator: const BottomBarIndicator.pill()),
+        ),
+      );
+
+      final origin = tester.getTopLeft(find.byType(BottomBarItems));
+      final slot = _slotRect(tester, 2);
+      var crossed = false;
+      for (var frame = 0; frame < 60; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        final pill = _paintedRect(tester).shift(origin);
+        if (pill.right >= slot.center.dx) {
+          expect(
+            pill.right,
+            lessThan(slot.right),
+            reason: 'the pill covers the left half of item 2 only',
+          );
+          crossed = true;
+          break;
+        }
+      }
+      expect(crossed, isTrue);
+      expect(find.byType(BottomBarItems), paints..clipRRect());
+
+      await tester.pumpAndSettle();
+      expect(
+        _iconColor(tester, 4),
+        Theme.of(
+          tester.element(find.byType(BottomBarItems)),
+        ).colorScheme.onPrimary,
+      );
+    },
+  );
+
+  testWidgets('tint settles on the item slot with a 16px radius', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(_bar(selectedIndex: 1, indicator: const BottomBarIndicator.tint())),
+    );
+    await tester.pumpAndSettle();
+
+    final origin = tester.getTopLeft(find.byType(BottomBarItems));
+    final rect = const EdgeInsets.all(2).deflateRect(_slotRect(tester, 1));
+    expect(
+      find.byType(BottomBarItems),
+      paints..rrect(
+        rrect: RRect.fromRectAndRadius(
+          rect.shift(-origin),
+          const Radius.circular(16),
+        ),
+      ),
+    );
+  });
+
+  testWidgets(
+    'dot stretches while moving 0 to 4 and settles to a size x size dot',
+    (tester) async {
+      await tester.pumpWidget(
+        _app(_bar(selectedIndex: 0, indicator: const BottomBarIndicator.dot())),
+      );
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        _app(_bar(selectedIndex: 4, indicator: const BottomBarIndicator.dot())),
+      );
+
+      var widest = 0.0;
+      for (var frame = 0; frame < 60; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        final width = _paintedRect(tester).width;
+        if (width > widest) widest = width;
+      }
+      expect(widest, greaterThan(12));
+
+      await tester.pumpAndSettle();
+      final dot = _paintedRect(tester);
+      expect(dot.width, closeTo(6, 0.01));
+      expect(dot.height, closeTo(6, 0.01));
+    },
+  );
 }

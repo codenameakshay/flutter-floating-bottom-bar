@@ -118,29 +118,11 @@ class BottomBarItem extends StatelessWidget {
       BottomBarLabelBehavior.onlySelected => selected,
       BottomBarLabelBehavior.alwaysHide => false,
     };
-    final effectiveColor = selected
-        ? (selectedColor ?? selection?.selectedForegroundColor ?? cs.primary)
-        : (color ?? cs.onSurfaceVariant);
+    final plainColor = color ?? cs.onSurfaceVariant;
+    final selectedLookColor =
+        selectedColor ?? selection?.selectedForegroundColor ?? cs.primary;
     final explicitSemanticLabel = semanticLabel ?? tooltip;
     final minHeight = BottomBarItemHeightScope.maybeOf(context) ?? 48;
-
-    final iconWidget = selected ? (selectedIcon ?? icon) : icon;
-
-    Widget stack = Stack(
-      clipBehavior: Clip.none,
-      children: [
-        IconTheme.merge(
-          data: IconThemeData(color: effectiveColor),
-          child: iconWidget,
-        ),
-        if (badge != null)
-          PositionedDirectional(top: -4, end: -4, child: badge!),
-      ],
-    );
-
-    if (selection != null) {
-      stack = IndicatorAnchor(role: IndicatorAnchorRole.icon, child: stack);
-    }
 
     final currentLabel = label;
     Widget labelChild = currentLabel ?? const SizedBox.shrink();
@@ -171,37 +153,86 @@ class BottomBarItem extends StatelessWidget {
             ? currentLabel.semanticsLabel ?? currentLabel.data
             : null);
 
-    final column = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        stack,
-        if (currentLabel != null && showLabel) ...[
-          const SizedBox(height: 2),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final text = DefaultTextStyle(
-                style:
-                    (Theme.of(context).textTheme.labelSmall ??
-                            const TextStyle())
-                        .copyWith(color: effectiveColor),
-                child: selection == null
-                    ? labelChild
-                    : Center(
-                        heightFactor: 1,
-                        child: IndicatorAnchor(
-                          role: IndicatorAnchorRole.label,
-                          child: labelChild,
+    Widget content({
+      required Color color,
+      required Widget icon,
+      required bool anchors,
+    }) {
+      Widget stack = Stack(
+        clipBehavior: Clip.none,
+        children: [
+          IconTheme.merge(
+            data: IconThemeData(color: color),
+            child: icon,
+          ),
+          if (badge != null)
+            PositionedDirectional(top: -4, end: -4, child: badge!),
+        ],
+      );
+      if (anchors) {
+        stack = IndicatorAnchor(role: IndicatorAnchorRole.icon, child: stack);
+      }
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          stack,
+          if (currentLabel != null && showLabel) ...[
+            const SizedBox(height: 2),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final text = DefaultTextStyle(
+                  style:
+                      (Theme.of(context).textTheme.labelSmall ??
+                              const TextStyle())
+                          .copyWith(color: color),
+                  child: selection == null
+                      ? labelChild
+                      : Center(
+                          heightFactor: 1,
+                          child: anchors
+                              ? IndicatorAnchor(
+                                  role: IndicatorAnchorRole.label,
+                                  child: labelChild,
+                                )
+                              : labelChild,
                         ),
-                      ),
-              );
-              return constraints.hasBoundedWidth
-                  ? SizedBox(width: double.infinity, child: text)
-                  : text;
-            },
+                );
+                return constraints.hasBoundedWidth
+                    ? SizedBox(width: double.infinity, child: text)
+                    : text;
+              },
+            ),
+          ],
+        ],
+      );
+    }
+
+    final anchors = selection != null;
+    final Widget column;
+    if (selection?.ink ?? false) {
+      column = Stack(
+        children: [
+          content(color: plainColor, icon: icon, anchors: anchors),
+          Positioned.fill(
+            child: ExcludeSemantics(
+              child: IndicatorInk(
+                child: content(
+                  color: selectedLookColor,
+                  icon: selectedIcon ?? icon,
+                  anchors: false,
+                ),
+              ),
+            ),
           ),
         ],
-      ],
-    );
+      );
+    } else {
+      column = content(
+        color: selected ? selectedLookColor : plainColor,
+        icon: selected ? (selectedIcon ?? icon) : icon,
+        anchors: anchors,
+      );
+    }
 
     Widget child = InkWell(
       onTap: onTap,

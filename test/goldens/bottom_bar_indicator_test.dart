@@ -21,6 +21,16 @@ void main() {
     Brightness.dark,
   );
   _indicatorGolden(
+    'indicator_tint_light.png',
+    const BottomBarIndicator.tint(),
+    Brightness.light,
+  );
+  _indicatorGolden(
+    'indicator_tint_dark.png',
+    const BottomBarIndicator.tint(),
+    Brightness.dark,
+  );
+  _indicatorGolden(
     'indicator_underline_light.png',
     const BottomBarIndicator.underline(),
     Brightness.light,

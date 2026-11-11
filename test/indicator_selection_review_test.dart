@@ -62,9 +62,15 @@ Widget _app({
 
 Rect _content(WidgetTester tester, String key, String label) => tester
     .getRect(
-      find.descendant(of: find.byKey(Key(key)), matching: find.byType(Icon)),
+      find
+          .descendant(of: find.byKey(Key(key)), matching: find.byType(Icon))
+          .first,
     )
-    .expandToInclude(tester.getRect(find.text(label)));
+    .expandToInclude(tester.getRect(find.text(label).first));
+
+/// The pill's slot-based rect inset by its default 2px, at item [key].
+Rect _pillTarget(WidgetTester tester, String key) =>
+    const EdgeInsets.all(2).deflateRect(tester.getRect(find.byKey(Key(key))));
 
 Rect _paintedPill(WidgetTester tester) {
   late Rect rect;
@@ -357,7 +363,7 @@ void main() {
         final width = _paintedPill(tester).width;
         if (width > widest) widest = width;
       }
-      final targetWidth = _content(tester, 'person', 'Person').width + 24;
+      final targetWidth = _pillTarget(tester, 'person').width;
       expect(widest, greaterThan(targetWidth + 40));
     },
   );
@@ -378,7 +384,7 @@ void main() {
         final width = _paintedPill(tester).width;
         if (width > widest) widest = width;
       }
-      final targetWidth = _content(tester, 'person', 'Person').width + 24;
+      final targetWidth = _pillTarget(tester, 'person').width;
       expect(widest, lessThan(targetWidth + 5));
     },
   );

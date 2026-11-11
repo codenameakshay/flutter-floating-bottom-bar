@@ -280,8 +280,8 @@ with built-in accessibility and RTL-aware badge placement.
 ### Indicators
 
 `BottomBarItems` can own selection and draw an indicator that slides between
-items on a spring. The indicator carries its momentum when you tap
-again mid-flight, and it jumps under reduced motion.
+items on a spring. The indicator carries its momentum when you tap again
+mid-flight, and it jumps under reduced motion.
 
 ```dart
 int index = 0;
@@ -297,14 +297,23 @@ BottomBarItems(
 )
 ```
 
-- `BottomBarIndicator.pill(stretch: true)` for an elastic pill.
-- `BottomBarIndicator.underline()` for a bar under the selected item.
-- `BottomBarIndicator.dot()` for a dot under the selected icon.
-- `BottomBarIndicator.builder((context, rect, settled) => ...)` for your own indicator, placed at the animated rect.
+- `BottomBarIndicator.pill()` is a solid capsule that fills the item's slot.
+  Add `stretch: true` to make it stretch as it travels.
+- `BottomBarIndicator.tint()` is a soft wash with accent-coloured content.
+- `BottomBarIndicator.underline()` is a bar under the content that stretches
+  like a worm as it moves.
+- `BottomBarIndicator.dot()` is a dot that stretches into a capsule as it moves.
+- `BottomBarIndicator.builder((context, rect, settled) => ...)` draws your own
+  indicator at the animated rect. The example app's `indicators` demo builds a
+  "tubelight" with it.
+
+The pill, tint and underline styles show the selected colour and
+`selectedIcon` only where they cover an item. While the pill slides, a label
+changes colour exactly where the pill passes over it.
 
 When `selectedIndex` is set, it wins over `BottomBarItem.selected`. Tapping an
-item runs its `onTap`, then `onSelected`. With the default pill, the selected
-item uses `onSecondaryContainer` unless it sets `selectedColor`.
+item runs its `onTap`, then `onSelected`. An item's `selectedColor` overrides
+the indicator's foreground colour.
 
 ## Migration from v1.x
 

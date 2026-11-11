@@ -249,6 +249,7 @@ class _SelectableItemsState extends State<_SelectableItems>
       indicator,
       Theme.of(context).colorScheme,
     );
+    final ink = indicatorInks(indicator);
     final children = [
       for (var i = 0; i < items.children.length; i++)
         IndicatorAnchor(
@@ -261,6 +262,7 @@ class _SelectableItemsState extends State<_SelectableItems>
             selected: i == selectedIndex,
             onSelect: onSelected == null ? null : () => onSelected(i),
             selectedForegroundColor: foreground,
+            ink: ink,
             child: items.children[i],
           ),
         ),
@@ -292,6 +294,7 @@ class BottomBarItemSelectionScope extends InheritedWidget {
     required this.selected,
     this.onSelect,
     this.selectedForegroundColor,
+    this.ink = false,
     required super.child,
   });
 
@@ -309,6 +312,11 @@ class BottomBarItemSelectionScope extends InheritedWidget {
   /// the row's [BottomBarItems.indicator], or null to keep its own default.
   final Color? selectedForegroundColor;
 
+  /// Whether the indicator reveals the selected look only where it covers
+  /// this child. When true, [BottomBarItem] paints its plain look and lays
+  /// its selected look over it, clipped to the indicator.
+  final bool ink;
+
   /// Returns the nearest enclosing scope, or `null` if there isn't one.
   static BottomBarItemSelectionScope? maybeOf(BuildContext context) {
     return context
@@ -320,7 +328,8 @@ class BottomBarItemSelectionScope extends InheritedWidget {
     return index != oldWidget.index ||
         selected != oldWidget.selected ||
         onSelect != oldWidget.onSelect ||
-        selectedForegroundColor != oldWidget.selectedForegroundColor;
+        selectedForegroundColor != oldWidget.selectedForegroundColor ||
+        ink != oldWidget.ink;
   }
 }
 

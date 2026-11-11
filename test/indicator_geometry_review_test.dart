@@ -105,7 +105,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       final viewport = tester.getRect(find.byType(SingleChildScrollView));
-      final selected = tester.getRect(find.byIcon(Icons.settings));
+      final selected = tester.getRect(find.byIcon(Icons.settings).first);
       expect(selected.left, greaterThanOrEqualTo(viewport.left));
       expect(selected.right, lessThanOrEqualTo(viewport.right));
     });
@@ -240,7 +240,7 @@ void main() {
     );
   });
 
-  testWidgets('built-in pill follows locally resized icon in the same frame', (
+  testWidgets('underline follows locally resized icon in the same frame', (
     tester,
   ) async {
     final iconSize = ValueNotifier<double>(24);
@@ -248,7 +248,7 @@ void main() {
     await tester.pumpWidget(
       _app(
         _bar(
-          indicator: const BottomBarIndicator.pill(),
+          indicator: const BottomBarIndicator.underline(),
           icon: ValueListenableBuilder<double>(
             valueListenable: iconSize,
             builder: (context, size, _) =>
@@ -260,17 +260,19 @@ void main() {
     await tester.pumpAndSettle();
     iconSize.value = 56;
     await tester.pump();
-    final content = tester.getRect(find.byKey(_iconKey));
+    final content = tester.getRect(find.byKey(_iconKey).first);
     final origin = tester.getTopLeft(find.byType(BottomBarItems));
     expect(
       find.byType(BottomBarItems),
       paints..rrect(
         rrect: RRect.fromRectAndRadius(
-          const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 4,
-          ).inflateRect(content).shift(-origin),
-          const Radius.circular(16),
+          Rect.fromLTWH(
+            content.center.dx - content.width / 2,
+            content.bottom + 4,
+            content.width,
+            3,
+          ).shift(-origin),
+          const Radius.circular(1.5),
         ),
       ),
     );

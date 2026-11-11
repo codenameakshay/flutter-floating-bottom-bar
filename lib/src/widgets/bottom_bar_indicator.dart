@@ -18,91 +18,130 @@ typedef BottomBarIndicatorBuilder =
 ///
 /// Pass one to [BottomBarItems.indicator] together with
 /// [BottomBarItems.selectedIndex]. The indicator slides between items on a
-/// spring ([BottomBarItems.indicatorMotion]), carries its momentum into a
-/// new target when the selection changes mid-flight, and jumps when the platform asks for reduced
-/// motion. It paints behind the items and is excluded from hit testing and
-/// semantics.
+/// spring ([BottomBarItems.indicatorMotion]), carries its momentum into a new
+/// target when the selection changes mid-flight, and jumps when the platform
+/// asks for reduced motion. It paints behind the items and is excluded from
+/// hit testing and semantics.
+///
+/// [pill], [tint] and [underline] reveal the selected look (colour and
+/// `selectedIcon`) only where the indicator covers an item, so mid-flight a
+/// label turns over exactly where the indicator passes.
 ///
 /// Geometry is read after layout, so the indicator is placed correctly in the
 /// same frame as a resize, a label change or an item insert or remove.
 sealed class BottomBarIndicator {
   const BottomBarIndicator._();
 
-  /// A filled pill that hugs the item's content: its icon plus its visible
-  /// label.
+  /// A solid capsule that fills the item's slot.
   ///
-  /// [color] defaults to `colorScheme.secondaryContainer`. [borderRadius]
-  /// defaults to a 16px radius, and [padding] (around the content) to 12px
-  /// horizontally and 4px vertically.
+  /// [color] defaults to `colorScheme.primary` and [foregroundColor], the
+  /// colour of the content it covers, to `colorScheme.onPrimary` (or black or
+  /// white over a custom [color]). [inset] shrinks the capsule inside the
+  /// slot. A null [borderRadius] gives fully rounded ends.
   ///
   /// With [stretch], the edge in the direction of travel moves first and the
   /// trailing edge follows on a slower spring, so fast moves look elastic.
   /// Neither edge overshoots its target.
-  ///
-  /// The selected item's content uses `colorScheme.onSecondaryContainer` (or
-  /// black or white over a custom [color]) unless the item sets
-  /// [BottomBarItem.selectedColor].
   const factory BottomBarIndicator.pill({
     Color? color,
-    BorderRadiusGeometry borderRadius,
-    EdgeInsetsGeometry padding,
+    Color? foregroundColor,
+    EdgeInsetsGeometry inset,
+    BorderRadiusGeometry? borderRadius,
     bool stretch,
   }) = _PillIndicator;
 
-  /// A bar along the bottom of the item's content.
+  /// A soft wash behind the item's slot, with the covered content in an
+  /// accent colour.
   ///
-  /// [color] defaults to `colorScheme.primary` and [thickness] to 3. A null
-  /// [width] matches the content width. [borderRadius] defaults to fully
-  /// rounded ends.
+  /// [color] defaults to `colorScheme.primary` at 12% opacity and
+  /// [foregroundColor] to `colorScheme.primary`.
+  const factory BottomBarIndicator.tint({
+    Color? color,
+    Color? foregroundColor,
+    EdgeInsetsGeometry inset,
+    BorderRadiusGeometry? borderRadius,
+    bool stretch,
+  }) = _TintIndicator;
+
+  /// A bar under the item's content that stretches like a worm as it moves.
+  ///
+  /// Content above the bar takes [color], which defaults to
+  /// `colorScheme.primary`. [thickness] defaults to 3. A null [width] matches
+  /// the content width.
   const factory BottomBarIndicator.underline({
     Color? color,
     double thickness,
     double? width,
-    BorderRadiusGeometry? borderRadius,
   }) = _UnderlineIndicator;
 
-  /// A dot centred under the item's icon, below its visible label.
+  /// A dot under the item's content that stretches into a capsule as it
+  /// moves.
   ///
-  /// [color] defaults to `colorScheme.primary` and [size] to 5.
+  /// [color] defaults to `colorScheme.primary` and [size] to 6.
   const factory BottomBarIndicator.dot({Color? color, double size}) =
       _DotIndicator;
 
   /// A custom indicator. [builder] runs for every animation frame and its
   /// widget is positioned at the animated rect, which follows the item's
-  /// content (icon plus visible label).
+  /// content (icon plus visible label). The widget may paint outside that
+  /// rect.
   const factory BottomBarIndicator.builder(BottomBarIndicatorBuilder builder) =
       _BuilderIndicator;
 
   Rect _target(IndicatorGeometry geometry, TextDirection direction);
+
+  /// The indicator's painted shape at [rect], or null if it does not paint.
+  RRect? _shape(Rect rect, TextDirection direction) => null;
+
+  Color _fill(ColorScheme colors) => colors.primary;
+
+  /// Where covered content shows its selected look, or null when the
+  /// selected item simply takes [_foreground].
+  RRect? _ink(RRect shape) => null;
 
   void _paint(
     Canvas canvas,
     Rect rect,
     ColorScheme colors,
     TextDirection direction,
-  ) {}
+  ) {
+    final shape = _shape(rect, direction);
+    if (shape != null) canvas.drawRRect(shape, Paint()..color = _fill(colors));
+  }
 
   bool get _stretch => false;
 
-  Color? _selectedForeground(ColorScheme colors) => null;
+  Color? _foreground(ColorScheme colors) => null;
 }
 
 /// The colour selected content should use over [indicator], if it differs
 /// from the item's default.
 Color? indicatorForeground(BottomBarIndicator? indicator, ColorScheme colors) =>
-    indicator?._selectedForeground(colors);
+    indicator?._foreground(colors);
+
+/// Whether [indicator] reveals the selected look only where it covers an
+/// item.
+bool indicatorInks(BottomBarIndicator? indicator) =>
+    indicator?._ink(RRect.zero) != null;
+
+Color _contrastOn(Color color) =>
+    ThemeData.estimateBrightnessForColor(color) == Brightness.dark
+    ? Colors.white
+    : Colors.black;
 
 final class _PillIndicator extends BottomBarIndicator {
   const _PillIndicator({
     this.color,
-    this.borderRadius = const BorderRadius.all(Radius.circular(16)),
-    this.padding = const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+    this.foregroundColor,
+    this.inset = const EdgeInsets.all(2),
+    this.borderRadius,
     this.stretch = false,
   }) : super._();
 
   final Color? color;
-  final BorderRadiusGeometry borderRadius;
-  final EdgeInsetsGeometry padding;
+  final Color? foregroundColor;
+  final EdgeInsetsGeometry inset;
+  final BorderRadiusGeometry? borderRadius;
   final bool stretch;
 
   @override
@@ -110,43 +149,60 @@ final class _PillIndicator extends BottomBarIndicator {
 
   @override
   Rect _target(IndicatorGeometry geometry, TextDirection direction) =>
-      padding.resolve(direction).inflateRect(geometry.content);
+      inset.resolve(direction).deflateRect(geometry.slot);
 
   @override
-  void _paint(
-    Canvas canvas,
-    Rect rect,
-    ColorScheme colors,
-    TextDirection direction,
-  ) {
-    canvas.drawRRect(
-      borderRadius.resolve(direction).toRRect(rect),
-      Paint()..color = color ?? colors.secondaryContainer,
-    );
-  }
-
-  @override
-  Color? _selectedForeground(ColorScheme colors) => switch (color) {
-    null => colors.onSecondaryContainer,
-    final c =>
-      ThemeData.estimateBrightnessForColor(c) == Brightness.dark
-          ? Colors.white
-          : Colors.black,
+  RRect _shape(Rect rect, TextDirection direction) => switch (borderRadius) {
+    null => RRect.fromRectAndRadius(
+      rect,
+      Radius.circular(math.max(0, rect.shortestSide / 2)),
+    ),
+    final radius => radius.resolve(direction).toRRect(rect),
   };
+
+  @override
+  Color _fill(ColorScheme colors) => color ?? colors.primary;
+
+  @override
+  RRect _ink(RRect shape) => shape;
+
+  @override
+  Color _foreground(ColorScheme colors) =>
+      foregroundColor ??
+      switch (color) {
+        null => colors.onPrimary,
+        final c => _contrastOn(c),
+      };
+}
+
+final class _TintIndicator extends _PillIndicator {
+  const _TintIndicator({
+    super.color,
+    super.foregroundColor,
+    super.inset,
+    super.borderRadius = const BorderRadius.all(Radius.circular(16)),
+    super.stretch,
+  });
+
+  @override
+  Color _fill(ColorScheme colors) =>
+      color ?? colors.primary.withValues(alpha: 0.12);
+
+  @override
+  Color _foreground(ColorScheme colors) =>
+      foregroundColor ?? color?.withValues(alpha: 1) ?? colors.primary;
 }
 
 final class _UnderlineIndicator extends BottomBarIndicator {
-  const _UnderlineIndicator({
-    this.color,
-    this.thickness = 3,
-    this.width,
-    this.borderRadius,
-  }) : super._();
+  const _UnderlineIndicator({this.color, this.thickness = 3, this.width})
+    : super._();
 
   final Color? color;
   final double thickness;
   final double? width;
-  final BorderRadiusGeometry? borderRadius;
+
+  @override
+  bool get _stretch => true;
 
   @override
   Rect _target(IndicatorGeometry geometry, TextDirection direction) {
@@ -154,54 +210,54 @@ final class _UnderlineIndicator extends BottomBarIndicator {
     final w = width ?? content.width;
     return Rect.fromLTWH(
       content.center.dx - w / 2,
-      content.bottom + 2,
+      content.bottom + 4,
       w,
       thickness,
     );
   }
 
   @override
-  void _paint(
-    Canvas canvas,
-    Rect rect,
-    ColorScheme colors,
-    TextDirection direction,
-  ) {
-    final radius =
-        borderRadius ?? BorderRadius.all(Radius.circular(thickness / 2));
-    canvas.drawRRect(
-      radius.resolve(direction).toRRect(rect),
-      Paint()..color = color ?? colors.primary,
-    );
-  }
+  RRect _shape(Rect rect, TextDirection direction) =>
+      RRect.fromRectAndRadius(rect, Radius.circular(thickness / 2));
+
+  @override
+  Color _fill(ColorScheme colors) => color ?? colors.primary;
+
+  /// A column through the bar, so content above it takes the bar's colour.
+  @override
+  RRect _ink(RRect shape) =>
+      RRect.fromLTRBR(shape.left, -1e5, shape.right, 1e5, Radius.zero);
+
+  @override
+  Color _foreground(ColorScheme colors) => color ?? colors.primary;
 }
 
 final class _DotIndicator extends BottomBarIndicator {
-  const _DotIndicator({this.color, this.size = 5}) : super._();
+  const _DotIndicator({this.color, this.size = 6}) : super._();
 
   final Color? color;
   final double size;
+
+  @override
+  bool get _stretch => true;
 
   @override
   Rect _target(IndicatorGeometry geometry, TextDirection direction) =>
       Rect.fromCenter(
         center: Offset(
           geometry.icon.center.dx,
-          geometry.content.bottom + 3 + size / 2,
+          geometry.content.bottom + 4 + size / 2,
         ),
         width: size,
         height: size,
       );
 
   @override
-  void _paint(
-    Canvas canvas,
-    Rect rect,
-    ColorScheme colors,
-    TextDirection direction,
-  ) {
-    canvas.drawOval(rect, Paint()..color = color ?? colors.primary);
-  }
+  RRect _shape(Rect rect, TextDirection direction) =>
+      RRect.fromRectAndRadius(rect, Radius.circular(rect.shortestSide / 2));
+
+  @override
+  Color _fill(ColorScheme colors) => color ?? colors.primary;
 }
 
 final class _BuilderIndicator extends BottomBarIndicator {
@@ -573,6 +629,46 @@ class IndicatorTrack extends MultiChildRenderObjectWidget {
   }
 }
 
+/// Paints [child] only where the row's indicator covers it.
+///
+/// [BottomBarItem] stacks its selected look under this over its plain look,
+/// so the selected colour follows the indicator mid-flight.
+class IndicatorInk extends SingleChildRenderObjectWidget {
+  const IndicatorInk({super.key, super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderInk();
+}
+
+class _RenderInk extends RenderProxyBox {
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    RenderObject? track = parent;
+    while (track != null && track is! RenderIndicatorTrack) {
+      track = track.parent;
+    }
+    final ink = track is RenderIndicatorTrack ? track._ink : null;
+    final shift = ink == null
+        ? null
+        : MatrixUtils.getAsTranslation(getTransformTo(track));
+    final clip = shift == null ? null : ink!.shift(-shift);
+    if (child == null ||
+        clip == null ||
+        !clip.outerRect.overlaps(Offset.zero & size)) {
+      layer = null;
+      return;
+    }
+    layer = context.pushClipRRect(
+      needsCompositing,
+      offset,
+      Offset.zero & size,
+      clip,
+      super.paint,
+      oldLayer: layer as ClipRRectLayer?,
+    );
+  }
+}
+
 class _TrackParentData extends ContainerBoxParentData<RenderBox> {}
 
 class RenderIndicatorTrack extends RenderBox
@@ -796,9 +892,15 @@ class RenderIndicatorTrack extends RenderBox
     }
   }
 
+  /// Where items reveal their selected look, in this track's coordinates.
+  /// Set at the start of [paint], before the items paint.
+  RRect? _ink;
+
   @override
   void paint(PaintingContext context, Offset offset) {
     final rect = _resolve();
+    final shape = rect == null ? null : _indicator._shape(rect, _textDirection);
+    _ink = shape == null ? null : _indicator._ink(shape);
     if (rect != null) {
       _indicator._paint(
         context.canvas,

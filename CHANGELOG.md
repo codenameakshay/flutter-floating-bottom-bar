@@ -1,11 +1,14 @@
 ## Unreleased
 
 - Add a selection indicator to `BottomBarItems`. Set `selectedIndex` and
-  `onSelected` and pick `BottomBarIndicator.pill()`, `.underline()`,
-  `.dot()` or `.builder()`. It slides between items on a spring, carries
-  its momentum when retargeted, follows resizes and label changes in the same
-  frame, scrolls a narrow row to the selected item, and jumps under reduced
-  motion. `BottomBarItem` takes its selection from the row when one is set.
+  `onSelected` and pick `BottomBarIndicator.pill()`, `.tint()`,
+  `.underline()`, `.dot()` or `.builder()`. It slides between items on a
+  spring, carries its momentum when retargeted, follows resizes and label
+  changes in the same frame, scrolls a narrow row to the selected item, and
+  jumps under reduced motion. The pill, tint and underline show the selected
+  colour only where they cover an item, so labels change colour as the
+  indicator passes. `BottomBarItem` takes its selection from the row when one
+  is set.
 - Fix the hidden action doing nothing when the body has no scrollable to
   scroll, such as a WebView driven by `reportScroll`, or after the scrolled
   list was disposed by a body swap. Tapping it now always shows the bar.
