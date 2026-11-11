@@ -124,7 +124,7 @@ clip: ## Record booted iOS sim -> clips/$(NAME).mp4, 1080x1920 (Ctrl+C to stop)
 		echo "  e.g. make clip NAME=1-issues-dock"; \
 		exit 64; \
 	fi
-	./tool/record_clip.sh $(NAME) $(MOV)
+	./tool/record_clip.sh "$(NAME)" $(if $(MOV),"$(MOV)")
 
 # ---------------------------------------------------------------------------
 # Build example app

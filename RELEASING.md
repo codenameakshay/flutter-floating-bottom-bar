@@ -1,13 +1,13 @@
 # Releasing
 
-1. Branch off `main` and set `version:` in `pubspec.yaml` to the new version, for example `3.1.0`.
-2. In `CHANGELOG.md`, rename `## Unreleased` to `## 3.1.0` and add a new empty `## Unreleased` above it.
-3. Run `make check` and `make publish-dry-run`, then merge the PR to `main`.
-4. Tag the merge commit and push the tag:
-
+1. In the package's pub.dev Admin tab, enable GitHub publishing for `codenameakshay/flutter-floating-bottom-bar` with tag pattern `v{{version}}` and require environment `pub.dev`.
+2. Create the GitHub environment `pub.dev` and configure required reviewers if release approval is wanted.
+3. Branch off `main` and set `version:` in `pubspec.yaml` to the new version, for example `3.1.0` or `3.1.0-beta.1`.
+4. Rename `## Unreleased` in `CHANGELOG.md` to `## 3.1.0` for that version, then add an empty `## Unreleased` above it.
+5. Run `make check` and `make publish-dry-run`, then merge the PR to `main`.
+6. Tag the merge commit and push the tag, using the exact pubspec version:
    ```sh
    git checkout main && git pull
    git tag v3.1.0 && git push origin v3.1.0
    ```
-
-5. The `Publish to pub.dev` workflow checks that the tag, pubspec and changelog agree, then waits for approval in the `pub.dev` environment and publishes.
+7. If reviewers are configured, approve the `pub.dev` deployment before the job runs. The workflow checks the tag, pubspec and changelog, then publishes with OIDC.
