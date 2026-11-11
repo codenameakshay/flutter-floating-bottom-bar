@@ -312,6 +312,32 @@ class _BottomBarState extends State<BottomBar>
 
   @override
   Future<void> scrollToBoundary({required bool toEnd}) async {
+    if (await _scrollActiveToBoundary(toEnd: toEnd)) {
+      _setBarVisible(true, notifyCallbacks: true, fromController: true);
+      return;
+    }
+    assert(() {
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: FlutterError(
+            'BottomBarController.scrollToStart/scrollToEnd found no attached, '
+            'visible scrollable in BottomBar.body; nothing to scroll.',
+          ),
+          library: 'flutter_floating_bottom_bar',
+        ),
+      );
+      return true;
+    }());
+  }
+
+  Future<void> _handleActionTap() async {
+    await _scrollActiveToBoundary(toEnd: _scrollBehavior.scrollOpposite);
+    _setBarVisible(true, notifyCallbacks: true, fromController: true);
+  }
+
+  /// Animates the active scrollable to a boundary. Returns `false` without
+  /// doing anything when no scrollable is active.
+  Future<bool> _scrollActiveToBoundary({required bool toEnd}) async {
     // A NestedScrollView splits scrolling across two coordinated positions —
     // an outer one driving the header slivers (e.g. SliverAppBar/
     // FlexibleSpaceBar) and an inner one driving the body. Animating the single
@@ -325,24 +351,11 @@ class _BottomBarState extends State<BottomBar>
     // to its bottom collapses the header and scrolls the body to the end. We
     // therefore issue exactly one call — animating both controllers at once
     // would have them fight over the coordinator and land at the wrong offset.
-    final position = _dispatcher.lastActivePosition;
-    if (position == null) {
-      assert(() {
-        FlutterError.reportError(
-          FlutterErrorDetails(
-            exception: FlutterError(
-              'BottomBarController.scrollToStart/scrollToEnd called before any '
-              'scroll notification was observed; nothing to scroll.',
-            ),
-            library: 'flutter_floating_bottom_bar',
-          ),
-        );
-        return true;
-      }());
-      return;
-    }
+    final active = _dispatcher.activeScrollable();
+    if (active == null) return false;
+    final position = active.position;
 
-    final nested = _nestedScrollViewOf(_dispatcher.lastActiveContext);
+    final nested = _nestedScrollViewOf(active.context);
     final controller = nested == null
         ? null
         : _nestedBoundaryControllerForPosition(
@@ -359,7 +372,7 @@ class _BottomBarState extends State<BottomBar>
           curve: _motion.curve,
         ),
     ]);
-    _setBarVisible(true, notifyCallbacks: true, fromController: true);
+    return true;
   }
 
   @override
@@ -523,7 +536,7 @@ class _BottomBarState extends State<BottomBar>
       decoration: theme.iconDecoration ?? const BoxDecoration(),
       tooltip: _defaultIconTooltip,
       semanticLabel: _defaultIconSemanticLabel,
-      onTap: () => scrollToBoundary(toEnd: _scrollBehavior.scrollOpposite),
+      onTap: _handleActionTap,
       visualBuilder: (width, height) => _buildIconChild(width, height),
     );
   }
