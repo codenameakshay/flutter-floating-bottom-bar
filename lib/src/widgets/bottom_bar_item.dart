@@ -94,7 +94,7 @@ class BottomBarItem extends StatelessWidget {
   /// Icon and label colour when [selected] is `true`.
   ///
   /// Defaults to `colorScheme.primary`, or to a colour that contrasts with
-  /// the row's [BottomBarItems.indicator] (`colorScheme.onSecondaryContainer`
+  /// the row's [BottomBarItems.indicator] (`colorScheme.onPrimary`
   /// over the default pill).
   final Color? selectedColor;
 
@@ -153,22 +153,62 @@ class BottomBarItem extends StatelessWidget {
             ? currentLabel.semanticsLabel ?? currentLabel.data
             : null);
 
+    // The reveal mounts the icon and label twice, which a GlobalKey forbids.
+    final ink =
+        (selection?.ink ?? false) &&
+        ![icon, selectedIcon, label].any((part) => part?.key is GlobalKey);
+
+    Widget reveal(Widget plain, Widget selected) => Stack(
+      children: [
+        plain,
+        Positioned.fill(
+          child: IgnorePointer(
+            child: ExcludeFocus(
+              child: ExcludeSemantics(child: IndicatorInk(child: selected)),
+            ),
+          ),
+        ),
+      ],
+    );
+
     Widget content({
       required Color color,
       required Widget icon,
       required bool anchors,
     }) {
-      Widget stack = Stack(
+      Widget iconStack(double? maxIconWidth) => Stack(
         clipBehavior: Clip.none,
         children: [
-          IconTheme.merge(
-            data: IconThemeData(color: color),
-            child: icon,
-          ),
+          if (ink)
+            reveal(
+              IconTheme.merge(
+                data: IconThemeData(color: color),
+                child: icon,
+              ),
+              IconTheme.merge(
+                data: IconThemeData(color: selectedLookColor),
+                child: OverflowBox(
+                  minWidth: 0,
+                  maxWidth: maxIconWidth,
+                  child: selectedIcon ?? icon,
+                ),
+              ),
+            )
+          else
+            IconTheme.merge(
+              data: IconThemeData(color: color),
+              child: icon,
+            ),
           if (badge != null)
             PositionedDirectional(top: -4, end: -4, child: badge!),
         ],
       );
+      Widget stack = ink
+          ? LayoutBuilder(
+              builder: (context, constraints) =>
+                  iconStack(constraints.maxWidth),
+            )
+          : iconStack(null);
       if (anchors) {
         stack = IndicatorAnchor(role: IndicatorAnchorRole.icon, child: stack);
       }
@@ -192,7 +232,17 @@ class BottomBarItem extends StatelessWidget {
                           child: anchors
                               ? IndicatorAnchor(
                                   role: IndicatorAnchorRole.label,
-                                  child: labelChild,
+                                  child: ink
+                                      ? reveal(
+                                          labelChild,
+                                          DefaultTextStyle.merge(
+                                            style: TextStyle(
+                                              color: selectedLookColor,
+                                            ),
+                                            child: labelChild,
+                                          ),
+                                        )
+                                      : labelChild,
                                 )
                               : labelChild,
                         ),
@@ -208,31 +258,11 @@ class BottomBarItem extends StatelessWidget {
     }
 
     final anchors = selection != null;
-    final Widget column;
-    if (selection?.ink ?? false) {
-      column = Stack(
-        children: [
-          content(color: plainColor, icon: icon, anchors: anchors),
-          Positioned.fill(
-            child: ExcludeSemantics(
-              child: IndicatorInk(
-                child: content(
-                  color: selectedLookColor,
-                  icon: selectedIcon ?? icon,
-                  anchors: false,
-                ),
-              ),
-            ),
-          ),
-        ],
-      );
-    } else {
-      column = content(
-        color: selected ? selectedLookColor : plainColor,
-        icon: selected ? (selectedIcon ?? icon) : icon,
-        anchors: anchors,
-      );
-    }
+    final column = content(
+      color: !ink && selected ? selectedLookColor : plainColor,
+      icon: !ink && selected ? (selectedIcon ?? icon) : icon,
+      anchors: anchors,
+    );
 
     Widget child = InkWell(
       onTap: onTap,

@@ -25,7 +25,10 @@ typedef BottomBarIndicatorBuilder =
 ///
 /// [pill], [tint] and [underline] reveal the selected look (colour and
 /// `selectedIcon`) only where the indicator covers an item, so mid-flight a
-/// label turns over exactly where the indicator passes.
+/// label turns over exactly where the indicator passes. The reveal mounts an
+/// item's icon and label twice, so an item whose `icon`, `selectedIcon` or
+/// `label` has a [GlobalKey] skips it and is styled as selected outright.
+/// Keep [GlobalKey]s out of deeper parts of item content with these styles.
 ///
 /// Geometry is read after layout, so the indicator is placed correctly in the
 /// same frame as a resize, a label change or an item insert or remove.
@@ -641,30 +644,61 @@ class IndicatorInk extends SingleChildRenderObjectWidget {
 }
 
 class _RenderInk extends RenderProxyBox {
+  RenderIndicatorTrack? _track;
+
+  @override
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    RenderObject? ancestor = parent;
+    while (ancestor != null && ancestor is! RenderIndicatorTrack) {
+      ancestor = ancestor.parent;
+    }
+    _track = ancestor as RenderIndicatorTrack?;
+    _track?._inks.add(this);
+  }
+
+  @override
+  void detach() {
+    _track?._inks.remove(this);
+    _track = null;
+    super.detach();
+  }
+
   @override
   void paint(PaintingContext context, Offset offset) {
-    RenderObject? track = parent;
-    while (track != null && track is! RenderIndicatorTrack) {
-      track = track.parent;
-    }
-    final ink = track is RenderIndicatorTrack ? track._ink : null;
-    final shift = ink == null
+    final track = _track;
+    final ink = track?._resolveInk();
+    final inverse = track == null
         ? null
-        : MatrixUtils.getAsTranslation(getTransformTo(track));
-    final clip = shift == null ? null : ink!.shift(-shift);
+        : Matrix4.tryInvert(getTransformTo(track));
+    final clip = ink == null || inverse == null
+        ? null
+        : (Path()..addRRect(ink)).transform(inverse.storage);
     if (child == null ||
         clip == null ||
-        !clip.outerRect.overlaps(Offset.zero & size)) {
+        !clip.getBounds().overlaps(Offset.zero & size)) {
       layer = null;
       return;
     }
-    layer = context.pushClipRRect(
+    final translation = MatrixUtils.getAsTranslation(getTransformTo(track));
+    if (translation != null) {
+      layer = context.pushClipRRect(
+        needsCompositing,
+        offset,
+        Offset.zero & size,
+        ink!.shift(-translation),
+        super.paint,
+        oldLayer: layer is ClipRRectLayer ? layer as ClipRRectLayer : null,
+      );
+      return;
+    }
+    layer = context.pushClipPath(
       needsCompositing,
       offset,
       Offset.zero & size,
       clip,
       super.paint,
-      oldLayer: layer as ClipRRectLayer?,
+      oldLayer: layer is ClipPathLayer ? layer as ClipPathLayer : null,
     );
   }
 }
@@ -698,7 +732,7 @@ class RenderIndicatorTrack extends RenderBox
   set indicator(BottomBarIndicator value) {
     if (identical(value, _indicator)) return;
     _indicator = value;
-    if (_usesBuilder) {
+    if (_observesGeometry) {
       _observeGeometry();
     } else {
       _cancelGeometryObservation();
@@ -740,19 +774,36 @@ class RenderIndicatorTrack extends RenderBox
   RenderBox get _layer => firstChild!;
   RenderBox get _row => lastChild!;
 
-  void _onTick() => _usesBuilder || _motion._reveal != null
-      ? markNeedsLayout()
-      : markNeedsPaint();
+  final Set<_RenderInk> _inks = {};
+
+  bool get _observesGeometry => _usesBuilder || indicatorInks(_indicator);
+
+  void _invalidateInk() {
+    for (final ink in _inks) {
+      ink.markNeedsPaint();
+    }
+  }
+
+  void _onTick() {
+    _invalidateInk();
+    if (_usesBuilder || _motion._reveal != null) {
+      markNeedsLayout();
+    } else {
+      markNeedsPaint();
+    }
+  }
 
   void _observeGeometry() {
-    if (!attached || !_usesBuilder || _geometryFrameCallback != null) return;
+    if (!attached || !_observesGeometry || _geometryFrameCallback != null) {
+      return;
+    }
     // Descendant paint-only transforms need not dirty any ancestor outside
     // their repaint boundary. Observe frames without requesting idle frames.
     _geometryFrameCallback = SchedulerBinding.instance.scheduleFrameCallback((
       _,
     ) {
       _geometryFrameCallback = null;
-      if (!attached || !_usesBuilder) return;
+      if (!attached || !_observesGeometry) return;
       markNeedsLayout();
       _observeGeometry();
     }, scheduleNewFrame: false);
@@ -795,9 +846,16 @@ class RenderIndicatorTrack extends RenderBox
 
   List<RenderIndicatorAnchor> get _slots {
     final slots = <RenderIndicatorAnchor>[];
-    _row.visitChildren((child) {
-      if (child is RenderIndicatorAnchor) slots.add(child);
-    });
+    void visit(RenderObject child) {
+      if (child is RenderIndicatorAnchor &&
+          child.role == IndicatorAnchorRole.slot) {
+        slots.add(child);
+        return;
+      }
+      child.visitChildren(visit);
+    }
+
+    visit(_row);
     return slots;
   }
 
@@ -861,6 +919,7 @@ class RenderIndicatorTrack extends RenderBox
           : BoxConstraints.tight(size),
     );
 
+    _invalidateInk();
     final motion = _motion;
     final reveal =
         motion._takeReveal() ??
@@ -892,15 +951,15 @@ class RenderIndicatorTrack extends RenderBox
     }
   }
 
-  /// Where items reveal their selected look, in this track's coordinates.
-  /// Set at the start of [paint], before the items paint.
-  RRect? _ink;
+  RRect? _resolveInk() {
+    final rect = _resolve();
+    final shape = rect == null ? null : _indicator._shape(rect, _textDirection);
+    return shape == null ? null : _indicator._ink(shape);
+  }
 
   @override
   void paint(PaintingContext context, Offset offset) {
     final rect = _resolve();
-    final shape = rect == null ? null : _indicator._shape(rect, _textDirection);
-    _ink = shape == null ? null : _indicator._ink(shape);
     if (rect != null) {
       _indicator._paint(
         context.canvas,

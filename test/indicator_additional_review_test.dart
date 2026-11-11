@@ -368,7 +368,7 @@ void main() {
     await tester.pumpWidget(_app(indicator: const BottomBarIndicator.pill()));
     await tester.pumpAndSettle();
     expect(find.byKey(_indicatorKey), findsNothing);
-    expect(tester.binding.transientCallbackCount, 0);
+    expect(tester.binding.transientCallbackCount, 1);
     expect(tester.binding.hasScheduledFrame, isFalse);
 
     await tester.pumpWidget(_app(indicator: builder));
