@@ -40,6 +40,48 @@ void main() {
     }
   });
 
+  testWidgets('a deep link opens its demo on top of the picker', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.defaultRouteNameTestValue =
+        '/nested-scroll';
+    addTearDown(
+      tester.binding.platformDispatcher.clearDefaultRouteNameTestValue,
+    );
+
+    await tester.pumpWidget(const ExampleApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nested scroll'), findsWidgets);
+    expect(find.text('Demos'), findsNothing);
+
+    tester.state<NavigatorState>(find.byType(Navigator)).pop();
+    await tester.pumpAndSettle();
+    expect(find.text('Demos'), findsOneWidget);
+  });
+
+  testWidgets('wide screens show the app in a 430px phone frame', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(const ExampleApp());
+
+    expect(tester.getSize(find.byKey(const Key('device-frame'))).width, 430);
+    expect(tester.getSize(find.byType(Navigator)).width, 430);
+  });
+
+  testWidgets('phones show the app full screen', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(const ExampleApp());
+
+    expect(find.byKey(const Key('device-frame')), findsNothing);
+    expect(tester.getSize(find.byType(Navigator)).width, 390);
+  });
+
   testWidgets('issues demo keeps its content readable on desktop', (
     tester,
   ) async {
