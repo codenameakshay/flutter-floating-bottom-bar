@@ -2,8 +2,8 @@
 
 - Add a selection indicator to `BottomBarItems`. Set `selectedIndex` and
   `onSelected` and pick `BottomBarIndicator.pill()`, `.underline()`,
-  `.dot()` or `.builder()`. It slides between items on a spring, keeps its
-  velocity when retargeted, follows resizes and label changes in the same
+  `.dot()` or `.builder()`. It slides between items on a spring, carries
+  its momentum when retargeted, follows resizes and label changes in the same
   frame, scrolls a narrow row to the selected item, and jumps under reduced
   motion. `BottomBarItem` takes its selection from the row when one is set.
 - Fix the hidden action doing nothing when the body has no scrollable to

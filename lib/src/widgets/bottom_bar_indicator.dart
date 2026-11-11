@@ -18,8 +18,8 @@ typedef BottomBarIndicatorBuilder =
 ///
 /// Pass one to [BottomBarItems.indicator] together with
 /// [BottomBarItems.selectedIndex]. The indicator slides between items on a
-/// spring ([BottomBarItems.indicatorMotion]), keeps its velocity when the
-/// selection changes mid-flight, and jumps when the platform asks for reduced
+/// spring ([BottomBarItems.indicatorMotion]), carries its momentum into a
+/// new target when the selection changes mid-flight, and jumps when the platform asks for reduced
 /// motion. It paints behind the items and is excluded from hit testing and
 /// semantics.
 ///
@@ -413,7 +413,8 @@ class IndicatorMotion extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Springs the indicator to [index], keeping its current velocity.
+  /// Springs the indicator to [index], carrying its current velocity
+  /// projected onto the new direction of travel.
   void animateTo(int index) {
     if (index == _to) return;
     _retarget(index);

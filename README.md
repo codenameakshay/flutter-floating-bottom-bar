@@ -280,8 +280,8 @@ with built-in accessibility and RTL-aware badge placement.
 ### Indicators
 
 `BottomBarItems` can own selection and draw an indicator that slides between
-items on a spring. The indicator keeps its velocity when you tap again
-mid-flight, and it jumps under reduced motion.
+items on a spring. The indicator carries its momentum when you tap
+again mid-flight, and it jumps under reduced motion.
 
 ```dart
 int index = 0;
