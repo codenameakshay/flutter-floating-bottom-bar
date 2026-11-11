@@ -151,7 +151,15 @@ class BottomBarItems extends StatelessWidget {
             );
           }
           return withItemHeight(
-            row([for (final child in children) Expanded(child: child)]),
+            row([
+              for (final child in children)
+                Expanded(
+                  key: selectedIndex != null && child.key != null
+                      ? ValueKey<Key>(child.key!)
+                      : null,
+                  child: child,
+                ),
+            ]),
           );
         },
       ),
@@ -169,12 +177,13 @@ class _SelectableItems extends StatefulWidget {
 }
 
 class _SelectableItemsState extends State<_SelectableItems>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   static const _defaultMotion = CupertinoMotion.snappy(
     duration: Duration(milliseconds: 450),
   );
 
   late final IndicatorMotion _motion;
+  bool _reduceMotion = false;
 
   @override
   void initState() {
@@ -183,7 +192,27 @@ class _SelectableItemsState extends State<_SelectableItems>
       vsync: this,
       index: widget.items.selectedIndex!,
       motion: widget.items.indicatorMotion ?? _defaultMotion,
-    );
+    )..indicator = widget.items.indicator;
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _updateReducedMotion();
+  }
+
+  @override
+  void didChangeAccessibilityFeatures() {
+    _updateReducedMotion();
+  }
+
+  void _updateReducedMotion() {
+    final reduced = reduceMotion(context);
+    if (reduced && !_reduceMotion) {
+      _motion.jumpTo(widget.items.selectedIndex!);
+    }
+    _reduceMotion = reduced;
   }
 
   @override
@@ -192,6 +221,7 @@ class _SelectableItemsState extends State<_SelectableItems>
     final items = widget.items;
     final old = oldWidget.items;
     _motion.motion = items.indicatorMotion ?? _defaultMotion;
+    _motion.indicator = items.indicator;
     final index = items.selectedIndex!;
     final moved = index != old.selectedIndex;
     if (items.children.length != old.children.length ||
@@ -204,6 +234,7 @@ class _SelectableItemsState extends State<_SelectableItems>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _motion.dispose();
     super.dispose();
   }
@@ -221,6 +252,9 @@ class _SelectableItemsState extends State<_SelectableItems>
     final children = [
       for (var i = 0; i < items.children.length; i++)
         IndicatorAnchor(
+          key: items.children[i].key == null
+              ? null
+              : ValueKey<Key>(items.children[i].key!),
           role: IndicatorAnchorRole.slot,
           child: BottomBarItemSelectionScope(
             index: i,
@@ -285,7 +319,7 @@ class BottomBarItemSelectionScope extends InheritedWidget {
   bool updateShouldNotify(BottomBarItemSelectionScope oldWidget) {
     return index != oldWidget.index ||
         selected != oldWidget.selected ||
-        (onSelect == null) != (oldWidget.onSelect == null) ||
+        onSelect != oldWidget.onSelect ||
         selectedForegroundColor != oldWidget.selectedForegroundColor;
   }
 }

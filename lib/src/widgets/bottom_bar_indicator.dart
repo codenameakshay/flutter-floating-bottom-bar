@@ -249,6 +249,23 @@ class RenderIndicatorAnchor extends RenderProxyBox {
   Size _laidOutSize = Size.zero;
 
   @override
+  void markNeedsLayout() {
+    final ancestors = <RenderObject>[];
+    RenderObject? track = parent;
+    while (track != null && track is! RenderIndicatorTrack) {
+      ancestors.add(track);
+      track = track.parent;
+    }
+    super.markNeedsLayout();
+    if (track is RenderIndicatorTrack && !track._layingOutRow) {
+      for (final ancestor in ancestors) {
+        ancestor.markNeedsLayout();
+      }
+      track.markNeedsLayout();
+    }
+  }
+
+  @override
   void performLayout() {
     super.performLayout();
     _laidOutSize = size;
@@ -299,10 +316,24 @@ class IndicatorMotion extends ChangeNotifier {
   int _to;
   List<Rect> _rects = const [];
   ({int index, bool animated})? _reveal;
+  int _revealRevision = 0;
 
   /// Whether a stretching indicator is in use: one edge leads, the other
   /// trails, and neither overshoots.
-  bool stretch = false;
+  bool _stretch = false;
+  bool get stretch => _stretch;
+  set stretch(bool value) {
+    if (value == _stretch) return;
+    if (settled || !_covers(_rects)) {
+      _stretch = value;
+      _trails.fillRange(0, _trails.length, false);
+      return;
+    }
+    _retarget(_to, stretch: value, reveal: false);
+  }
+
+  set indicator(BottomBarIndicator? value) =>
+      stretch = value?._stretch ?? false;
 
   set motion(Motion value) {
     if (_lead.motion == value) return;
@@ -332,8 +363,11 @@ class IndicatorMotion extends ChangeNotifier {
   }
 
   bool _covers(List<Rect> rects) =>
+      _to >= 0 &&
       _to < rects.length &&
-      _from.every((blend) => blend.keys.every((i) => i < rects.length));
+      _from.every(
+        (blend) => blend.keys.every((i) => i >= 0 && i < rects.length),
+      );
 
   static double _blend(Map<int, double> blend, int edge, List<Rect> rects) {
     var sum = 0.0;
@@ -352,11 +386,17 @@ class IndicatorMotion extends ChangeNotifier {
     _rects = rects;
     if (_to < 0 || _to >= rects.length) return null;
     if (settled || !_covers(rects)) return rects[_to];
-    return Rect.fromLTRB(
+    final rect = Rect.fromLTRB(
       _value(0, rects),
       _value(1, rects),
       _value(2, rects),
       _value(3, rects),
+    );
+    if (rect.width >= 0 && rect.height >= 0) return rect;
+    return Rect.fromCenter(
+      center: rect.center,
+      width: math.max(0, rect.width),
+      height: math.max(0, rect.height),
     );
   }
 
@@ -367,14 +407,20 @@ class IndicatorMotion extends ChangeNotifier {
       _from[edge] = {index: 1.0};
     }
     _reveal = (index: index, animated: false);
+    _revealRevision++;
     _trail.value = 1;
     _lead.value = 1;
+    notifyListeners();
   }
 
   /// Springs the indicator to [index], keeping its current velocity.
   void animateTo(int index) {
-    final rects = _rects;
     if (index == _to) return;
+    _retarget(index);
+  }
+
+  void _retarget(int index, {bool? stretch, bool reveal = true}) {
+    final rects = _rects;
     if (index < 0 || index >= rects.length || !_covers(rects)) {
       jumpTo(index);
       return;
@@ -396,11 +442,17 @@ class IndicatorMotion extends ChangeNotifier {
     }
 
     _to = index;
+    if (stretch != null) _stretch = stretch;
     final target = rects[index];
     final travel = target.center.dx - (current[0] + current[2]) / 2;
     _trails
-      ..[0] = stretch && travel > 0
-      ..[2] = stretch && travel < 0;
+      ..[0] = _stretch && travel > 0
+      ..[2] = _stretch && travel < 0;
+
+    if (reveal) {
+      _reveal = (index: index, animated: true);
+      _revealRevision++;
+    }
 
     for (final (controller, trailing) in [(_lead, false), (_trail, true)]) {
       var dot = 0.0;
@@ -421,7 +473,6 @@ class IndicatorMotion extends ChangeNotifier {
         );
       }
     }
-    _reveal = (index: index, animated: true);
   }
 
   ({int index, bool animated})? _takeReveal() {
@@ -540,6 +591,8 @@ class RenderIndicatorTrack extends RenderBox
     if (identical(value, _motion)) return;
     if (attached) _motion.removeListener(_onTick);
     _motion = value;
+    _needsInitialReveal = true;
+    _revealGeneration++;
     if (attached) _motion.addListener(_onTick);
     markNeedsLayout();
   }
@@ -548,7 +601,11 @@ class RenderIndicatorTrack extends RenderBox
   set indicator(BottomBarIndicator value) {
     if (identical(value, _indicator)) return;
     _indicator = value;
-    _motion.stretch = value._stretch;
+    if (_usesBuilder) {
+      _observeGeometry();
+    } else {
+      _cancelGeometryObservation();
+    }
     markNeedsLayout();
   }
 
@@ -556,6 +613,8 @@ class RenderIndicatorTrack extends RenderBox
   set reveal(bool value) {
     if (value == _reveal) return;
     _reveal = value;
+    _needsInitialReveal = true;
+    _revealGeneration++;
     markNeedsLayout();
   }
 
@@ -574,13 +633,40 @@ class RenderIndicatorTrack extends RenderBox
   }
 
   Rect? _builderRect;
+  bool _layingOutRow = false;
+  bool _needsInitialReveal = true;
+  int _revealGeneration = 0;
+  int? _geometryFrameCallback;
 
   bool get _usesBuilder => _indicator is _BuilderIndicator;
 
   RenderBox get _layer => firstChild!;
   RenderBox get _row => lastChild!;
 
-  void _onTick() => _usesBuilder ? markNeedsLayout() : markNeedsPaint();
+  void _onTick() => _usesBuilder || _motion._reveal != null
+      ? markNeedsLayout()
+      : markNeedsPaint();
+
+  void _observeGeometry() {
+    if (!attached || !_usesBuilder || _geometryFrameCallback != null) return;
+    // Descendant paint-only transforms need not dirty any ancestor outside
+    // their repaint boundary. Observe frames without requesting idle frames.
+    _geometryFrameCallback = SchedulerBinding.instance.scheduleFrameCallback((
+      _,
+    ) {
+      _geometryFrameCallback = null;
+      if (!attached || !_usesBuilder) return;
+      markNeedsLayout();
+      _observeGeometry();
+    }, scheduleNewFrame: false);
+  }
+
+  void _cancelGeometryObservation() {
+    final callback = _geometryFrameCallback;
+    if (callback == null) return;
+    SchedulerBinding.instance.cancelFrameCallbackWithId(callback);
+    _geometryFrameCallback = null;
+  }
 
   @override
   void setupParentData(RenderBox child) {
@@ -592,12 +678,15 @@ class RenderIndicatorTrack extends RenderBox
   @override
   void attach(PipelineOwner owner) {
     super.attach(owner);
-    _motion.stretch = _indicator._stretch;
     _motion.addListener(_onTick);
+    _observeGeometry();
   }
 
   @override
   void detach() {
+    _revealGeneration++;
+    _needsInitialReveal = true;
+    _cancelGeometryObservation();
     _motion.removeListener(_onTick);
     super.detach();
   }
@@ -652,24 +741,50 @@ class RenderIndicatorTrack extends RenderBox
   @override
   void performLayout() {
     final row = _row;
-    row.layout(constraints.loosen(), parentUsesSize: true);
+    _layingOutRow = true;
+    try {
+      row.layout(constraints.loosen(), parentUsesSize: true);
+    } finally {
+      _layingOutRow = false;
+    }
     size = constraints.constrain(row.size);
     (row.parentData! as _TrackParentData).offset = Alignment.center.alongOffset(
       size - row.size as Offset,
     );
 
-    _builderRect = _usesBuilder ? _resolve() : null;
+    _builderRect = null;
+    if (_usesBuilder) {
+      invokeLayoutCallback<BoxConstraints>((_) {
+        _builderRect = _resolve();
+      });
+    }
     _layer.layout(
       _usesBuilder
           ? _FrameConstraints(size, _builderRect, _motion.settled)
           : BoxConstraints.tight(size),
     );
 
-    final reveal = _motion._takeReveal();
+    final motion = _motion;
+    final reveal =
+        motion._takeReveal() ??
+        (_reveal && _needsInitialReveal
+            ? (index: motion._to, animated: false)
+            : null);
+    final revision = motion._revealRevision;
+    final generation = _revealGeneration;
     if (_reveal && reveal != null) {
+      _needsInitialReveal = false;
       SchedulerBinding.instance.addPostFrameCallback((_) {
-        final slots = attached ? _slots : const <RenderIndicatorAnchor>[];
-        if (reveal.index >= slots.length) return;
+        if (!attached ||
+            !_reveal ||
+            _revealGeneration != generation ||
+            !identical(motion, _motion) ||
+            motion._revealRevision != revision ||
+            reveal.index != motion._to) {
+          return;
+        }
+        final slots = _slots;
+        if (reveal.index < 0 || reveal.index >= slots.length) return;
         slots[reveal.index].showOnScreen(
           duration: reveal.animated
               ? const Duration(milliseconds: 350)
@@ -690,13 +805,6 @@ class RenderIndicatorTrack extends RenderBox
         _colors,
         _textDirection,
       );
-    }
-    if (_usesBuilder && rect != _builderRect) {
-      // A relayout boundary inside an item moved it without relaying out
-      // this track; catch the builder up on the next frame.
-      SchedulerBinding.instance.addPostFrameCallback((_) {
-        if (attached) markNeedsLayout();
-      });
     }
     defaultPaint(context, offset);
   }
