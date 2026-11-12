@@ -91,6 +91,12 @@ sealed class BottomBarIndicator {
   const factory BottomBarIndicator.builder(BottomBarIndicatorBuilder builder) =
       _BuilderIndicator;
 
+  /// No indicator.
+  ///
+  /// Use it on [BottomBarItems.indicator] to opt a row out of the theme's
+  /// [BottomBarItemThemeData.indicator].
+  const factory BottomBarIndicator.none() = _NoIndicator;
+
   Rect _target(IndicatorGeometry geometry, TextDirection direction);
 
   /// The indicator's painted shape at [rect], or null if it does not paint.
@@ -121,6 +127,16 @@ sealed class BottomBarIndicator {
 /// from the item's default.
 Color? indicatorForeground(BottomBarIndicator? indicator, ColorScheme colors) =>
     indicator?._foreground(colors);
+
+/// The indicator a row draws: its own [row] argument, else the theme's
+/// [theme] one, and null for [BottomBarIndicator.none].
+BottomBarIndicator? effectiveIndicator(
+  BottomBarIndicator? row,
+  BottomBarIndicator? theme,
+) => switch (row ?? theme) {
+  _NoIndicator() => null,
+  final indicator => indicator,
+};
 
 /// Whether [indicator] reveals the selected look only where it covers an
 /// item.
@@ -261,6 +277,14 @@ final class _DotIndicator extends BottomBarIndicator {
 
   @override
   Color _fill(ColorScheme colors) => color ?? colors.primary;
+}
+
+final class _NoIndicator extends BottomBarIndicator {
+  const _NoIndicator() : super._();
+
+  @override
+  Rect _target(IndicatorGeometry geometry, TextDirection direction) =>
+      geometry.slot;
 }
 
 final class _BuilderIndicator extends BottomBarIndicator {
