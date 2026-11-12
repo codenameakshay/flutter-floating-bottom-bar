@@ -129,7 +129,10 @@ class _ItemThemeDemoPageState extends State<ItemThemeDemoPage> {
     return SizedBox(
       height: 96,
       child: BottomBar(
-        theme: BottomBarThemeData(items: theme),
+        theme: BottomBarThemeData(
+          items: theme,
+          layout: const BottomBarLayout(respectSafeArea: false),
+        ),
         body: const SizedBox.shrink(),
         child: BottomBarItems(
           selectedIndex: selectedIndex,
