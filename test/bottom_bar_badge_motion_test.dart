@@ -258,6 +258,42 @@ void main() {
     expect(layers(tester).map((layer) => layer.$1).toList(), ['2']);
   });
 
+  for (final firstFrame in [16, 80, 180]) {
+    testWidgets(
+      'repeated retargets after direction flips preserve positions at ${firstFrame}ms',
+      (tester) async {
+        await tester.pumpWidget(_app(const BottomBarBadge.count(1)));
+        await tester.pumpAndSettle();
+        await tester.pumpWidget(_app(const BottomBarBadge.count(2)));
+        await tester.pump(Duration(milliseconds: firstFrame));
+
+        for (final count in [3, 1, 4, 2, 5, 3]) {
+          final before = {
+            for (final (text, rect) in layers(tester)) text: rect,
+          };
+          final width = _pillWidth(tester);
+          await tester.pumpWidget(_app(BottomBarBadge.count(count)));
+          for (final (text, rect) in layers(tester)) {
+            final previous = before[text];
+            if (previous != null) {
+              expect(
+                rect.top,
+                closeTo(previous.top, 0.0001),
+                reason: '$text moved when retargeting to $count',
+              );
+            }
+          }
+          expect(_pillWidth(tester), closeTo(width, 0.0001));
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+
+        await tester.pumpAndSettle();
+        expect(layers(tester).map((layer) => layer.$1).toList(), ['3']);
+        expect(tester.hasRunningAnimations, isFalse);
+      },
+    );
+  }
+
   testWidgets('reduced motion snaps every change', (tester) async {
     await tester.pumpWidget(
       _app(const BottomBarBadge.count(3), reducedMotion: true),
@@ -283,6 +319,37 @@ void main() {
     await tester.pump();
     expect(_pill, findsOneWidget);
     expect(scale(tester), 1.0);
+    expect(tester.hasRunningAnimations, isFalse);
+  });
+
+  testWidgets('enabling reduced motion stops all in-flight controllers', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app(const BottomBarBadge.count(9)));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(_app(const BottomBarBadge.count(150)));
+    await tester.pump(const Duration(milliseconds: 30));
+    await tester.pumpWidget(_app(const BottomBarBadge.count(0)));
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(tester.hasRunningAnimations, isTrue);
+
+    await tester.pumpWidget(
+      _app(const BottomBarBadge.count(0), reducedMotion: true),
+    );
+    expect(_pill, findsNothing);
+    expect(tester.hasRunningAnimations, isFalse);
+
+    for (final badge in [
+      const BottomBarBadge.count(10),
+      const BottomBarBadge.dot(),
+      const BottomBarBadge.label('New'),
+      const BottomBarBadge.label(''),
+    ]) {
+      await tester.pumpWidget(_app(badge, reducedMotion: true));
+      expect(tester.hasRunningAnimations, isFalse);
+    }
+    expect(_pill, findsNothing);
+    await tester.pump(const Duration(seconds: 1));
     expect(tester.hasRunningAnimations, isFalse);
   });
 

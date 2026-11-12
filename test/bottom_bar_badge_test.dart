@@ -214,73 +214,93 @@ void main() {
       );
     });
 
-    for (final clip in [Clip.hardEdge, Clip.antiAlias]) {
-      testWidgets('pills are not clipped by the bar with $clip', (
-        tester,
-      ) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: BottomBar(
-                layout: BottomBarLayout(clip: clip),
-                body: const SizedBox(),
-                child: SizedBox(
-                  height: 40,
-                  child: BottomBarItems(
-                    children: [
-                      BottomBarItem(
-                        icon: const Icon(Icons.inbox),
-                        badge: const BottomBarBadge.count(150),
+    for (final clip in Clip.values) {
+      for (final scale in [1.0, 3.0]) {
+        for (final height in [24.0, 40.0]) {
+          testWidgets(
+            'pills are not clipped by the bar with $clip at $height scale $scale',
+            (tester) async {
+              await tester.pumpWidget(
+                MaterialApp(
+                  builder: (context, child) => MediaQuery(
+                    data: MediaQuery.of(
+                      context,
+                    ).copyWith(textScaler: TextScaler.linear(scale)),
+                    child: child!,
+                  ),
+                  home: Scaffold(
+                    body: BottomBar(
+                      layout: BottomBarLayout(clip: clip),
+                      body: const SizedBox(),
+                      child: SizedBox(
+                        height: height,
+                        child: BottomBarItems(
+                          children: [
+                            BottomBarItem(
+                              icon: const Icon(Icons.inbox),
+                              badge: const BottomBarBadge.count(150),
+                            ),
+                            BottomBarItem(
+                              icon: const Icon(Icons.mail),
+                              badge: const BottomBarBadge.dot(),
+                            ),
+                            BottomBarItem(icon: const Icon(Icons.send)),
+                            BottomBarItem(
+                              icon: const Icon(Icons.star),
+                              badge: const BottomBarBadge.count(150),
+                            ),
+                          ],
+                        ),
                       ),
-                      BottomBarItem(
-                        icon: const Icon(Icons.mail),
-                        badge: const BottomBarBadge.dot(),
-                      ),
-                      BottomBarItem(icon: const Icon(Icons.send)),
-                      BottomBarItem(
-                        icon: const Icon(Icons.star),
-                        badge: const BottomBarBadge.count(150),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
+              );
+              await tester.pumpAndSettle();
 
-        final pills = _pill();
-        expect(pills, findsNWidgets(3));
-        for (var i = 0; i < 3; i++) {
-          final pill = pills.at(i);
-          final pillRect = tester.getRect(pill);
-          var node = tester.renderObject<RenderObject>(pill).parent;
-          while (node != null) {
-            final clips =
-                node is RenderClipRect ||
-                node is RenderClipRRect ||
-                node is RenderClipPath ||
-                node is RenderViewportBase ||
-                (node is RenderStack && node.clipBehavior != Clip.none);
-            if (clips) {
-              final box = node as RenderBox;
-              final clipRect = MatrixUtils.transformRect(
-                box.getTransformTo(null),
-                Offset.zero & box.size,
-              );
-              expect(pillRect.left, greaterThanOrEqualTo(clipRect.left - 0.01));
-              expect(pillRect.top, greaterThanOrEqualTo(clipRect.top - 0.01));
-              expect(pillRect.right, lessThanOrEqualTo(clipRect.right + 0.01));
-              expect(
-                pillRect.bottom,
-                lessThanOrEqualTo(clipRect.bottom + 0.01),
-              );
-            }
-            node = node.parent;
-          }
+              final pills = _pill();
+              expect(pills, findsNWidgets(3));
+              for (var i = 0; i < 3; i++) {
+                final pill = pills.at(i);
+                final pillRect = tester.getRect(pill);
+                var node = tester.renderObject<RenderObject>(pill).parent;
+                while (node != null) {
+                  final clips =
+                      node is RenderClipRect ||
+                      node is RenderClipRRect ||
+                      node is RenderClipPath ||
+                      node is RenderViewportBase ||
+                      (node is RenderStack && node.clipBehavior != Clip.none);
+                  if (clips) {
+                    final box = node as RenderBox;
+                    final clipRect = MatrixUtils.transformRect(
+                      box.getTransformTo(null),
+                      Offset.zero & box.size,
+                    );
+                    expect(
+                      pillRect.left,
+                      greaterThanOrEqualTo(clipRect.left - 0.01),
+                    );
+                    expect(
+                      pillRect.top,
+                      greaterThanOrEqualTo(clipRect.top - 0.01),
+                    );
+                    expect(
+                      pillRect.right,
+                      lessThanOrEqualTo(clipRect.right + 0.01),
+                    );
+                    expect(
+                      pillRect.bottom,
+                      lessThanOrEqualTo(clipRect.bottom + 0.01),
+                    );
+                  }
+                  node = node.parent;
+                }
+              }
+            },
+          );
         }
-      });
+      }
     }
   });
 
@@ -544,6 +564,166 @@ void main() {
   });
 
   group('semantics', () {
+    testWidgets('icon-only item joins its accessible icon name and keeps tap', (
+      tester,
+    ) async {
+      var taps = 0;
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: BottomBarItem(
+                icon: const Icon(Icons.inbox, semanticLabel: 'Inbox'),
+                badge: const BottomBarBadge.count(3),
+                onTap: () => taps++,
+              ),
+            ),
+          ),
+        ),
+      );
+      final node = tester.getSemantics(find.byType(BottomBarItem));
+      expect(node.label, 'Inbox, 3');
+      node.owner!.performAction(node.id, SemanticsAction.tap);
+      expect(taps, 1);
+      semantics.dispose();
+    });
+
+    testWidgets('custom keyed label is mounted once during selection motion', (
+      tester,
+    ) async {
+      final key = GlobalKey();
+      Widget app(int selectedIndex) => MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: BottomBarItems(
+              selectedIndex: selectedIndex,
+              labelBehavior: BottomBarLabelBehavior.onlySelected,
+              children: [
+                BottomBarItem(
+                  icon: const Icon(Icons.inbox),
+                  label: Semantics(
+                    key: key,
+                    label: 'Inbox',
+                    child: const SizedBox(width: 30, height: 10),
+                  ),
+                  badge: const BottomBarBadge.count(3),
+                ),
+                BottomBarItem(icon: const Icon(Icons.send)),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpWidget(app(0));
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(app(1));
+      await tester.pump(const Duration(milliseconds: 30));
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(key), findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(find.byKey(key), findsOneWidget);
+    });
+
+    testWidgets(
+      'custom badge naming keeps icon state across hide and removal',
+      (tester) async {
+        Widget app(Widget? badge) => MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: BottomBarItem(
+                icon: const _StatefulIcon(),
+                label: Semantics(
+                  label: 'Inbox',
+                  child: const SizedBox(width: 30, height: 10),
+                ),
+                badge: badge,
+                onTap: () {},
+              ),
+            ),
+          ),
+        );
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(app(const BottomBarBadge.count(3)));
+        final state = tester.state(find.byType(_StatefulIcon));
+        for (final badge in [
+          const BottomBarBadge.count(0),
+          const BottomBarBadge.count(5),
+          null,
+        ]) {
+          await tester.pumpWidget(app(badge));
+          expect(tester.state(find.byType(_StatefulIcon)), same(state));
+        }
+        expect(_semanticsLabel(tester), 'Inbox');
+        semantics.dispose();
+      },
+    );
+
+    for (final behavior in BottomBarLabelBehavior.values) {
+      testWidgets('custom label joins badge name with $behavior', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: BottomBarItems(
+                  labelBehavior: behavior,
+                  children: [
+                    BottomBarItem(
+                      icon: const Icon(
+                        Icons.inbox,
+                        semanticLabel: 'Decorative icon',
+                      ),
+                      label: Semantics(
+                        label: 'Inbox',
+                        child: SizedBox(width: 30, height: 10),
+                      ),
+                      badge: const BottomBarBadge.count(
+                        3,
+                        semanticLabel: '3 new',
+                      ),
+                      onTap: () {},
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(_semanticsLabel(tester), 'Inbox, 3 new');
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: BottomBarItems(
+                  labelBehavior: behavior,
+                  children: [
+                    BottomBarItem(
+                      icon: const Icon(
+                        Icons.inbox,
+                        semanticLabel: 'Decorative icon',
+                      ),
+                      label: Semantics(
+                        label: 'Inbox',
+                        child: const SizedBox(width: 30, height: 10),
+                      ),
+                      badge: const BottomBarBadge.count(0),
+                      onTap: () {},
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        expect(_semanticsLabel(tester), 'Inbox');
+        semantics.dispose();
+      });
+    }
+
     testWidgets('count is announced after the item name', (tester) async {
       final semantics = tester.ensureSemantics();
       await tester.pumpWidget(
@@ -668,4 +848,16 @@ void main() {
       semantics.dispose();
     });
   });
+}
+
+class _StatefulIcon extends StatefulWidget {
+  const _StatefulIcon();
+
+  @override
+  State<_StatefulIcon> createState() => _StatefulIconState();
+}
+
+class _StatefulIconState extends State<_StatefulIcon> {
+  @override
+  Widget build(BuildContext context) => const Icon(Icons.inbox);
 }

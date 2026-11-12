@@ -333,6 +333,7 @@ class _ItemViewState extends State<_ItemView>
                 currentLabel.data != null
             ? currentLabel.semanticsLabel ?? currentLabel.data
             : null);
+    final customBadgeLabel = badge is BottomBarBadge && baseLabel == null;
     final accessibleLabel = baseLabel == null || badgeLabel == null
         ? baseLabel
         : '$baseLabel, $badgeLabel';
@@ -431,7 +432,7 @@ class _ItemViewState extends State<_ItemView>
         else
           tinted(color, plainIcon()),
         if (badge is BottomBarBadge)
-          Positioned.fill(child: badge)
+          Positioned.fill(child: ExcludeSemantics(child: badge))
         else if (badge != null)
           PositionedDirectional(top: -4, end: -4, child: badge),
       ],
@@ -445,6 +446,10 @@ class _ItemViewState extends State<_ItemView>
                   iconStack(constraints.maxWidth),
             )
           : iconStack(null),
+    );
+    stack = ExcludeSemantics(
+      excluding: customBadgeLabel && currentLabel != null,
+      child: stack,
     );
     if (anchors) {
       stack = IndicatorAnchor(role: IndicatorAnchorRole.icon, child: stack);
@@ -510,7 +515,34 @@ class _ItemViewState extends State<_ItemView>
               const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           // heightFactor keeps the item content-tall when the bar hands it
           // loose height up to the full screen.
-          child: Center(heightFactor: 1, child: column),
+          child: Center(
+            heightFactor: 1,
+            child: OverflowBox(
+              minHeight: 0,
+              maxHeight: double.infinity,
+              fit: OverflowBoxFit.deferToChild,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  column,
+                  if (customBadgeLabel &&
+                      labelShown <= 0 &&
+                      currentLabel != null)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: ExcludeFocus(
+                          child: Opacity(
+                            opacity: 0,
+                            alwaysIncludeSemantics: true,
+                            child: labelChild,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -526,12 +558,14 @@ class _ItemViewState extends State<_ItemView>
     // Always present so a badge or label toggling the name keeps the subtree.
     child = ExcludeSemantics(excluding: accessibleLabel != null, child: child);
 
-    return Semantics(
+    return _BadgeName(
+      combine: customBadgeLabel,
+      suffix: badgeLabel,
       button: true,
       enabled: onTap != null,
       selected: selected,
       label: accessibleLabel,
-      onTap: accessibleLabel != null ? onTap : null,
+      onTap: accessibleLabel != null || customBadgeLabel ? onTap : null,
       child: child,
     );
   }
@@ -564,4 +598,107 @@ class _RenderFillBoundedWidth extends RenderProxyBox {
   @override
   Size computeDryLayout(BoxConstraints constraints) =>
       constraints.constrain(child!.getDryLayout(_fill(constraints)));
+}
+
+class _BadgeName extends Semantics {
+  _BadgeName({
+    required this.suffix,
+    required this.combine,
+    required super.child,
+    super.button,
+    super.enabled,
+    super.selected,
+    super.label,
+    super.onTap,
+  });
+
+  final String? suffix;
+  final bool combine;
+
+  @override
+  RenderSemanticsAnnotations createRenderObject(BuildContext context) =>
+      _RenderBadgeName(
+        suffix,
+        combine,
+        properties: properties,
+        textDirection: combine || properties.label != null
+            ? Directionality.maybeOf(context)
+            : null,
+      );
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    RenderSemanticsAnnotations renderObject,
+  ) {
+    super.updateRenderObject(context, renderObject);
+    if (combine) renderObject.textDirection = Directionality.of(context);
+    (renderObject as _RenderBadgeName)
+      ..suffix = suffix
+      ..combine = combine;
+  }
+}
+
+class _RenderBadgeName extends RenderSemanticsAnnotations {
+  _RenderBadgeName(
+    this._suffix,
+    this._combine, {
+    required super.properties,
+    required super.textDirection,
+  });
+
+  String? _suffix;
+  bool _combine;
+
+  set combine(bool value) {
+    if (value == _combine) return;
+    _combine = value;
+    markNeedsSemanticsUpdate();
+  }
+
+  set suffix(String? value) {
+    if (value == _suffix) return;
+    _suffix = value;
+    markNeedsSemanticsUpdate();
+  }
+
+  @override
+  void describeSemanticsConfiguration(SemanticsConfiguration config) {
+    super.describeSemanticsConfiguration(config);
+    if (_combine) {
+      config
+        ..isSemanticBoundary = true
+        ..explicitChildNodes = true;
+    }
+  }
+
+  @override
+  void assembleSemanticsNode(
+    SemanticsNode node,
+    SemanticsConfiguration config,
+    Iterable<SemanticsNode> children,
+  ) {
+    final suffix = _suffix;
+    if (!_combine) {
+      super.assembleSemanticsNode(node, config, children);
+      return;
+    }
+    final labels = <String>[];
+    void collect(SemanticsNode child) {
+      final data = child.getSemanticsData();
+      if (data.label.isNotEmpty) labels.add(data.label);
+      if (!child.isPartOfNodeMerging) {
+        child.visitChildren((descendant) {
+          collect(descendant);
+          return true;
+        });
+      }
+    }
+
+    for (final child in children) {
+      collect(child);
+    }
+    config.label = [...labels, ?suffix].join(', ');
+    node.updateWith(config: config);
+  }
 }
