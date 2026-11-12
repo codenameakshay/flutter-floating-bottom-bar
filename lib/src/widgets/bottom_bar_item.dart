@@ -43,6 +43,7 @@ class BottomBarItem extends StatelessWidget {
     this.badge,
     this.selected = false,
     this.onTap,
+    this.onLongPress,
     this.semanticLabel,
     this.tooltip,
     this.color,
@@ -89,6 +90,14 @@ class BottomBarItem extends StatelessWidget {
   /// runs first and [BottomBarItems.onSelected] runs after it.
   final VoidCallback? onTap;
 
+  /// Called when the item is long-pressed.
+  ///
+  /// Inside a [BottomBarItems] with a [BottomBarItems.selectedIndex], this
+  /// runs first and [BottomBarItems.onLongPressed] runs after it. While a
+  /// long-press handler is set, [tooltip] shows on hover only, and the
+  /// item's semantics offer a long-press action.
+  final VoidCallback? onLongPress;
+
   /// Explicit accessible name for this item.
   ///
   /// When non-null, this name is exposed as the only semantics label for the
@@ -97,7 +106,8 @@ class BottomBarItem extends StatelessWidget {
   /// fallback. If both are null, descendant semantics remain visible.
   final String? semanticLabel;
 
-  /// Tooltip shown on long-press.
+  /// Tooltip shown on long-press, or on hover only when the item has a
+  /// long-press handler.
   ///
   /// When [semanticLabel] is null, this also becomes the explicit accessible
   /// name fallback. When null no tooltip is rendered.
@@ -280,6 +290,13 @@ class _ItemViewState extends State<_ItemView>
         : () {
             item.onTap?.call();
             onSelect();
+          };
+    final onRowLongPress = selection?.onLongPress;
+    final onLongPress = onRowLongPress == null
+        ? item.onLongPress
+        : () {
+            item.onLongPress?.call();
+            onRowLongPress();
           };
     final labelBehavior =
         BottomBarItemsScope.maybeOf(context) ??
@@ -498,6 +515,7 @@ class _ItemViewState extends State<_ItemView>
 
     Widget child = InkWell(
       onTap: onTap,
+      onLongPress: onLongPress,
       onHighlightChanged: _onHighlightChanged,
       borderRadius: theme.inkBorderRadius ?? BorderRadius.circular(8),
       overlayColor: theme.overlayColor,
@@ -519,6 +537,7 @@ class _ItemViewState extends State<_ItemView>
       child = Tooltip(
         message: item.tooltip!,
         excludeFromSemantics: true,
+        triggerMode: onLongPress == null ? null : TooltipTriggerMode.manual,
         child: child,
       );
     }
@@ -532,6 +551,7 @@ class _ItemViewState extends State<_ItemView>
       selected: selected,
       label: accessibleLabel,
       onTap: accessibleLabel != null ? onTap : null,
+      onLongPress: accessibleLabel != null ? onLongPress : null,
       child: child,
     );
   }

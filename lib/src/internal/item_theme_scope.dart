@@ -3,11 +3,20 @@ import 'package:material_ui/material_ui.dart';
 import '../bottom_bar_theme.dart';
 import '../widgets/bottom_bar_item_theme.dart';
 
-/// Carries a [BottomBar]'s resolved [BottomBarThemeData.items] to its child.
+/// Carries a [BottomBar]'s resolved [BottomBarThemeData.items] and its
+/// reselect hook to its child.
 class ItemThemeScope extends InheritedWidget {
-  const ItemThemeScope({super.key, required this.items, required super.child});
+  const ItemThemeScope({
+    super.key,
+    required this.items,
+    this.scrollToStart,
+    required super.child,
+  });
 
   final BottomBarItemThemeData? items;
+
+  /// Shows the bar and scrolls the visible list in its body to the start.
+  final VoidCallback? scrollToStart;
 
   @override
   bool updateShouldNotify(ItemThemeScope oldWidget) => items != oldWidget.items;
@@ -22,3 +31,10 @@ BottomBarItemThemeData itemThemeOf(BuildContext context) {
           : Theme.of(context).extension<BottomBarThemeData>()?.items) ??
       const BottomBarItemThemeData();
 }
+
+/// Shows the enclosing [BottomBar] and scrolls the visible list in its body to
+/// the start. Does nothing outside a [BottomBar].
+void barScrollToStart(BuildContext context) => context
+    .getInheritedWidgetOfExactType<ItemThemeScope>()
+    ?.scrollToStart
+    ?.call();

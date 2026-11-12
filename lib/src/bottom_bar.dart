@@ -331,6 +331,11 @@ class _BottomBarState extends State<BottomBar>
     }());
   }
 
+  void _scrollToStartOnReselect() {
+    _setBarVisible(true, notifyCallbacks: true, fromController: true);
+    _scrollActiveToBoundary(toEnd: false);
+  }
+
   Future<void> _handleActionTap() async {
     await _scrollActiveToBoundary(toEnd: _scrollBehavior.scrollOpposite);
     _setBarVisible(true, notifyCallbacks: true, fromController: true);
@@ -599,7 +604,11 @@ class _BottomBarState extends State<BottomBar>
             borderRadius: _effectiveBarBorderRadius(theme, l),
             child: Focus(
               focusNode: _barFocusNode,
-              child: ItemThemeScope(items: theme.items, child: widget.child),
+              child: ItemThemeScope(
+                items: theme.items,
+                scrollToStart: _scrollToStartOnReselect,
+                child: widget.child,
+              ),
             ),
           ),
         );
