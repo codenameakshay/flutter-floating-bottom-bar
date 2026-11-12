@@ -442,14 +442,15 @@ class IndicatorMotion extends ChangeNotifier {
       _trails[edge] ? _trail : _lead;
 
   double _progress(int edge) {
-    if (settled) return 1;
-    final value = _controller(edge).value;
+    final controller = _controller(edge);
+    if (!controller.isAnimating) return 1;
+    final value = controller.value;
     return stretch ? math.min(value, 1) : value;
   }
 
   double _velocity(int edge) {
-    if (settled) return 0;
     final controller = _controller(edge);
+    if (!controller.isAnimating) return 0;
     return stretch && controller.value >= 1 ? 0 : controller.velocity;
   }
 
@@ -537,7 +538,7 @@ class IndicatorMotion extends ChangeNotifier {
   /// Springs the indicator to [index], carrying its current velocity
   /// projected onto the new direction of travel.
   void animateTo(int index) {
-    if (index == _to) return;
+    if (index == _to && !dragging) return;
     _retarget(index);
   }
 
@@ -635,12 +636,30 @@ class IndicatorMotion extends ChangeNotifier {
         dot += velocity[edge] * distance;
         span += distance * distance;
       }
+      var start = 0.0;
+      if (!_stretch && fingerVelocity != 0 && span <= 1e-6) {
+        // A nonzero blend basis carries momentum even at the exact target.
+        dot = 0;
+        span = 0;
+        for (var edge = 0; edge < 4; edge++) {
+          if (_trails[edge] != trailing) continue;
+          _from[edge] = {
+            for (final key in {...goal.keys, ...heading.keys, ...ahead.keys})
+              key: (goal[key] ?? 0) + (heading[key] ?? 0) - (ahead[key] ?? 0),
+          }..removeWhere((_, weight) => weight.abs() < 1e-9);
+          final distance =
+              _edge(target, edge) - _blend(_from[edge], edge, rects);
+          dot += velocity[edge] * distance;
+          span += distance * distance;
+        }
+        start = 1;
+      }
       if (trailing && !_trails.contains(true)) {
         controller.value = 1;
       } else {
         controller.animateTo(
           1,
-          from: 0,
+          from: start,
           withVelocity: span > 1e-6 ? dot / span : 0,
         );
       }

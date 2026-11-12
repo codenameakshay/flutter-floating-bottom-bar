@@ -58,7 +58,7 @@ class _IndicatorsDemoPageState extends State<IndicatorsDemoPage> {
         PopupMenuItem(value: 'Sign out', child: Text('Sign out')),
       ],
     );
-    if (value == null) return;
+    if (!mounted || value == null) return;
     setState(() => _account = value == 'Sign out' ? null : value);
   }
 

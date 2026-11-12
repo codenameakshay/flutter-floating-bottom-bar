@@ -492,8 +492,10 @@ BottomBarThemeData(
 ```
 
 The row plays the haptic once per selection or reselect. A drag plays
-`selectionClick` each time the finger crosses into another item. Taps keep the
-`InkWell` feedback, which is a click sound on Android, so nothing doubles up.
+`selectionClick` each time the finger crosses into another item. The setting
+covers only these selection haptics. Items keep the `InkWell` platform
+feedback: a click sound on an Android tap, and a vibration on an Android
+long-press. A tap does not vibrate twice.
 
 Long-press is set per item with `BottomBarItem.onLongPress`, or per row with
 `BottomBarItems.onLongPressed`. While either one is set, the item's `tooltip`

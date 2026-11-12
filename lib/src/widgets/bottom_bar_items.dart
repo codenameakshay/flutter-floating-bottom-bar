@@ -272,6 +272,10 @@ class _SelectableItemsState extends State<_SelectableItems>
     final theme = itemThemeOf(context);
     _indicator = effectiveIndicator(widget.items.indicator, theme.indicator);
     _haptics = theme.haptics ?? BottomBarHaptics.none;
+    if (_indicator == null && _dragIndex != null) {
+      _dragIndex = null;
+      _settle();
+    }
     _motion
       ..motion =
           widget.items.indicatorMotion ??
@@ -301,6 +305,14 @@ class _SelectableItemsState extends State<_SelectableItems>
     _syncTheme();
     final index = items.selectedIndex!;
     final moved = index != old.selectedIndex;
+    if (_dragIndex != null &&
+        (moved ||
+            items.children.length != old.children.length ||
+            !items.dragToSelect ||
+            _indicator == null)) {
+      _dragIndex = null;
+      _settle();
+    }
     if (items.children.length != old.children.length ||
         (moved && reduceMotion(context))) {
       _motion.jumpTo(index);
@@ -312,6 +324,7 @@ class _SelectableItemsState extends State<_SelectableItems>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _dragIndex = null;
     _motion.dispose();
     super.dispose();
   }
@@ -354,7 +367,7 @@ class _SelectableItemsState extends State<_SelectableItems>
     if (!_reduceMotion) _motion.follow(position.dx);
     final index = _motion.indexAt(position.dx);
     if (index != null && index != _dragIndex) {
-      _dragIndex = index;
+      setState(() => _dragIndex = index);
       if (_haptics != BottomBarHaptics.none) {
         _haptic(BottomBarHaptics.selectionClick);
       }
@@ -364,7 +377,7 @@ class _SelectableItemsState extends State<_SelectableItems>
   void _onDragEnd(DragEndDetails details) {
     final index = _dragIndex;
     if (index == null) return;
-    _dragIndex = null;
+    setState(() => _dragIndex = null);
     if (_motion.dragging) {
       _motion.release(index, velocity: details.velocity.pixelsPerSecond.dx);
     }
@@ -375,8 +388,8 @@ class _SelectableItemsState extends State<_SelectableItems>
   }
 
   void _cancelDrag() {
-    if (_dragIndex == null) return;
-    _dragIndex = null;
+    if (!mounted || _dragIndex == null) return;
+    setState(() => _dragIndex = null);
     _settle();
   }
 
@@ -431,7 +444,7 @@ class _SelectableItemsState extends State<_SelectableItems>
           role: IndicatorAnchorRole.slot,
           child: BottomBarItemSelectionScope(
             index: i,
-            selected: i == selectedIndex,
+            selected: i == (_dragIndex ?? selectedIndex),
             onSelect: selectable ? () => _select(i) : null,
             onLongPress: onLongPressed == null ? null : () => onLongPressed(i),
             selectedForegroundColor: foreground,
@@ -444,20 +457,27 @@ class _SelectableItemsState extends State<_SelectableItems>
       children,
       indicator == null
           ? null
-          : (row, {required reveal}) => Listener(
-              // An accepted drag reports a cancelled pointer through onEnd.
-              onPointerCancel: (_) => _cancelDrag(),
-              child: RawGestureDetector(
-                excludeFromSemantics: true,
-                gestures: _dragGestures(items.dragToSelect && !reveal),
-                child: IndicatorTrack(
-                  motion: _motion,
-                  indicator: indicator,
-                  reveal: reveal,
-                  row: row,
+          : (row, {required reveal}) {
+              if (reveal && _dragIndex != null) {
+                SchedulerBinding.instance.addPostFrameCallback((_) {
+                  _cancelDrag();
+                });
+              }
+              return Listener(
+                // An accepted drag reports a cancelled pointer through onEnd.
+                onPointerCancel: (_) => _cancelDrag(),
+                child: RawGestureDetector(
+                  excludeFromSemantics: true,
+                  gestures: _dragGestures(items.dragToSelect && !reveal),
+                  child: IndicatorTrack(
+                    motion: _motion,
+                    indicator: indicator,
+                    reveal: reveal,
+                    row: row,
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
     );
   }
 }

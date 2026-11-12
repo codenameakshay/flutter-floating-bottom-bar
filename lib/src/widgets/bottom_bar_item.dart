@@ -547,7 +547,7 @@ class _ItemViewState extends State<_ItemView>
 
     return Semantics(
       button: true,
-      enabled: onTap != null,
+      enabled: onTap != null || onLongPress != null,
       selected: selected,
       label: accessibleLabel,
       onTap: accessibleLabel != null ? onTap : null,

@@ -143,8 +143,9 @@ class BottomBarItemThemeData {
   ///
   /// With `dragToSelect`, a drag also plays
   /// [BottomBarHaptics.selectionClick] each time the finger crosses into
-  /// another item. Item taps keep [InkWell]'s own platform feedback, which
-  /// is a click sound on Android, not a vibration. Defaults to
+  /// another item. It covers only these selection haptics. Items keep
+  /// [InkWell]'s own platform feedback: a click sound on an Android tap and
+  /// a vibration on an Android long-press. Defaults to
   /// [BottomBarHaptics.none].
   final BottomBarHaptics? haptics;
 
