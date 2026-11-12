@@ -1,5 +1,17 @@
 ## Unreleased
 
+- Add `BottomBarItems.onReselected`, called when the selected item is tapped
+  again or picked again by a drag. `onSelected` still fires after it. Add
+  `scrollToStartOnReselect` to scroll the visible list back to its start on a
+  reselect. Add `BottomBarItemThemeData.haptics` with `BottomBarHaptics` to
+  play a selection click or a light impact. Add `BottomBarItem.onLongPress` and
+  `BottomBarItems.onLongPressed`. While one is set, the tooltip shows on hover
+  only, and the item exposes a long-press action to assistive technology. Add
+  `BottomBarItems.dragToSelect`. The indicator follows the finger, and a
+  release selects the item under it with the finger's velocity. It is off in
+  narrow rows and in rows without an indicator. It works in RTL, and reduced
+  motion keeps the indicator still during the drag. There is no double-tap
+  callback on purpose. All defaults keep today's behaviour.
 - Add `BottomBarBadge.dot()`, `.count()` and `.label()` for
   `BottomBarItem.badge`. Badges scale in from the top-end corner with a slight
   overshoot and scale out before they go. Counts roll their digits, the width
