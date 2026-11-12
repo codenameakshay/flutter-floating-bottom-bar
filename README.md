@@ -315,6 +315,50 @@ When `selectedIndex` is set, it wins over `BottomBarItem.selected`. Tapping an
 item runs its `onTap`, then `onSelected`. An item's `selectedColor` overrides
 the indicator's foreground colour.
 
+### Item theme
+
+Style and animate every `BottomBarItem` through `BottomBarItemThemeData`, set as `BottomBarThemeData.items`, without forking the widget.
+
+It sets:
+
+- Colours, through `color` and `selectedColor`.
+- Icon sizes, through `iconSize` and `selectedIconSize`.
+- Label styles, through `labelStyle` and `selectedLabelStyle`. A heavier selected weight animates in.
+- Padding and the gap between icon and label, through `padding` and `iconLabelGap`.
+- Ink radius, overlay and splash, through `inkBorderRadius`, `overlayColor` and `splashFactory`. `NoSplash.splashFactory` removes the ripple.
+- `pressedScale`, which scales the icon and label while the item is pressed.
+- The `motion` spring for item transitions.
+- The default `indicator` and `indicatorMotion` for `BottomBarItems` rows.
+
+Precedence, lowest to highest:
+
+1. Built-in defaults.
+2. `ThemeData.extensions`.
+3. `BottomBar(theme:)`.
+4. `BottomBarItems` arguments (`indicator`, `indicatorMotion`). An indicator's foreground colour beats `selectedColor`.
+5. `BottomBarItem` arguments (`color`, `selectedColor`).
+
+Items outside a `BottomBar` read the `ThemeData.extensions` level only. Use `BottomBarIndicator.none()` to opt one row out of a theme indicator.
+
+Selection changes animate colour, icon and label style on a spring; with `BottomBarLabelBehavior.onlySelected` the label grows in and the indicator follows it, and reduced motion skips all of it.
+
+```dart
+MaterialApp(
+  theme: ThemeData(
+    extensions: const [
+      BottomBarThemeData(
+        items: BottomBarItemThemeData(
+          selectedLabelStyle: TextStyle(fontWeight: FontWeight.w700),
+          pressedScale: 0.92,
+          indicator: BottomBarIndicator.pill(),
+        ),
+      ),
+    ],
+  ),
+  home: ...,
+);
+```
+
 ## Migration from v1.x
 
 | v1.x | v2.x | Migration |

@@ -1,5 +1,14 @@
 ## Unreleased
 
+- Add `BottomBarItemThemeData`, set as `BottomBarThemeData.items`, to style
+  and animate `BottomBarItem` without forking it: colours, icon sizes, label
+  styles, padding, icon-label gap, ink radius, overlay, splash and a
+  `pressedScale` press effect. It also sets the default indicator and
+  indicator motion for `BottomBarItems`, and `BottomBarIndicator.none()` opts
+  a row out. `BottomBar` now passes its resolved theme to its child. Selection
+  changes animate colour, icon and label style on a spring, `onlySelected`
+  labels grow in with the indicator following, and reduced motion skips it
+  all.
 - Add a selection indicator to `BottomBarItems`. Set `selectedIndex` and
   `onSelected` and pick `BottomBarIndicator.pill()`, `.tint()`,
   `.underline()`, `.dot()` or `.builder()`. It slides between items on a
