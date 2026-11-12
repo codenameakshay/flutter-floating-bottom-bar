@@ -8,8 +8,6 @@ import '../internal/item_theme_scope.dart';
 import '../internal/reduce_motion.dart';
 import 'bottom_bar_item_theme.dart';
 
-enum _Kind { dot, count, label }
-
 /// An animated badge for [BottomBarItem.badge]: a dot, a count or a short
 /// label on the icon's top-end corner.
 ///
@@ -46,8 +44,7 @@ class BottomBarBadge extends StatefulWidget {
     this.outline,
     this.offset,
     this.semanticLabel,
-  }) : _kind = _Kind.dot,
-       _text = null,
+  }) : _text = null,
        _count = null,
        _visible = show,
        backgroundColor = color,
@@ -67,7 +64,6 @@ class BottomBarBadge extends StatefulWidget {
     this.semanticLabel,
   }) : assert(count >= 0, 'count must not be negative'),
        assert(max > 0, 'max must be positive'),
-       _kind = _Kind.count,
        _count = count,
        _text = count > max ? '$max+' : '$count',
        _visible = count > 0 || showZero;
@@ -82,12 +78,10 @@ class BottomBarBadge extends StatefulWidget {
     this.outline,
     this.offset,
     this.semanticLabel,
-  }) : _kind = _Kind.label,
-       _count = null,
+  }) : _count = null,
        _text = text,
        _visible = show && text != '';
 
-  final _Kind _kind;
   final String? _text;
   final int? _count;
   final bool _visible;
@@ -283,7 +277,6 @@ class _Look {
     final cs = Theme.of(context).colorScheme;
     final theme = itemThemeOf(context).badge ?? const BottomBarBadgeThemeData();
     final textColor = theme.textColor;
-    dot = badge._kind == _Kind.dot;
     background = badge.backgroundColor ?? theme.backgroundColor ?? cs.error;
     style = (Theme.of(context).textTheme.labelSmall ?? const TextStyle())
         .copyWith(color: cs.onError)
@@ -314,7 +307,6 @@ class _Look {
     duration: Duration(milliseconds: 400),
   );
 
-  late final bool dot;
   late final Color background;
   late final TextStyle style;
   late final BorderSide outline;
@@ -327,7 +319,7 @@ class _Look {
   late final TextDirection direction;
 
   Size size(String? text) {
-    if (dot || text == null) return Size.square(dotSize);
+    if (text == null) return Size.square(dotSize);
     final painter = TextPainter(
       text: TextSpan(text: text, style: style),
       textDirection: direction,
@@ -413,6 +405,7 @@ class _BottomBarBadgeState extends State<BottomBarBadge>
           _rollTo(text, widget._count);
         }
       }
+      _toCount = widget._count;
     }
 
     if (_shown != visible) {
@@ -436,7 +429,9 @@ class _BottomBarBadgeState extends State<BottomBarBadge>
     );
     widthController.motion = look.motion;
     if (reduced || wasHidden) {
-      if (widthController.value != width) widthController.value = width;
+      if (widthController.isAnimating || widthController.value != width) {
+        widthController.value = width;
+      }
     } else if (_widthTarget != width) {
       widthController.animateTo(width);
     }
@@ -511,7 +506,7 @@ class _BottomBarBadgeState extends State<BottomBarBadge>
   Widget _build(_Look look) {
     final presence = _settled(_presence!, _shown! ? 1 : 0);
     if (presence <= 0 && !_shown!) return const SizedBox.shrink();
-    final dot = look.dot || _to == null;
+    final dot = _to == null;
     final size = _size!;
     final width = dot ? size.width : _settled(_width!, _widthTarget!);
     final height = size.height;
