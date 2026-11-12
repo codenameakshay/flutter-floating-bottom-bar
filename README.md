@@ -257,8 +257,9 @@ opacity or scale.
 `BottomBarItems` is a row helper. `BottomBarItem` is an opinionated item widget
 with built-in accessibility and RTL-aware badge placement.
 
-- The badge uses `PositionedDirectional`, so it follows the top-end corner in
-  both LTR and RTL layouts.
+- A `BottomBarBadge` sits on the icon's top-end corner and mirrors in RTL. Any
+  other `badge` widget uses `PositionedDirectional`, so it follows the top-end
+  corner in both LTR and RTL layouts. See [Badges](#badges).
 - The item exposes button semantics, selection state, and enabled state.
 - The tappable surface keeps at least a 48x48 target.
 - Accessible naming is deterministic: `semanticLabel` wins, otherwise
@@ -358,6 +359,94 @@ MaterialApp(
   home: ...,
 );
 ```
+
+### Badges
+
+`BottomBarBadge` puts a dot, a count or a short label on an item's icon. Pass
+it to `BottomBarItem.badge`.
+
+```dart
+BottomBarItems(
+  selectedIndex: index,
+  onSelected: (i) => setState(() => index = i),
+  children: [
+    BottomBarItem(
+      icon: const Icon(Icons.home_outlined),
+      label: const Text('Home'),
+      badge: BottomBarBadge.dot(show: hasUpdate),
+    ),
+    BottomBarItem(
+      icon: const Icon(Icons.inbox_outlined),
+      label: const Text('Inbox'),
+      badge: BottomBarBadge.count(unread, semanticLabel: '$unread new'),
+    ),
+    BottomBarItem(
+      icon: const Icon(Icons.person_outline),
+      label: const Text('Profile'),
+      badge: BottomBarBadge.label('New', show: isNew),
+    ),
+  ],
+)
+```
+
+- `.dot()` is a small dot with no text.
+- `.count(n)` shows the number. Above `max`, which defaults to 99, it shows
+  "99+". At 0 it hides unless `showZero` is true.
+- `.label('New')` shows a short word. It hides when the text is empty.
+
+Badges scale in with a slight overshoot and scale out before they go. A count
+rolls its digits up when it grows and down when it shrinks. The width follows
+the text. Reduced motion snaps every change.
+
+Hide a badge with `show: false` or a count of 0, not with a null `badge`. That
+way the out animation can play.
+
+`outline` draws a ring that separates the badge from the icon. Use the surface
+colour, such as `BorderSide(color: colorScheme.surface, width: 2)`. `offset`
+shifts the badge. Positive x moves it toward the item's end, and positive y
+moves it down.
+
+Style every badge through `BottomBarBadgeThemeData`, set as
+`BottomBarItemThemeData.badge`:
+
+```dart
+BottomBarThemeData(
+  items: BottomBarItemThemeData(
+    badge: BottomBarBadgeThemeData(
+      backgroundColor: colorScheme.primary,
+      textColor: colorScheme.onPrimary,
+      textStyle: textTheme.labelSmall,
+      dotSize: 8,
+      height: 18,
+      padding: const EdgeInsets.symmetric(horizontal: 5),
+      offset: const Offset(-2, 0),
+      outlineColor: colorScheme.surface,
+      outlineWidth: 2,
+      motion: Motion.snappySpring(),
+    ),
+  ),
+)
+```
+
+The fields are `backgroundColor`, `textColor`, `textStyle`, `dotSize`,
+`height`, `padding`, `offset`, `outlineColor`, `outlineWidth` and `motion`.
+Every field is optional. Arguments on a badge win over the theme.
+
+The item announces its name and its badge, as in "Inbox, 3 new". A count
+announces the text it shows by default, such as "3" or "99+". A label
+announces its text. A dot is silent unless it has a `semanticLabel`.
+
+To localize, pass a translated `semanticLabel`:
+
+```dart
+BottomBarBadge.count(
+  unread,
+  semanticLabel: AppLocalizations.of(context).unreadCount(unread),
+)
+```
+
+Any other widget in `badge` keeps its old placement at the top-end corner. The
+item does not announce it.
 
 ## Migration from v1.x
 
