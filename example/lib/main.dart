@@ -5,6 +5,7 @@ import 'demos/badges_demo.dart';
 import 'demos/basic_demo.dart';
 import 'demos/basic_tab_bar_demo.dart';
 import 'demos/custom_transition_demo.dart';
+import 'demos/go_router_shell_demo.dart';
 import 'demos/indicators_demo.dart';
 import 'demos/issues_dock_demo.dart';
 import 'demos/item_theme_demo.dart';
@@ -58,6 +59,11 @@ final demos = <({String slug, String title, WidgetBuilder builder})>[
     slug: 'custom-transition',
     title: 'Custom transition',
     builder: (_) => const CustomTransitionDemoPage(),
+  ),
+  (
+    slug: 'go-router-shell',
+    title: 'go_router shell',
+    builder: (_) => const GoRouterShellDemoPage(),
   ),
 ];
 
