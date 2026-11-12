@@ -7,6 +7,7 @@ import 'package:motor/motor.dart';
 import '../internal/bottom_bar_item_height.dart';
 import '../internal/item_theme_scope.dart';
 import '../internal/reduce_motion.dart';
+import 'bottom_bar_badge.dart';
 import 'bottom_bar_indicator.dart';
 import 'bottom_bar_item_theme.dart';
 import 'bottom_bar_items.dart';
@@ -66,9 +67,11 @@ class BottomBarItem extends StatelessWidget {
   /// [BottomBarItems.labelBehavior].
   final Widget? label;
 
-  /// Optional badge rendered in the top-end corner of the icon.
+  /// Optional badge on the icon's top-end corner.
   ///
-  /// Typically a [Badge] widget. Use for notification counts or dot indicators.
+  /// Use a [BottomBarBadge] for a dot, a count or a short label that
+  /// animates, follows the theme and joins the item's accessible name. Any
+  /// other widget sits 4 pixels past the corner and is not announced.
   final Widget? badge;
 
   /// Whether this item is currently the active/selected tab.
@@ -320,11 +323,19 @@ class _ItemViewState extends State<_ItemView>
       );
     }
 
-    final accessibleLabel =
+    final badgeLabel = badge is BottomBarBadge
+        ? badgeSemanticsLabel(badge)
+        : null;
+    final baseLabel =
         explicitSemanticLabel ??
-        (!showLabel && currentLabel is Text && currentLabel.data != null
+        ((!showLabel || badgeLabel != null) &&
+                currentLabel is Text &&
+                currentLabel.data != null
             ? currentLabel.semanticsLabel ?? currentLabel.data
             : null);
+    final accessibleLabel = baseLabel == null || badgeLabel == null
+        ? baseLabel
+        : '$baseLabel, $badgeLabel';
 
     // The reveal mounts the icon and label twice, which a GlobalKey forbids.
     final ink =
@@ -419,7 +430,9 @@ class _ItemViewState extends State<_ItemView>
           )
         else
           tinted(color, plainIcon()),
-        if (badge != null)
+        if (badge is BottomBarBadge)
+          Positioned.fill(child: badge)
+        else if (badge != null)
           PositionedDirectional(top: -4, end: -4, child: badge),
       ],
     );
@@ -510,9 +523,8 @@ class _ItemViewState extends State<_ItemView>
       );
     }
 
-    if (accessibleLabel != null) {
-      child = ExcludeSemantics(child: child);
-    }
+    // Always present so a badge or label toggling the name keeps the subtree.
+    child = ExcludeSemantics(excluding: accessibleLabel != null, child: child);
 
     return Semantics(
       button: true,

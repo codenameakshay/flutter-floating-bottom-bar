@@ -3,6 +3,7 @@ import 'dart:ui' show lerpDouble;
 import 'package:material_ui/material_ui.dart';
 import 'package:motor/motor.dart';
 
+import 'bottom_bar_badge.dart';
 import 'bottom_bar_indicator.dart';
 
 /// Defaults for every [BottomBarItem] and [BottomBarItems] below a theme.
@@ -50,6 +51,7 @@ class BottomBarItemThemeData {
     this.motion,
     this.indicator,
     this.indicatorMotion,
+    this.badge,
   });
 
   /// Icon and label colour of an unselected item.
@@ -119,6 +121,9 @@ class BottomBarItemThemeData {
   /// `indicatorMotion` argument.
   final Motion? indicatorMotion;
 
+  /// Defaults for every [BottomBarBadge] on these items.
+  final BottomBarBadgeThemeData? badge;
+
   /// Returns a theme where the non-null fields of [other] override this one.
   BottomBarItemThemeData merge(BottomBarItemThemeData? other) {
     if (other == null) return this;
@@ -138,6 +143,7 @@ class BottomBarItemThemeData {
       motion: other.motion,
       indicator: other.indicator,
       indicatorMotion: other.indicatorMotion,
+      badge: badge?.merge(other.badge) ?? other.badge,
     );
   }
 
@@ -158,6 +164,7 @@ class BottomBarItemThemeData {
     Motion? motion,
     BottomBarIndicator? indicator,
     Motion? indicatorMotion,
+    BottomBarBadgeThemeData? badge,
   }) {
     return BottomBarItemThemeData(
       color: color ?? this.color,
@@ -175,12 +182,14 @@ class BottomBarItemThemeData {
       motion: motion ?? this.motion,
       indicator: indicator ?? this.indicator,
       indicatorMotion: indicatorMotion ?? this.indicatorMotion,
+      badge: badge ?? this.badge,
     );
   }
 
   /// Linearly interpolates between [a] and [b].
   ///
-  /// Colours, sizes, styles, padding and radii interpolate. [splashFactory],
+  /// Colours, sizes, styles, padding and radii interpolate, and [badge] uses
+  /// [BottomBarBadgeThemeData.lerp]. [splashFactory],
   /// [motion], [indicator] and [indicatorMotion] switch at `t == 0.5`.
   static BottomBarItemThemeData? lerp(
     BottomBarItemThemeData? a,
@@ -220,6 +229,7 @@ class BottomBarItemThemeData {
       motion: first ? a.motion : b.motion,
       indicator: first ? a.indicator : b.indicator,
       indicatorMotion: first ? a.indicatorMotion : b.indicatorMotion,
+      badge: BottomBarBadgeThemeData.lerp(a.badge, b.badge, t),
     );
   }
 
@@ -241,7 +251,8 @@ class BottomBarItemThemeData {
         other.pressedScale == pressedScale &&
         other.motion == motion &&
         other.indicator == indicator &&
-        other.indicatorMotion == indicatorMotion;
+        other.indicatorMotion == indicatorMotion &&
+        other.badge == badge;
   }
 
   @override
@@ -261,6 +272,7 @@ class BottomBarItemThemeData {
     motion,
     indicator,
     indicatorMotion,
+    badge,
   );
 }
 
