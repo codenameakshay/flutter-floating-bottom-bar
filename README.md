@@ -516,6 +516,16 @@ still selects.
 There is no double-tap callback on purpose. A double-tap recognizer would make
 every single tap wait for the double-tap timeout.
 
+### Works with go_router
+
+`BottomBar` hosts go_router's `StatefulShellRoute.indexedStack` with no extra
+dependency in this package. Each tab keeps its own stack and scroll position.
+A reselect pops the tab to its root, or scrolls it to the top. Android back
+pops the tab, then goes Home, then leaves the app. See the
+[go_router recipe](./EXAMPLES.md#go_router-statefulshellroute) for the full
+shell builder, or
+[try it live](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/go-router-shell).
+
 ## Migration from v1.x
 
 | v1.x | v2.x | Migration |

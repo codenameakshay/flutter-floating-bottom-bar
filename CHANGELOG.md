@@ -1,5 +1,7 @@
 ## Unreleased
 
+- Add a go_router `StatefulShellRoute` recipe to `EXAMPLES.md` and a
+  `go-router-shell` demo. Only the example app depends on go_router.
 - Add `BottomBarItems.onReselected`, called when the selected item is tapped
   again or picked again by a drag. `onSelected` still fires after it. Add
   `scrollToStartOnReselect` to scroll the visible list back to its start on a
