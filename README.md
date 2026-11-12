@@ -448,6 +448,74 @@ BottomBarBadge.count(
 Any other widget in `badge` keeps its old placement at the top-end corner. The
 item does not announce it.
 
+### Reselect and gestures
+
+`BottomBarItems` can react when the user taps the selected item again. It can
+also let the user drag across the row to pick an item.
+
+```dart
+int index = 0;
+
+BottomBarItems(
+  selectedIndex: index,
+  onSelected: (i) => setState(() => index = i),
+  onReselected: (i) =>
+      _navigatorKeys[i].currentState?.popUntil((r) => r.isFirst),
+  scrollToStartOnReselect: true,
+  onLongPressed: (i) => _showItemMenu(i),
+  dragToSelect: true,
+  indicator: const BottomBarIndicator.pill(),
+  children: [
+    BottomBarItem(icon: const Icon(Icons.home), label: const Text('Home')),
+    BottomBarItem(icon: const Icon(Icons.search), label: const Text('Search')),
+  ],
+)
+```
+
+`onReselected` fires when the selected item is tapped again, or picked again
+by a drag. `onSelected` still fires on a reselect, after `onReselected`.
+
+`scrollToStartOnReselect` shows the bar if it is hidden. Then it scrolls the
+list on screen back to its start. It uses the same target as
+`BottomBarController.scrollToStart`. That is the most recently scrolled list
+that is still visible, with `NestedScrollView` headers expanded. The scroll
+starts before `onReselected` runs. It has no effect outside a `BottomBar`.
+
+Haptics are off by default. Turn one on in the item theme.
+
+```dart
+BottomBarThemeData(
+  items: BottomBarItemThemeData(
+    haptics: BottomBarHaptics.selectionClick,
+  ),
+)
+```
+
+The row plays the haptic once per selection or reselect. A drag plays
+`selectionClick` each time the finger crosses into another item. The setting
+covers only these selection haptics. Items keep the `InkWell` platform
+feedback: a click sound on an Android tap, and a vibration on an Android
+long-press. A tap does not vibrate twice.
+
+Long-press is set per item with `BottomBarItem.onLongPress`, or per row with
+`BottomBarItems.onLongPressed`. While either one is set, the item's `tooltip`
+shows on hover only, and the item exposes a long-press action to assistive
+technology.
+
+Set `dragToSelect` to let the user press the row and slide sideways. The
+indicator follows the finger, and the item under it shows its selected look.
+Lifting the finger selects that item, or reselects it. The release springs
+from the finger with its velocity. Sliding off the bar vertically, or a
+cancelled gesture, springs the indicator back. Vertical drags are left alone.
+Dragging works in RTL.
+
+Drag is off in rows narrow enough to scroll, and in rows without an indicator.
+With reduced motion, the indicator stays put during the drag, and the release
+still selects.
+
+There is no double-tap callback on purpose. A double-tap recognizer would make
+every single tap wait for the double-tap timeout.
+
 ## Migration from v1.x
 
 | v1.x | v2.x | Migration |

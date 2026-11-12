@@ -1,3 +1,6 @@
+import 'package:flutter/gestures.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:motor/motor.dart';
 
@@ -5,6 +8,7 @@ import '../internal/bottom_bar_item_height.dart';
 import '../internal/item_theme_scope.dart';
 import '../internal/reduce_motion.dart';
 import 'bottom_bar_indicator.dart';
+import 'bottom_bar_item_theme.dart';
 
 /// Controls when a [BottomBarItem]'s label is visible when it is placed
 /// inside a [BottomBarItems] row.
@@ -54,6 +58,12 @@ enum BottomBarLabelBehavior {
 ///   children: [...],
 /// )
 /// ```
+///
+/// Tapping the selected item again calls [onReselected], and
+/// [scrollToStartOnReselect] scrolls the visible list back to its start.
+/// [dragToSelect] lets the user slide a finger along the row to pick an item.
+/// There is no double-tap callback: a double-tap recognizer would delay every
+/// single tap.
 class BottomBarItems extends StatelessWidget {
   /// Creates a [BottomBarItems] row.
   const BottomBarItems({
@@ -65,6 +75,10 @@ class BottomBarItems extends StatelessWidget {
     this.onSelected,
     this.indicator,
     this.indicatorMotion,
+    this.onReselected,
+    this.scrollToStartOnReselect = false,
+    this.onLongPressed,
+    this.dragToSelect = false,
   });
 
   /// The widgets to display in the row — typically [BottomBarItem] instances.
@@ -93,7 +107,45 @@ class BottomBarItems extends StatelessWidget {
 
   /// Called with a child's index when it is tapped, after the child's own
   /// `onTap`. Only used when [selectedIndex] is non-null.
+  ///
+  /// It also fires when the selected item is tapped again, after
+  /// [onReselected].
   final ValueChanged<int>? onSelected;
+
+  /// Called with the selected child's index when it is tapped again, or
+  /// picked again by [dragToSelect]. Only used when [selectedIndex] is
+  /// non-null.
+  ///
+  /// Runs after [scrollToStartOnReselect] starts its scroll and before
+  /// [onSelected], so it can pop the tab's navigator to its root.
+  final ValueChanged<int>? onReselected;
+
+  /// Whether reselecting an item shows the enclosing [BottomBar] and scrolls
+  /// the list on screen in [BottomBar.body] back to its start.
+  ///
+  /// It uses the same target as [BottomBarController.scrollToStart]: the
+  /// most recently scrolled list that is still visible, with
+  /// [NestedScrollView] headers expanded. Does nothing outside a
+  /// [BottomBar]. Defaults to false.
+  final bool scrollToStartOnReselect;
+
+  /// Called with a child's index when it is long-pressed, after the child's
+  /// own `onLongPress`. Only used when [selectedIndex] is non-null.
+  ///
+  /// While set, a [BottomBarItem.tooltip] shows on hover only.
+  final ValueChanged<int>? onLongPressed;
+
+  /// Whether pressing the row and sliding sideways picks an item, like the
+  /// iOS tab bar.
+  ///
+  /// The [indicator] follows the finger and the item under it shows its
+  /// selected look. Lifting the finger selects that item through
+  /// [onSelected], or reselects it. Sliding off the bar vertically cancels.
+  /// A plain tap works as before. It has no effect without an [indicator]
+  /// or in a row too narrow for its items, which scrolls instead. Under
+  /// reduced motion the indicator stays put during the drag and jumps on
+  /// release. Defaults to false.
+  final bool dragToSelect;
 
   /// The selection indicator drawn behind the selected child. Only used when
   /// [selectedIndex] is non-null.
@@ -186,9 +238,17 @@ class _SelectableItemsState extends State<_SelectableItems>
     duration: Duration(milliseconds: 450),
   );
 
+  /// How far the finger may stray above or below the row before a drag
+  /// cancels.
+  static const _dragCancelSlop = 2 * kTouchSlop;
+
   late final IndicatorMotion _motion;
   bool _reduceMotion = false;
   BottomBarIndicator? _indicator;
+  BottomBarHaptics _haptics = BottomBarHaptics.none;
+
+  /// The item under the finger while a drag runs, else null.
+  int? _dragIndex;
 
   @override
   void initState() {
@@ -211,6 +271,11 @@ class _SelectableItemsState extends State<_SelectableItems>
   void _syncTheme() {
     final theme = itemThemeOf(context);
     _indicator = effectiveIndicator(widget.items.indicator, theme.indicator);
+    _haptics = theme.haptics ?? BottomBarHaptics.none;
+    if (_indicator == null && _dragIndex != null) {
+      _dragIndex = null;
+      _settle();
+    }
     _motion
       ..motion =
           widget.items.indicatorMotion ??
@@ -240,6 +305,14 @@ class _SelectableItemsState extends State<_SelectableItems>
     _syncTheme();
     final index = items.selectedIndex!;
     final moved = index != old.selectedIndex;
+    if (_dragIndex != null &&
+        (moved ||
+            items.children.length != old.children.length ||
+            !items.dragToSelect ||
+            _indicator == null)) {
+      _dragIndex = null;
+      _settle();
+    }
     if (items.children.length != old.children.length ||
         (moved && reduceMotion(context))) {
       _motion.jumpTo(index);
@@ -251,8 +324,100 @@ class _SelectableItemsState extends State<_SelectableItems>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _dragIndex = null;
     _motion.dispose();
     super.dispose();
+  }
+
+  void _haptic(BottomBarHaptics haptics) {
+    switch (haptics) {
+      case BottomBarHaptics.none:
+        break;
+      case BottomBarHaptics.selectionClick:
+        HapticFeedback.selectionClick();
+      case BottomBarHaptics.lightImpact:
+        HapticFeedback.lightImpact();
+    }
+  }
+
+  void _select(int index) {
+    final items = widget.items;
+    _haptic(_haptics);
+    if (index == items.selectedIndex) {
+      if (items.scrollToStartOnReselect) barScrollToStart(context);
+      items.onReselected?.call(index);
+    }
+    items.onSelected?.call(index);
+  }
+
+  void _onDragStart(DragStartDetails details) {
+    _dragIndex = widget.items.selectedIndex;
+    _onDragUpdate(details.localPosition);
+  }
+
+  void _onDragUpdate(Offset position) {
+    if (_dragIndex == null) return;
+    final box = context.findRenderObject() as RenderBox?;
+    final height = box != null && box.hasSize ? box.size.height : 0.0;
+    if (position.dy < -_dragCancelSlop ||
+        position.dy > height + _dragCancelSlop) {
+      _cancelDrag();
+      return;
+    }
+    if (!_reduceMotion) _motion.follow(position.dx);
+    final index = _motion.indexAt(position.dx);
+    if (index != null && index != _dragIndex) {
+      setState(() => _dragIndex = index);
+      if (_haptics != BottomBarHaptics.none) {
+        _haptic(BottomBarHaptics.selectionClick);
+      }
+    }
+  }
+
+  void _onDragEnd(DragEndDetails details) {
+    final index = _dragIndex;
+    if (index == null) return;
+    setState(() => _dragIndex = null);
+    if (_motion.dragging) {
+      _motion.release(index, velocity: details.velocity.pixelsPerSecond.dx);
+    }
+    _select(index);
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _dragIndex == null) _settle();
+    });
+  }
+
+  void _cancelDrag() {
+    if (!mounted || _dragIndex == null) return;
+    setState(() => _dragIndex = null);
+    _settle();
+  }
+
+  /// Returns the indicator to the selected item, after a cancelled drag or a
+  /// release the parent did not accept.
+  void _settle() {
+    final index = widget.items.selectedIndex!;
+    if (_reduceMotion) {
+      if (_motion.dragging || _motion.target != index) _motion.jumpTo(index);
+    } else {
+      _motion.release(index);
+    }
+  }
+
+  Map<Type, GestureRecognizerFactory> _dragGestures(bool enabled) {
+    if (!enabled) return const {};
+    return {
+      HorizontalDragGestureRecognizer:
+          GestureRecognizerFactoryWithHandlers<HorizontalDragGestureRecognizer>(
+            () => HorizontalDragGestureRecognizer(debugOwner: this),
+            (recognizer) => recognizer
+              ..onlyAcceptDragOnThreshold = true
+              ..onStart = _onDragStart
+              ..onUpdate = ((details) => _onDragUpdate(details.localPosition))
+              ..onEnd = _onDragEnd
+              ..onCancel = _cancelDrag,
+          ),
+    };
   }
 
   @override
@@ -260,7 +425,11 @@ class _SelectableItemsState extends State<_SelectableItems>
     final items = widget.items;
     final indicator = _indicator;
     final selectedIndex = items.selectedIndex!;
-    final onSelected = items.onSelected;
+    final selectable =
+        items.onSelected != null ||
+        items.onReselected != null ||
+        items.scrollToStartOnReselect;
+    final onLongPressed = items.onLongPressed;
     final foreground = indicatorForeground(
       indicator,
       Theme.of(context).colorScheme,
@@ -275,8 +444,9 @@ class _SelectableItemsState extends State<_SelectableItems>
           role: IndicatorAnchorRole.slot,
           child: BottomBarItemSelectionScope(
             index: i,
-            selected: i == selectedIndex,
-            onSelect: onSelected == null ? null : () => onSelected(i),
+            selected: i == (_dragIndex ?? selectedIndex),
+            onSelect: selectable ? () => _select(i) : null,
+            onLongPress: onLongPressed == null ? null : () => onLongPressed(i),
             selectedForegroundColor: foreground,
             ink: ink,
             child: items.children[i],
@@ -287,12 +457,27 @@ class _SelectableItemsState extends State<_SelectableItems>
       children,
       indicator == null
           ? null
-          : (row, {required reveal}) => IndicatorTrack(
-              motion: _motion,
-              indicator: indicator,
-              reveal: reveal,
-              row: row,
-            ),
+          : (row, {required reveal}) {
+              if (reveal && _dragIndex != null) {
+                SchedulerBinding.instance.addPostFrameCallback((_) {
+                  _cancelDrag();
+                });
+              }
+              return Listener(
+                // An accepted drag reports a cancelled pointer through onEnd.
+                onPointerCancel: (_) => _cancelDrag(),
+                child: RawGestureDetector(
+                  excludeFromSemantics: true,
+                  gestures: _dragGestures(items.dragToSelect && !reveal),
+                  child: IndicatorTrack(
+                    motion: _motion,
+                    indicator: indicator,
+                    reveal: reveal,
+                    row: row,
+                  ),
+                ),
+              );
+            },
     );
   }
 }
@@ -309,6 +494,7 @@ class BottomBarItemSelectionScope extends InheritedWidget {
     required this.index,
     required this.selected,
     this.onSelect,
+    this.onLongPress,
     this.selectedForegroundColor,
     this.ink = false,
     required super.child,
@@ -320,9 +506,14 @@ class BottomBarItemSelectionScope extends InheritedWidget {
   /// Whether the child is the selected one.
   final bool selected;
 
-  /// Reports this child as selected through [BottomBarItems.onSelected].
-  /// Null when the row has no [BottomBarItems.onSelected].
+  /// Reports this child as selected through [BottomBarItems.onSelected],
+  /// or reselected through [BottomBarItems.onReselected]. Null when the row
+  /// has neither and no [BottomBarItems.scrollToStartOnReselect].
   final VoidCallback? onSelect;
+
+  /// Reports a long-press on this child through
+  /// [BottomBarItems.onLongPressed]. Null when the row has none.
+  final VoidCallback? onLongPress;
 
   /// The content colour a selected child should use so it contrasts with
   /// the row's [BottomBarItems.indicator], or null to keep its own default.
@@ -344,6 +535,7 @@ class BottomBarItemSelectionScope extends InheritedWidget {
     return index != oldWidget.index ||
         selected != oldWidget.selected ||
         onSelect != oldWidget.onSelect ||
+        onLongPress != oldWidget.onLongPress ||
         selectedForegroundColor != oldWidget.selectedForegroundColor ||
         ink != oldWidget.ink;
   }

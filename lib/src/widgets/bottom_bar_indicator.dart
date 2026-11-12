@@ -397,6 +397,7 @@ class IndicatorMotion extends ChangeNotifier {
   late final List<Map<int, double>> _from;
   final List<bool> _trails = List.filled(4, false);
   int _to;
+  double? _dragX;
   List<Rect> _rects = const [];
   ({int index, bool animated})? _reveal;
   int _revealRevision = 0;
@@ -412,7 +413,7 @@ class IndicatorMotion extends ChangeNotifier {
       _trails.fillRange(0, _trails.length, false);
       return;
     }
-    _retarget(_to, stretch: value, reveal: false);
+    _retarget(_to, stretch: value, reveal: false, dragX: _dragX);
   }
 
   set indicator(BottomBarIndicator? value) =>
@@ -428,20 +429,28 @@ class IndicatorMotion extends ChangeNotifier {
       ? CupertinoMotion(duration: lead.duration * 1.6)
       : const CupertinoMotion.smooth(duration: Duration(milliseconds: 700));
 
-  bool get settled => !_lead.isAnimating && !_trail.isAnimating;
+  bool get settled =>
+      _dragX == null && !_lead.isAnimating && !_trail.isAnimating;
+
+  /// The selected index the indicator rests on or springs to.
+  int get target => _to;
+
+  /// Whether the indicator follows a drag.
+  bool get dragging => _dragX != null;
 
   SingleMotionController _controller(int edge) =>
       _trails[edge] ? _trail : _lead;
 
   double _progress(int edge) {
-    if (settled) return 1;
-    final value = _controller(edge).value;
+    final controller = _controller(edge);
+    if (!controller.isAnimating) return 1;
+    final value = controller.value;
     return stretch ? math.min(value, 1) : value;
   }
 
   double _velocity(int edge) {
-    if (settled) return 0;
     final controller = _controller(edge);
+    if (!controller.isAnimating) return 0;
     return stretch && controller.value >= 1 ? 0 : controller.velocity;
   }
 
@@ -458,10 +467,38 @@ class IndicatorMotion extends ChangeNotifier {
     return sum;
   }
 
-  double _value(int edge, List<Rect> rects) {
-    final from = _blend(_from[edge], edge, rects);
-    return from + (_edge(rects[_to], edge) - from) * _progress(edge);
+  /// Where a drag at [x] sits, as a fractional item index clamped to the
+  /// row. Works in either text direction because it follows item centres.
+  static double? _position(double x, List<Rect> rects) {
+    if (rects.isEmpty) return null;
+    for (var i = 0; i < rects.length - 1; i++) {
+      final a = rects[i].center.dx;
+      final b = rects[i + 1].center.dx;
+      if (a != b && (x - a) * (x - b) <= 0) return i + (x - a) / (b - a);
+    }
+    final first = (x - rects.first.center.dx).abs();
+    final last = (x - rects.last.center.dx).abs();
+    return first <= last ? 0 : rects.length - 1.0;
   }
+
+  /// The blend the indicator heads for: the selected item, or the drag
+  /// position between the two items around it.
+  Map<int, double> _target(List<Rect> rects, [double? x]) {
+    x ??= _dragX;
+    final position = x == null ? null : _position(x, rects);
+    if (position == null) return {_to: 1};
+    final lo = position.floor();
+    final f = position - lo;
+    return {lo: 1 - f, if (f > 0) lo + 1: f};
+  }
+
+  double _value(int edge, List<Rect> rects, Map<int, double> target) {
+    final from = _blend(_from[edge], edge, rects);
+    return from + (_blend(target, edge, rects) - from) * _progress(edge);
+  }
+
+  /// The item nearest [x] in the latest geometry, or null before layout.
+  int? indexAt(double x) => _position(x, _rects)?.round();
 
   /// The indicator rect for the item [rects], or null when the selected
   /// index has no item.
@@ -469,11 +506,12 @@ class IndicatorMotion extends ChangeNotifier {
     _rects = rects;
     if (_to < 0 || _to >= rects.length) return null;
     if (settled || !_covers(rects)) return rects[_to];
+    final target = _target(rects);
     final rect = Rect.fromLTRB(
-      _value(0, rects),
-      _value(1, rects),
-      _value(2, rects),
-      _value(3, rects),
+      _value(0, rects, target),
+      _value(1, rects, target),
+      _value(2, rects, target),
+      _value(3, rects, target),
     );
     if (rect.width >= 0 && rect.height >= 0) return rect;
     return Rect.fromCenter(
@@ -486,6 +524,7 @@ class IndicatorMotion extends ChangeNotifier {
   /// Places the indicator on [index] without animating.
   void jumpTo(int index) {
     _to = index;
+    _dragX = null;
     for (var edge = 0; edge < 4; edge++) {
       _from[edge] = {index: 1.0};
     }
@@ -499,35 +538,85 @@ class IndicatorMotion extends ChangeNotifier {
   /// Springs the indicator to [index], carrying its current velocity
   /// projected onto the new direction of travel.
   void animateTo(int index) {
-    if (index == _to) return;
+    if (index == _to && !dragging) return;
     _retarget(index);
   }
 
-  void _retarget(int index, {bool? stretch, bool reveal = true}) {
+  /// Moves the indicator toward a drag at [x], in the row's coordinates.
+  ///
+  /// The first call springs it from where it is to the finger, later calls
+  /// track the finger exactly. Between items it blends their rects, and it
+  /// stays within the row.
+  void follow(double x) {
+    if (_dragX == null) {
+      _retarget(_to, reveal: false, dragX: x);
+    } else if (x != _dragX) {
+      _dragX = x;
+      notifyListeners();
+    }
+  }
+
+  /// Ends a drag and springs the indicator to [index], carrying the finger's
+  /// horizontal [velocity] in logical pixels per second.
+  void release(int index, {double velocity = 0}) {
+    if (_dragX == null) {
+      animateTo(index);
+    } else {
+      _retarget(index, fingerVelocity: velocity);
+    }
+  }
+
+  void _retarget(
+    int index, {
+    bool? stretch,
+    bool reveal = true,
+    double? dragX,
+    double fingerVelocity = 0,
+  }) {
     final rects = _rects;
     if (index < 0 || index >= rects.length || !_covers(rects)) {
       jumpTo(index);
+      _dragX = dragX;
       return;
     }
 
     final current = List<double>.filled(4, 0);
     final velocity = List<double>.filled(4, 0);
+    final heading = _target(rects);
+    final step = fingerVelocity.sign;
+    final ahead = _dragX == null || step == 0
+        ? heading
+        : _target(rects, _dragX! + step);
     for (var edge = 0; edge < 4; edge++) {
       final p = _progress(edge);
       final from = _blend(_from[edge], edge, rects);
-      final to = _edge(rects[_to], edge);
+      final to = _blend(heading, edge, rects);
+      final fingerEdge =
+          (_blend(ahead, edge, rects) - to) * fingerVelocity.abs();
       current[edge] = from + (to - from) * p;
-      velocity[edge] = _velocity(edge) * (to - from);
-      _from[edge] = {
-        for (final MapEntry(:key, :value) in _from[edge].entries)
-          key: value * (1 - p),
-      }..update(_to, (w) => w + p, ifAbsent: () => p);
-      _from[edge].removeWhere((_, w) => w.abs() < 1e-9);
+      velocity[edge] = _velocity(edge) * (to - from) + fingerEdge * p;
+      _from[edge] =
+          {
+              for (final MapEntry(:key, :value) in _from[edge].entries)
+                key: value * (1 - p),
+            }
+            ..addAll({
+              for (final MapEntry(:key, :value) in heading.entries)
+                key: (_from[edge][key] ?? 0) * (1 - p) + value * p,
+            })
+            ..removeWhere((_, w) => w.abs() < 1e-9);
     }
 
     _to = index;
+    _dragX = dragX;
     if (stretch != null) _stretch = stretch;
-    final target = rects[index];
+    final goal = _target(rects);
+    final target = Rect.fromLTRB(
+      _blend(goal, 0, rects),
+      _blend(goal, 1, rects),
+      _blend(goal, 2, rects),
+      _blend(goal, 3, rects),
+    );
     final travel = target.center.dx - (current[0] + current[2]) / 2;
     _trails
       ..[0] = _stretch && travel > 0
@@ -547,12 +636,30 @@ class IndicatorMotion extends ChangeNotifier {
         dot += velocity[edge] * distance;
         span += distance * distance;
       }
+      var start = 0.0;
+      if (!_stretch && fingerVelocity != 0 && span <= 1e-6) {
+        // A nonzero blend basis carries momentum even at the exact target.
+        dot = 0;
+        span = 0;
+        for (var edge = 0; edge < 4; edge++) {
+          if (_trails[edge] != trailing) continue;
+          _from[edge] = {
+            for (final key in {...goal.keys, ...heading.keys, ...ahead.keys})
+              key: (goal[key] ?? 0) + (heading[key] ?? 0) - (ahead[key] ?? 0),
+          }..removeWhere((_, weight) => weight.abs() < 1e-9);
+          final distance =
+              _edge(target, edge) - _blend(_from[edge], edge, rects);
+          dot += velocity[edge] * distance;
+          span += distance * distance;
+        }
+        start = 1;
+      }
       if (trailing && !_trails.contains(true)) {
         controller.value = 1;
       } else {
         controller.animateTo(
           1,
-          from: 0,
+          from: start,
           withVelocity: span > 1e-6 ? dot / span : 0,
         );
       }

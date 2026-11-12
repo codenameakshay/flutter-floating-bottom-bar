@@ -21,8 +21,15 @@ class IndicatorsDemoPage extends StatefulWidget {
 }
 
 class _IndicatorsDemoPageState extends State<IndicatorsDemoPage> {
+  static const _tabs = ['Home', 'Search', 'Inbox', 'Saved', 'Profile'];
+
   int _index = 0;
   _Style _style = _Style.pill;
+  bool _scrollToStart = true;
+  bool _drag = true;
+  BottomBarHaptics _haptics = BottomBarHaptics.selectionClick;
+  String? _account;
+  final _profileKey = GlobalKey();
 
   BottomBarIndicator get _indicator => switch (_style) {
     _Style.pill => const BottomBarIndicator.pill(),
@@ -36,6 +43,25 @@ class _IndicatorsDemoPageState extends State<IndicatorsDemoPage> {
     ),
   };
 
+  Future<void> _showAccountMenu(BuildContext context) async {
+    final box = _profileKey.currentContext!.findRenderObject() as RenderBox;
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final value = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        box.localToGlobal(Offset.zero) & box.size,
+        Offset.zero & overlay.size,
+      ),
+      items: const [
+        PopupMenuItem(value: 'Personal', child: Text('Personal')),
+        PopupMenuItem(value: 'Work', child: Text('Work')),
+        PopupMenuItem(value: 'Sign out', child: Text('Sign out')),
+      ],
+    );
+    if (!mounted || value == null) return;
+    setState(() => _account = value == 'Sign out' ? null : value);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -47,6 +73,7 @@ class _IndicatorsDemoPageState extends State<IndicatorsDemoPage> {
           borderRadius: BorderRadius.all(Radius.circular(28)),
         ),
         theme: BottomBarThemeData(
+          items: BottomBarItemThemeData(haptics: _haptics),
           barDecoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(28),
@@ -63,25 +90,68 @@ class _IndicatorsDemoPageState extends State<IndicatorsDemoPage> {
           children: [
             Padding(
               padding: const EdgeInsets.all(16),
-              child: Wrap(
-                key: const Key('indicator-style'),
-                spacing: 8,
-                runSpacing: 8,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  for (final style in _Style.values)
-                    ChoiceChip(
-                      label: Text(style.label),
-                      selected: style == _style,
-                      showCheckmark: false,
-                      onSelected: (_) => setState(() => _style = style),
-                    ),
+                  Wrap(
+                    key: const Key('indicator-style'),
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final style in _Style.values)
+                        ChoiceChip(
+                          label: Text(style.label),
+                          selected: style == _style,
+                          showCheckmark: false,
+                          onSelected: (_) => setState(() => _style = style),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    key: const Key('gesture-options'),
+                    spacing: 8,
+                    children: [
+                      FilterChip(
+                        label: const Text('Reselect to top'),
+                        selected: _scrollToStart,
+                        showCheckmark: false,
+                        onSelected: (v) => setState(() => _scrollToStart = v),
+                      ),
+                      FilterChip(
+                        label: const Text('Drag to select'),
+                        selected: _drag,
+                        showCheckmark: false,
+                        onSelected: (v) => setState(() => _drag = v),
+                      ),
+                      FilterChip(
+                        label: const Text('Haptics'),
+                        selected: _haptics != BottomBarHaptics.none,
+                        showCheckmark: false,
+                        onSelected: (v) => setState(
+                          () => _haptics = v
+                              ? BottomBarHaptics.selectionClick
+                              : BottomBarHaptics.none,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
             Expanded(
-              child: ListView.builder(
-                itemCount: 200,
-                itemBuilder: (_, i) => ListTile(title: Text('Row $i')),
+              child: IndexedStack(
+                index: _index,
+                children: [
+                  for (final tab in _tabs)
+                    ListView.builder(
+                      key: PageStorageKey<String>(tab),
+                      itemCount: 200,
+                      itemBuilder: (_, i) =>
+                          ListTile(title: Text('$tab row $i')),
+                    ),
+                ],
               ),
             ),
           ],
@@ -92,27 +162,34 @@ class _IndicatorsDemoPageState extends State<IndicatorsDemoPage> {
             selectedIndex: _index,
             onSelected: (i) => setState(() => _index = i),
             indicator: _indicator,
-            children: const [
-              BottomBarItem(
+            scrollToStartOnReselect: _scrollToStart,
+            dragToSelect: _drag,
+            children: [
+              const BottomBarItem(
                 icon: Icon(Icons.home_outlined),
                 selectedIcon: Icon(Icons.home),
                 label: Text('Home'),
               ),
-              BottomBarItem(icon: Icon(Icons.search), label: Text('Search')),
-              BottomBarItem(
+              const BottomBarItem(
+                icon: Icon(Icons.search),
+                label: Text('Search'),
+              ),
+              const BottomBarItem(
                 icon: Icon(Icons.inbox_outlined),
                 selectedIcon: Icon(Icons.inbox),
                 label: Text('Inbox'),
               ),
-              BottomBarItem(
+              const BottomBarItem(
                 icon: Icon(Icons.favorite_border),
                 selectedIcon: Icon(Icons.favorite),
                 label: Text('Saved'),
               ),
               BottomBarItem(
-                icon: Icon(Icons.person_outline),
-                selectedIcon: Icon(Icons.person),
-                label: Text('Profile'),
+                key: _profileKey,
+                icon: const Icon(Icons.person_outline),
+                selectedIcon: const Icon(Icons.person),
+                label: Text(_account ?? 'Profile'),
+                onLongPress: () => _showAccountMenu(context),
               ),
             ],
           ),
