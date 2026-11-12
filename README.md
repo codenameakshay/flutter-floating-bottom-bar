@@ -526,6 +526,88 @@ pops the tab, then goes Home, then leaves the app. See the
 shell builder, or
 [try it live](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/go-router-shell).
 
+### Centre action
+
+`BottomBarItems.centerAction` adds a primary button to the middle of the row,
+such as a "create" or "compose" action. It is not a tab. It does not count
+toward `selectedIndex`.
+
+```dart
+int index = 0;
+
+BottomBar(
+  body: const BottomBarBodyPadding(child: Placeholder()),
+  child: BottomBarItems(
+    selectedIndex: index,
+    onSelected: (i) => setState(() => index = i),
+    indicator: const BottomBarIndicator.pill(),
+    centerAction: BottomBarCenterAction(
+      icon: const Icon(Icons.add),
+      semanticLabel: 'Create',
+      style: BottomBarCenterActionStyle.notched,
+      onPressed: () => showModalBottomSheet<void>(
+        context: context,
+        builder: (_) => const CreateSheet(),
+      ),
+    ),
+    children: [
+      BottomBarItem(icon: const Icon(Icons.home), label: const Text('Home')),
+      BottomBarItem(icon: const Icon(Icons.search), label: const Text('Search')),
+      BottomBarItem(icon: const Icon(Icons.inbox), label: const Text('Inbox')),
+      BottomBarItem(icon: const Icon(Icons.person), label: const Text('Profile')),
+    ],
+  ),
+)
+```
+
+- Give it a `semanticLabel` or a `tooltip`. The constructor asserts that one
+  of them is set.
+- `inline` is a filled button in the middle slot, inside the bar. It is the
+  default.
+- `raised` sits partly above the bar's top edge. By default its centre sits on
+  the edge.
+- `notched` is raised too. The bar's outline is cut around it with a smooth
+  circular notch. The bar's fill, border and shadow follow the cut.
+- The action takes the slot at `children.length ~/ 2`. With an even number of
+  children it is exactly centred. It mirrors in RTL.
+- The indicator, `onSelected`, `onReselected`, `onLongPressed`, `dragToSelect`
+  and selection semantics skip it. A drag across it passes to the next item.
+- `raised` and `notched` need an enclosing `BottomBar`. The part above the bar
+  is tappable and in the accessibility tree. It counts in
+  `BottomBarScope.barHeight` and `BottomBarBodyPadding`. It hides and shows with
+  the bar. While hidden, it takes no focus, taps or semantics.
+- Outside a `BottomBar`, or in a row too narrow for its items (which scrolls),
+  the action sits inline.
+- It follows `pressedScale`, `haptics` and `motion` from the item theme.
+  Reduced motion snaps the press.
+
+Style every centre action through `BottomBarCenterActionThemeData`, set as
+`BottomBarItemThemeData.centerAction`.
+
+```dart
+BottomBarThemeData(
+  items: BottomBarItemThemeData(
+    centerAction: BottomBarCenterActionThemeData(
+      backgroundColor: colorScheme.tertiary,
+      foregroundColor: colorScheme.onTertiary,
+      elevation: 4,
+      raise: 20,
+      notchMargin: 8,
+    ),
+  ),
+)
+```
+
+The fields are `backgroundColor`, `foregroundColor`, `size`, `shape`,
+`elevation`, `shadowColor`, `raise` and `notchMargin`. Every field is optional.
+`size` defaults to 48 inline and 56 raised or notched. `elevation` defaults to 0
+inline and 3 raised or notched. `raise` defaults to half the size, so the
+centre sits on the edge. `notchMargin` defaults to 6.
+
+Precedence matches the item theme. The order is built-in defaults,
+`ThemeData.extensions`, `BottomBar(theme:)`, then the arguments on
+`BottomBarCenterAction`, which win.
+
 ## Migration from v1.x
 
 | v1.x | v2.x | Migration |
