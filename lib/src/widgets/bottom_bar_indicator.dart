@@ -790,6 +790,7 @@ class RenderIndicatorTrack extends RenderBox
   Rect? _builderRect;
   bool _layingOutRow = false;
   bool _needsInitialReveal = true;
+  ({int index, Rect rect})? _revealedSlot;
   int _revealGeneration = 0;
   int? _geometryFrameCallback;
 
@@ -945,9 +946,18 @@ class RenderIndicatorTrack extends RenderBox
 
     _invalidateInk();
     final motion = _motion;
+    final slots = _reveal ? _slots : const <RenderIndicatorAnchor>[];
+    final slot = motion._to >= 0 && motion._to < slots.length
+        ? (index: motion._to, rect: _rectOf(slots[motion._to]))
+        : null;
+    final resized =
+        slot != null &&
+        _revealedSlot?.index == slot.index &&
+        _revealedSlot?.rect != slot.rect;
+    _revealedSlot = slot;
     final reveal =
         motion._takeReveal() ??
-        (_reveal && _needsInitialReveal
+        (_reveal && (_needsInitialReveal || resized)
             ? (index: motion._to, animated: false)
             : null);
     final revision = motion._revealRevision;

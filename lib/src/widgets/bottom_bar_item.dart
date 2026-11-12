@@ -164,6 +164,12 @@ class _ItemViewState extends State<_ItemView>
   void didChangeAccessibilityFeatures() => _sync();
 
   @override
+  void deactivate() {
+    _pressed = false;
+    super.deactivate();
+  }
+
+  @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _selection?.dispose();
@@ -377,7 +383,15 @@ class _ItemViewState extends State<_ItemView>
     );
 
     Widget plainIcon() {
-      if (ink || t == 0 || selectedIcon == null) return icon;
+      if (ink ||
+          t == 0 ||
+          selectedIcon == null ||
+          identical(icon, selectedIcon)) {
+        return icon;
+      }
+      if (icon.key is GlobalKey && icon.key == selectedIcon.key) {
+        return selected ? selectedIcon : icon;
+      }
       if (t == 1) return selectedIcon;
       return Stack(
         alignment: Alignment.center,
@@ -471,7 +485,7 @@ class _ItemViewState extends State<_ItemView>
 
     Widget child = InkWell(
       onTap: onTap,
-      onHighlightChanged: scale == null ? null : _onHighlightChanged,
+      onHighlightChanged: _onHighlightChanged,
       borderRadius: theme.inkBorderRadius ?? BorderRadius.circular(8),
       overlayColor: theme.overlayColor,
       splashFactory: theme.splashFactory,
