@@ -153,14 +153,18 @@ class _ScaffoldWithBottomBarState extends State<ScaffoldWithBottomBar> {
   final _bar = BottomBarController();
 
   @override
+  void didUpdateWidget(ScaffoldWithBottomBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.navigationShell.currentIndex !=
+        oldWidget.navigationShell.currentIndex) {
+      _bar.show();
+    }
+  }
+
+  @override
   void dispose() {
     _bar.dispose();
     super.dispose();
-  }
-
-  void _goBranch(int index, {bool initialLocation = false}) {
-    widget.navigationShell.goBranch(index, initialLocation: initialLocation);
-    _bar.show();
   }
 
   @override
@@ -170,7 +174,7 @@ class _ScaffoldWithBottomBarState extends State<ScaffoldWithBottomBar> {
     return PopScope(
       canPop: shell.currentIndex == 0,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _goBranch(0);
+        if (!didPop) shell.goBranch(0);
       },
       child: Scaffold(
         body: BottomBar(
@@ -201,10 +205,10 @@ class _ScaffoldWithBottomBarState extends State<ScaffoldWithBottomBar> {
               indicator: const BottomBarIndicator.pill(),
               scrollToStartOnReselect: atRoot,
               onReselected: (i) {
-                if (!atRoot) _goBranch(i, initialLocation: true);
+                if (!atRoot) shell.goBranch(i, initialLocation: true);
               },
               onSelected: (i) {
-                if (i != shell.currentIndex) _goBranch(i);
+                if (i != shell.currentIndex) shell.goBranch(i);
               },
               children: [
                 for (final branch in _branches)

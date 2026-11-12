@@ -1,4 +1,8 @@
+import 'package:flutter/services.dart';
+import 'dart:io';
+import 'fixtures/go_router_recipe.dart' as recipe;
 import 'package:material_ui/material_ui.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_floating_bottom_bar_example/main.dart';
@@ -51,6 +55,149 @@ bool _barVisible(WidgetTester tester, String title) {
 }
 
 void main() {
+  test('recipe fixture matches the documented code', () {
+    final examples = File('../EXAMPLES.md').readAsStringSync();
+    final section = examples.split('## go_router (StatefulShellRoute)').last;
+    final snippet = section.split('```dart')[1].split('```').first;
+    final fixture = File('test/fixtures/go_router_recipe.dart')
+        .readAsStringSync()
+        .split('// Stub pages for the recipe compile test.')
+        .first;
+    String normalize(String value) =>
+        value.replaceAll(RegExp(r'\s+'), ' ').trim();
+    expect(normalize(fixture), normalize(snippet));
+  });
+
+  testWidgets('recipe compiles with stub pages and opens Inbox details', (
+    tester,
+  ) async {
+    await tester.pumpWidget(MaterialApp.router(routerConfig: recipe.router));
+    await tester.pumpAndSettle();
+    expect(find.text('Recipe Home'), findsOneWidget);
+    final bar = tester.widget<BottomBar>(find.byType(BottomBar)).controller!;
+    bar.hide();
+    await tester.pumpAndSettle();
+    expect(bar.isVisible, isFalse);
+    recipe.router.go('/inbox/2');
+    await tester.pumpAndSettle();
+    expect(find.text('Recipe detail 2'), findsOneWidget);
+    expect(bar.isVisible, isTrue);
+    await tester.pumpWidget(const SizedBox.shrink());
+    recipe.router.dispose();
+  });
+
+  testWidgets('root reselect leaves the inactive branch offset unchanged', (
+    tester,
+  ) async {
+    await _openShell(tester);
+    await _drag(tester, 'Home', -600);
+    await _drag(tester, 'Home', 40);
+    final homeOffset = _offset(tester, 'Home');
+    await _tapTab(tester, 'Search');
+    await _drag(tester, 'Search', -600);
+    await _drag(tester, 'Search', 40);
+    await _tapTab(tester, 'Search');
+    expect(_offset(tester, 'Search'), 0);
+    await _tapTab(tester, 'Home');
+    expect(_offset(tester, 'Home'), homeOffset);
+    await _tapTab(tester, 'Home');
+    await _tapTab(tester, 'Home');
+    expect(_offset(tester, 'Home'), 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('local navigation does not report browser URL changes', (
+    tester,
+  ) async {
+    await _openShell(tester);
+    final calls = <MethodCall>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.navigation,
+      (call) async {
+        calls.add(call);
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.navigation,
+        null,
+      ),
+    );
+    await tester.tap(find.text('Home row 2'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    await _tapTab(tester, 'Inbox');
+    expect(
+      calls.where((call) => call.method == 'routeInformationUpdated'),
+      isEmpty,
+    );
+  });
+
+  testWidgets(
+    'iOS detail swipe pops locally but branch root cannot swipe out',
+    (tester) async {
+      await _openShell(tester);
+      await tester.tap(find.text('Home row 2'));
+      await tester.pumpAndSettle();
+      await tester.dragFrom(const Offset(1, 400), const Offset(350, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('Home row 0'), findsOneWidget);
+      expect(find.text('Home item 2'), findsNothing);
+      await _tapTab(tester, 'Search');
+      await tester.dragFrom(const Offset(1, 400), const Offset(350, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('Search row 0'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Home row 0'), findsOneWidget);
+      await tester.dragFrom(const Offset(1, 400), const Offset(350, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('Demos'), findsOneWidget);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+  );
+  testWidgets('same-location go, restore and push still work after a pop', (
+    tester,
+  ) async {
+    await _openShell(tester);
+    final router = GoRouter.of(tester.element(find.text('Home row 0')));
+    for (final navigate in <void Function()>[
+      () => router.go('/home/2'),
+      () =>
+          router.restore(router.configuration.findMatch(Uri.parse('/home/2'))),
+      () {
+        router.push<void>('/home/2');
+      },
+    ]) {
+      navigate();
+      await tester.pumpAndSettle();
+      expect(find.text('Home item 2'), findsOneWidget);
+      router.pop();
+      await tester.pumpAndSettle();
+      expect(find.text('Home row 0'), findsOneWidget);
+      navigate();
+      await tester.pumpAndSettle();
+      expect(find.text('Home item 2'), findsOneWidget);
+      router.pop();
+      await tester.pumpAndSettle();
+    }
+  });
+
+  testWidgets('programmatic branch navigation shows the hidden bar', (
+    tester,
+  ) async {
+    await _openShell(tester);
+    final router = GoRouter.of(tester.element(find.text('Home row 0')));
+    await _drag(tester, 'Home', -600);
+    expect(_barVisible(tester, 'Home'), isFalse);
+    router.go('/search');
+    await tester.pumpAndSettle();
+    expect(find.text('Search row 0'), findsOneWidget);
+    expect(_barVisible(tester, 'Search'), isTrue);
+  });
+
   testWidgets(
     'tapping a tab switches branches and keeps each branch stack and scroll offset',
     (tester) async {

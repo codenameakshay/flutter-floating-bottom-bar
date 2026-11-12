@@ -12,6 +12,7 @@ void main() {
     'Nested scroll',
     'Badged nav',
     'Custom transition',
+    'go_router shell',
   ];
 
   testWidgets('demo picker lists and opens every registered demo', (
@@ -22,16 +23,16 @@ void main() {
     expect(find.text('Demos'), findsOneWidget);
 
     for (final demoName in demoNames) {
-      expect(find.text(demoName), findsOneWidget);
-    }
-
-    for (final demoName in demoNames) {
-      await tester.ensureVisible(find.text(demoName));
+      await tester.scrollUntilVisible(
+        find.text(demoName),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.tap(find.text(demoName));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull, reason: 'opening $demoName');
 
-      tester.state<NavigatorState>(find.byType(Navigator)).pop();
+      tester.state<NavigatorState>(find.byType(Navigator).first).pop();
       await tester.pumpAndSettle();
       expect(
         tester.takeException(),
@@ -40,6 +41,33 @@ void main() {
       );
       expect(find.text('Demos'), findsOneWidget);
     }
+  });
+
+  testWidgets('go_router demo disposes and reopens at Home', (tester) async {
+    await tester.pumpWidget(const ExampleApp());
+    final outerNavigator = tester.state<NavigatorState>(
+      find.byType(Navigator).first,
+    );
+
+    outerNavigator.pushNamed('/go-router-shell');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Home row 1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Home item 1'), findsOneWidget);
+
+    outerNavigator.pop();
+    await tester.pumpAndSettle();
+    expect(find.text('Demos'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    outerNavigator.pushNamed('/go-router-shell');
+    await tester.pumpAndSettle();
+    expect(find.text('Home row 0'), findsOneWidget);
+    expect(find.text('Home item 1'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('a deep link opens its demo on top of the picker', (
@@ -239,11 +267,15 @@ void main() {
     await tester.pumpWidget(const ExampleApp());
 
     for (final demoName in demoNames) {
-      await tester.ensureVisible(find.text(demoName));
+      await tester.scrollUntilVisible(
+        find.text(demoName),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.tap(find.text(demoName));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull, reason: 'opening $demoName');
-      tester.state<NavigatorState>(find.byType(Navigator)).pop();
+      tester.state<NavigatorState>(find.byType(Navigator).first).pop();
       await tester.pumpAndSettle();
       expect(
         tester.takeException(),

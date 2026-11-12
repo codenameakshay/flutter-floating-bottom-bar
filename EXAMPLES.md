@@ -254,7 +254,7 @@ Related runnable demo: `example/lib/demos/go_router_shell_demo.dart`
 ([live](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/go-router-shell)).
 
 `StatefulShellRoute.indexedStack` gives each tab its own `Navigator` and
-keeps every tab alive in an `IndexedStack`. Put the `navigationShell` in
+keeps visited tabs alive in an `IndexedStack`. Put the `navigationShell` in
 `BottomBar.body` and drive `BottomBarItems` from `currentIndex`. Add
 `go_router` to your app's `pubspec.yaml`. This package does not depend on it.
 
@@ -296,7 +296,17 @@ final router = GoRouter(
         ),
         StatefulShellBranch(
           routes: [
-            GoRoute(path: '/inbox', builder: (_, _) => const InboxPage()),
+            GoRoute(
+              path: '/inbox',
+              builder: (_, _) => const InboxPage(),
+              routes: [
+                GoRoute(
+                  path: ':id',
+                  builder: (_, state) =>
+                      DetailPage(id: state.pathParameters['id']!),
+                ),
+              ],
+            ),
           ],
         ),
         StatefulShellBranch(
@@ -327,14 +337,18 @@ class _ScaffoldWithBottomBarState extends State<ScaffoldWithBottomBar> {
   final _bar = BottomBarController();
 
   @override
+  void didUpdateWidget(ScaffoldWithBottomBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.navigationShell.currentIndex !=
+        oldWidget.navigationShell.currentIndex) {
+      _bar.show();
+    }
+  }
+
+  @override
   void dispose() {
     _bar.dispose();
     super.dispose();
-  }
-
-  void _goBranch(int index, {bool initialLocation = false}) {
-    widget.navigationShell.goBranch(index, initialLocation: initialLocation);
-    _bar.show();
   }
 
   @override
@@ -344,7 +358,7 @@ class _ScaffoldWithBottomBarState extends State<ScaffoldWithBottomBar> {
     return PopScope(
       canPop: shell.currentIndex == 0,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _goBranch(0);
+        if (!didPop) shell.goBranch(0);
       },
       child: Scaffold(
         body: BottomBar(
@@ -356,10 +370,10 @@ class _ScaffoldWithBottomBarState extends State<ScaffoldWithBottomBar> {
             indicator: const BottomBarIndicator.pill(),
             scrollToStartOnReselect: atRoot,
             onReselected: (i) {
-              if (!atRoot) _goBranch(i, initialLocation: true);
+              if (!atRoot) shell.goBranch(i, initialLocation: true);
             },
             onSelected: (i) {
-              if (i != shell.currentIndex) _goBranch(i);
+              if (i != shell.currentIndex) shell.goBranch(i);
             },
             children: const [
               BottomBarItem(icon: Icon(Icons.home), label: Text('Home')),
@@ -397,18 +411,21 @@ when no list has scrolled yet. The controller method logs a debug error in
 that case. At depth the flag is off, so the reselect does not scroll the page
 that is about to close.
 
-**Back rule.** Android back and predictive back go in this order:
+**Back rule.** Android system back goes in this order:
 
 1. go_router pops the current tab's own stack first.
 2. At the root of a tab other than Home, the shell's `PopScope` blocks the pop
    and goes to Home.
 3. At the root of Home, `canPop` is true, so the app pops as usual.
 
+Step 2 runs after the pop is refused, so Android predictive back shows no
+preview of Home.
+
 **Scroll and bar state.** Each tab keeps its own scroll position, because
-the `IndexedStack` keeps every tab alive. The bar's scroll target skips tabs
+the `IndexedStack` keeps visited tabs alive. The bar's scroll target skips tabs
 that are offstage, so the hidden action and `scrollToStartOnReselect` scroll
-only the visible tab. `_goBranch` shows the bar on every tab change, so a bar
-hidden in one tab does not stay hidden in the next.
+only the visible tab. `didUpdateWidget` shows the bar when the branch index
+changes, so a tab tap, the back rule and `context.go` all bring the bar back.
 
 **Inside another app.** The demo app has its own `MaterialApp` routes, so the
 demo mounts go_router as a nested `Router`. It passes a
@@ -416,8 +433,10 @@ demo mounts go_router as a nested `Router`. It passes a
 it to the platform, so the browser URL stays the app's. It also sets
 `overridePlatformDefaultLocation: true`, so go_router does not start at the
 app's deep link. Back reaches the app's `Navigator` first, so the demo's page
-forwards it to `routerDelegate.popRoute()` until Home is at its root. You do
-not need any of this when go_router is your app's router.
+forwards it to `routerDelegate.popRoute()` until Home is at its root. Away
+from Home's root that page refuses the iOS edge swipe, so the demo puts a
+Close button on each tab root. You do not need any of this when go_router is
+your app's router.
 
 ## Demo index
 
