@@ -1,5 +1,6 @@
 import 'dart:ui' show lerpDouble;
 
+import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:motor/motor.dart';
 
@@ -185,12 +186,12 @@ class _ItemViewState extends State<_ItemView>
     final selection = _selection ??= SingleMotionController(
       motion: motion,
       vsync: this,
-      initialValue: selectionTarget,
+      initialValue: _selectionTarget = selectionTarget,
     );
     final press = _press ??= SingleMotionController(
       motion: motion,
       vsync: this,
-      initialValue: pressTarget,
+      initialValue: _pressTarget = pressTarget,
     );
     selection.motion = motion;
     press.motion = motion;
@@ -219,6 +220,13 @@ class _ItemViewState extends State<_ItemView>
     return target;
   }
 
+  /// A spring stops within tolerance of its target, so a settled item uses
+  /// the exact target and renders exactly as it did before animating.
+  static double _settledValue(
+    SingleMotionController controller,
+    double target,
+  ) => controller.isAnimating ? controller.value : target;
+
   void _onHighlightChanged(bool value) {
     _pressed = value;
     _sync();
@@ -236,8 +244,8 @@ class _ItemViewState extends State<_ItemView>
         theme: theme,
         selection: selection,
         selected: _selected,
-        t: _selection!.value.clamp(0, 1),
-        scale: pressedScale == 1 ? null : _press!.value,
+        t: _settledValue(_selection!, _selectionTarget!).clamp(0, 1),
+        scale: pressedScale == 1 ? null : _settledValue(_press!, _pressTarget!),
       ),
     );
   }
@@ -415,51 +423,47 @@ class _ItemViewState extends State<_ItemView>
       stack = IndicatorAnchor(role: IndicatorAnchorRole.icon, child: stack);
     }
 
+    final labelBase =
+        (Theme.of(context).textTheme.labelSmall ?? const TextStyle()).merge(
+          theme.labelStyle,
+        );
+    final label = pressed(
+      ink
+          ? reveal(
+              labelChild,
+              DefaultTextStyle.merge(
+                style: TextStyle(color: selectedLookColor),
+                child: labelChild,
+              ),
+            )
+          : labelChild,
+    );
+
     final column = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         stack,
         if (currentLabel != null && labelShown > 0) ...[
           SizedBox(height: (theme.iconLabelGap ?? 2) * labelShown),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final base =
-                  (Theme.of(context).textTheme.labelSmall ?? const TextStyle())
-                      .merge(theme.labelStyle);
-              final style = lerpLabelStyle(
-                base,
-                base.merge(theme.selectedLabelStyle),
+          _FillBoundedWidth(
+            child: DefaultTextStyle(
+              style: lerpLabelStyle(
+                labelBase,
+                labelBase.merge(theme.selectedLabelStyle),
                 t,
-              )!.copyWith(color: color);
-              final label = pressed(
-                ink
-                    ? reveal(
-                        labelChild,
-                        DefaultTextStyle.merge(
-                          style: TextStyle(color: selectedLookColor),
-                          child: labelChild,
-                        ),
-                      )
-                    : labelChild,
-              );
-              final text = DefaultTextStyle(
-                style: style,
-                child: selection == null
-                    ? grown(label)
-                    : Center(
-                        heightFactor: 1,
-                        child: anchors
-                            ? IndicatorAnchor(
-                                role: IndicatorAnchorRole.label,
-                                child: grown(label),
-                              )
-                            : grown(label),
-                      ),
-              );
-              return constraints.hasBoundedWidth
-                  ? SizedBox(width: double.infinity, child: text)
-                  : text;
-            },
+              )!.copyWith(color: color),
+              child: selection == null
+                  ? grown(label)
+                  : Center(
+                      heightFactor: 1,
+                      child: anchors
+                          ? IndicatorAnchor(
+                              role: IndicatorAnchorRole.label,
+                              child: grown(label),
+                            )
+                          : grown(label),
+                    ),
+            ),
           ),
         ],
       ],
@@ -505,4 +509,33 @@ class _ItemViewState extends State<_ItemView>
       child: child,
     );
   }
+}
+
+/// Fills a bounded width and keeps its child's width when unbounded.
+///
+/// Not a [LayoutBuilder]: one rebuilds its child during layout, and an
+/// [IndicatorAnchor] changed then would dirty ancestors outside that layout.
+class _FillBoundedWidth extends SingleChildRenderObjectWidget {
+  const _FillBoundedWidth({super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderFillBoundedWidth();
+}
+
+class _RenderFillBoundedWidth extends RenderProxyBox {
+  BoxConstraints _fill(BoxConstraints constraints) =>
+      constraints.hasBoundedWidth
+      ? constraints.tighten(width: constraints.maxWidth)
+      : constraints;
+
+  @override
+  void performLayout() {
+    child!.layout(_fill(constraints), parentUsesSize: true);
+    size = constraints.constrain(child!.size);
+  }
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) =>
+      constraints.constrain(child!.getDryLayout(_fill(constraints)));
 }
