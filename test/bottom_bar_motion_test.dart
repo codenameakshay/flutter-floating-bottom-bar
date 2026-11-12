@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+import 'package:flutter_floating_bottom_bar/src/internal/bar_surface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:motor/motor.dart' as motor;
 
@@ -87,7 +88,7 @@ void main() {
       ),
     );
 
-    // VisibilityAnimator wraps the bar's Container (which contains the
+    // VisibilityAnimator wraps the bar's BarSurface (which contains the
     // keyed SizedBox) in exactly one FadeTransition.
     final fades = find.ancestor(
       of: find.byKey(barKey),
@@ -95,12 +96,12 @@ void main() {
     );
     expect(fades, findsWidgets);
     // At least one of those FadeTransitions is the one we just inserted.
-    // We verify it's the immediate wrapper of the bar's Container by
+    // We verify it's the immediate wrapper of the bar's BarSurface by
     // checking its child contains the keyed SizedBox.
     bool hasBarFade = false;
     for (final element in fades.evaluate()) {
       final fade = element.widget as FadeTransition;
-      if (fade.child is Container) {
+      if (fade.child is BarSurface) {
         hasBarFade = true;
         break;
       }
@@ -108,7 +109,7 @@ void main() {
     expect(
       hasBarFade,
       isTrue,
-      reason: 'expected a FadeTransition wrapping the bar Container',
+      reason: 'expected a FadeTransition wrapping the bar BarSurface',
     );
   });
 
@@ -268,5 +269,5 @@ FadeTransition _barFade(WidgetTester tester) {
       .evaluate()
       .map((element) => element.widget)
       .cast<FadeTransition>()
-      .firstWhere((widget) => widget.child is Container);
+      .firstWhere((widget) => widget.child is BarSurface);
 }

@@ -6,6 +6,7 @@ import 'package:motor/motor.dart';
 import 'bottom_bar_controller.dart';
 import 'bottom_bar_scope.dart';
 import 'bottom_bar_theme.dart';
+import 'internal/bar_surface.dart';
 import 'internal/item_theme_scope.dart';
 import 'config/bottom_bar_layout.dart';
 import 'config/bottom_bar_motion.dart';
@@ -595,19 +596,21 @@ class _BottomBarState extends State<BottomBar>
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final bar = Container(
+        final bar = BarSurface(
           key: _barRenderKey,
-          width: _effectiveBarWidth(constraints, l),
           decoration: _effectiveBarDecoration(theme, l),
-          child: Material(
-            color: Colors.transparent,
-            borderRadius: _effectiveBarBorderRadius(theme, l),
-            child: Focus(
-              focusNode: _barFocusNode,
-              child: ItemThemeScope(
-                items: theme.items,
-                scrollToStart: _scrollToStartOnReselect,
-                child: widget.child,
+          child: SizedBox(
+            width: _effectiveBarWidth(constraints, l),
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: _effectiveBarBorderRadius(theme, l),
+              child: Focus(
+                focusNode: _barFocusNode,
+                child: ItemThemeScope(
+                  items: theme.items,
+                  scrollToStart: _scrollToStartOnReselect,
+                  child: widget.child,
+                ),
               ),
             ),
           ),
