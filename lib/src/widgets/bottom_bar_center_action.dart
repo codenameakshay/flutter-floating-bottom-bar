@@ -140,7 +140,10 @@ CenterActionGeometry centerActionGeometry(
   final theme =
       itemThemeOf(context).centerAction ??
       const BottomBarCenterActionThemeData();
-  final style = inline || CenterActionInline.of(context)
+  final style =
+      inline ||
+          CenterActionInline.of(context) ||
+          context.findAncestorWidgetOfExactType<BarSurface>() == null
       ? BottomBarCenterActionStyle.inline
       : action.style;
   final size =

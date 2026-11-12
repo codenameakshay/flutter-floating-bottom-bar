@@ -48,7 +48,20 @@ class RenderBarSurface extends RenderShiftedBox {
     markNeedsPaint();
   }
 
+  final List<RenderCenterActionSlot> _actions = [];
   RenderCenterActionSlot? _action;
+
+  void _updateAction() {
+    final previous = _action;
+    _action =
+        _actions.where((action) => action._lift).firstOrNull ??
+        _actions.firstOrNull;
+    if (identical(previous, _action)) return;
+    _actionsNeedLayout = true;
+    markNeedsLayout();
+  }
+
+  bool _actionsNeedLayout = false;
   Decoration? _paintedDecoration;
   BoxPainter? _painter;
 
@@ -125,6 +138,14 @@ class RenderBarSurface extends RenderShiftedBox {
 
   @override
   void performLayout() {
+    if (_actionsNeedLayout) {
+      _actionsNeedLayout = false;
+      invokeLayoutCallback((constraints) {
+        for (final action in _actions) {
+          action.markNeedsLayout();
+        }
+      });
+    }
     final child = this.child;
     var raise = _raise;
     if (child == null) {
@@ -189,13 +210,33 @@ class RenderBarSurface extends RenderShiftedBox {
     super.paint(context, offset);
   }
 
+  bool _actionAllowsHit(Offset position) {
+    RenderObject? child = _action;
+    var ancestor = child?.parent;
+    while (ancestor != null && !identical(ancestor, this)) {
+      if (ancestor is RenderIgnorePointer && ancestor.ignoring ||
+          ancestor is RenderAbsorbPointer && ancestor.absorbing ||
+          ancestor is RenderOffstage && ancestor.offstage) {
+        return false;
+      }
+      if (ancestor is RenderBox && child != null) {
+        final clip = ancestor.describeApproximatePaintClip(child);
+        final local = ancestor.globalToLocal(localToGlobal(position));
+        if (clip != null && !clip.contains(local)) return false;
+      }
+      child = ancestor;
+      ancestor = ancestor.parent;
+    }
+    return true;
+  }
+
   @override
   bool hitTest(BoxHitTestResult result, {required Offset position}) {
     if (!size.contains(position)) return false;
     // The raised action paints above the bar's own box, where its ancestors
     // up to here would reject the pointer, so test it directly.
     final button = _action?._lifted ?? false ? _action!.child : null;
-    if (button != null && button.hasSize) {
+    if (button != null && button.hasSize && _actionAllowsHit(position)) {
       final hit = result.addWithPaintTransform(
         transform: button.getTransformTo(this),
         position: position,
@@ -204,6 +245,21 @@ class RenderBarSurface extends RenderShiftedBox {
             button.hitTest(result, position: local),
       );
       if (hit) {
+        var ancestor = button.parent;
+        while (ancestor != null && !identical(ancestor, this)) {
+          if (ancestor is RenderBox) {
+            final target = ancestor;
+            result.addWithPaintTransform(
+              transform: target.getTransformTo(this),
+              position: position,
+              hitTest: (result, local) {
+                result.add(BoxHitTestEntry(target, local));
+                return true;
+              },
+            );
+          }
+          ancestor = ancestor.parent;
+        }
         result.add(BoxHitTestEntry(this, position));
         return true;
       }
@@ -213,8 +269,8 @@ class RenderBarSurface extends RenderShiftedBox {
 }
 
 /// The centre action's slot in a row. Reserves [width] in the row; when
-/// [lifted] inside a [BarSurface], it has no height and paints its child with
-/// its top [raise] above the bar's top edge.
+/// [lifted] inside a [BarSurface], it reserves the part below the bar's top
+/// edge and paints its child with its top [raise] above that edge.
 class CenterActionSlot extends SingleChildRenderObjectWidget {
   const CenterActionSlot({
     super.key,
@@ -280,6 +336,7 @@ class RenderCenterActionSlot extends RenderShiftedBox {
     if (value == _lift) return;
     _lift = value;
     markNeedsLayout();
+    _host?._updateAction();
     _host?.markNeedsLayout();
   }
 
@@ -305,7 +362,7 @@ class RenderCenterActionSlot extends RenderShiftedBox {
   }
 
   /// Raised or notched only inside a bar; anywhere else it sits inline.
-  bool get _lifted => _lift && _host != null;
+  bool get _lifted => _lift && identical(_host?._action, this);
 
   @override
   void attach(PipelineOwner owner) {
@@ -315,18 +372,19 @@ class RenderCenterActionSlot extends RenderShiftedBox {
       ancestor = ancestor.parent;
     }
     final host = ancestor as RenderBarSurface?;
-    if (host != null && host._action == null) {
-      _host = host.._action = this;
-      host.markNeedsLayout();
+    if (host != null) {
+      _host = host;
+      host._actions.add(this);
+      host._updateAction();
     }
   }
 
   @override
   void detach() {
     final host = _host;
-    if (host != null && identical(host._action, this)) {
-      host._action = null;
-      host.markNeedsLayout();
+    if (host != null) {
+      host._actions.remove(this);
+      host._updateAction();
     }
     _host = null;
     super.detach();
@@ -350,7 +408,10 @@ class RenderCenterActionSlot extends RenderShiftedBox {
     }
     child.layout(constraints.loosen(), parentUsesSize: true);
     size = constraints.constrain(
-      Size(math.max(_width, child.size.width), _lifted ? 0 : child.size.height),
+      Size(
+        math.max(_width, child.size.width),
+        _lifted ? math.max(0, child.size.height - _raise) : child.size.height,
+      ),
     );
     _inlineOffset = Alignment.center.alongOffset(size - child.size as Offset);
   }
@@ -360,7 +421,10 @@ class RenderCenterActionSlot extends RenderShiftedBox {
     final childSize =
         child?.getDryLayout(constraints.loosen()) ?? Size(_width, 0);
     return constraints.constrain(
-      Size(math.max(_width, childSize.width), _lifted ? 0 : childSize.height),
+      Size(
+        math.max(_width, childSize.width),
+        _lifted ? math.max(0, childSize.height - _raise) : childSize.height,
+      ),
     );
   }
 
@@ -373,12 +437,16 @@ class RenderCenterActionSlot extends RenderShiftedBox {
       math.max(_width, super.computeMaxIntrinsicWidth(height));
 
   @override
-  double computeMinIntrinsicHeight(double width) =>
-      _lifted ? 0 : super.computeMinIntrinsicHeight(width);
+  double computeMinIntrinsicHeight(double width) => math.max(
+    0,
+    super.computeMinIntrinsicHeight(width) - (_lifted ? _raise : 0),
+  );
 
   @override
-  double computeMaxIntrinsicHeight(double width) =>
-      _lifted ? 0 : super.computeMaxIntrinsicHeight(width);
+  double computeMaxIntrinsicHeight(double width) => math.max(
+    0,
+    super.computeMaxIntrinsicHeight(width) - (_lifted ? _raise : 0),
+  );
 
   @override
   void paint(PaintingContext context, Offset offset) {
