@@ -4,6 +4,7 @@ import 'demos/ai_prompt_dock_demo.dart';
 import 'demos/badges_demo.dart';
 import 'demos/basic_demo.dart';
 import 'demos/basic_tab_bar_demo.dart';
+import 'demos/center_action_demo.dart';
 import 'demos/custom_transition_demo.dart';
 import 'demos/go_router_shell_demo.dart';
 import 'demos/indicators_demo.dart';
@@ -64,6 +65,11 @@ final demos = <({String slug, String title, WidgetBuilder builder})>[
     slug: 'go-router-shell',
     title: 'go_router shell',
     builder: (_) => const GoRouterShellDemoPage(),
+  ),
+  (
+    slug: 'center-action',
+    title: 'Centre action',
+    builder: (_) => const CenterActionDemoPage(),
   ),
 ];
 
