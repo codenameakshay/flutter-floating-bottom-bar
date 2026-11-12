@@ -10,18 +10,9 @@ class BadgesDemoPage extends StatefulWidget {
 
 class _BadgesDemoPageState extends State<BadgesDemoPage> {
   int _index = 0;
-
-  Widget _badge(String count) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-    decoration: BoxDecoration(
-      color: Colors.red,
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: Text(
-      count,
-      style: const TextStyle(color: Colors.white, fontSize: 10),
-    ),
-  );
+  int _unread = 3;
+  bool _homeDot = true;
+  bool _profileNew = true;
 
   @override
   Widget build(BuildContext context) {
@@ -50,9 +41,53 @@ class _BadgesDemoPageState extends State<BadgesDemoPage> {
             ],
           ),
         ),
-        body: ListView.builder(
-          itemCount: 200,
-          itemBuilder: (_, i) => ListTile(title: Text('Row $i')),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Inbox count: $_unread',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        FilledButton.tonal(
+                          onPressed: () => setState(() => _unread += 1),
+                          child: const Text('Add 1'),
+                        ),
+                        FilledButton.tonal(
+                          onPressed: () => setState(() => _unread += 50),
+                          child: const Text('Add 50'),
+                        ),
+                        FilledButton.tonal(
+                          onPressed: () => setState(() => _unread = 0),
+                          child: const Text('Clear'),
+                        ),
+                        FilledButton.tonal(
+                          onPressed: () => setState(() => _homeDot = !_homeDot),
+                          child: const Text('Toggle dot'),
+                        ),
+                        FilledButton.tonal(
+                          onPressed: () =>
+                              setState(() => _profileNew = !_profileNew),
+                          child: const Text('Toggle New'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            for (var i = 0; i < 40; i++) ListTile(title: Text('Message $i')),
+          ],
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -65,17 +100,22 @@ class _BadgesDemoPageState extends State<BadgesDemoPage> {
                 icon: const Icon(Icons.home_outlined),
                 selectedIcon: const Icon(Icons.home),
                 label: const Text('Home'),
+                badge: BottomBarBadge.dot(show: _homeDot),
               ),
               BottomBarItem(
                 icon: const Icon(Icons.inbox_outlined),
                 selectedIcon: const Icon(Icons.inbox),
                 label: const Text('Inbox'),
-                badge: _badge('3'),
+                badge: BottomBarBadge.count(
+                  _unread,
+                  semanticLabel: '$_unread new',
+                ),
               ),
               BottomBarItem(
                 icon: const Icon(Icons.person_outline),
                 selectedIcon: const Icon(Icons.person),
                 label: const Text('Profile'),
+                badge: BottomBarBadge.label('New', show: _profileNew),
               ),
             ],
           ),

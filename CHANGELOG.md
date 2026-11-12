@@ -1,5 +1,13 @@
 ## Unreleased
 
+- Add `BottomBarBadge.dot()`, `.count()` and `.label()` for
+  `BottomBarItem.badge`. Badges scale in from the top-end corner with a slight
+  overshoot and scale out before they go. Counts roll their digits, the width
+  follows the text, a change mid-flight retargets smoothly, and reduced motion
+  snaps. The Material 3 placement mirrors in RTL. Set
+  `BottomBarItemThemeData.badge` to a `BottomBarBadgeThemeData` to style every
+  badge. The item's accessible name now includes its badge, such as "Inbox, 3
+  new". Raw widgets in `badge:` keep working as before.
 - Add `BottomBarItemThemeData`, set as `BottomBarThemeData.items`, to style
   and animate `BottomBarItem` without forking it: colours, icon sizes, label
   styles, padding, icon-label gap, ink radius, overlay, splash and a
