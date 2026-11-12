@@ -7,6 +7,7 @@ import 'demos/basic_tab_bar_demo.dart';
 import 'demos/custom_transition_demo.dart';
 import 'demos/indicators_demo.dart';
 import 'demos/issues_dock_demo.dart';
+import 'demos/item_theme_demo.dart';
 import 'demos/nested_scroll_demo.dart';
 
 void main() => runApp(const ExampleApp());
@@ -17,6 +18,11 @@ final demos = <({String slug, String title, WidgetBuilder builder})>[
     slug: 'indicators',
     title: 'Indicators',
     builder: (_) => const IndicatorsDemoPage(),
+  ),
+  (
+    slug: 'item-theme',
+    title: 'Item theme',
+    builder: (_) => const ItemThemeDemoPage(),
   ),
   (
     slug: 'issues-dock',

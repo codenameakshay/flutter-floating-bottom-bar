@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'config/bottom_bar_layout.dart';
 import 'config/bottom_bar_motion.dart';
 import 'config/bottom_bar_scroll_behavior.dart';
+import 'widgets/bottom_bar_item_theme.dart';
 
 /// App-wide defaults for [BottomBar].
 ///
@@ -25,6 +26,9 @@ import 'config/bottom_bar_scroll_behavior.dart';
 /// 2. `Theme.of(context).extension<BottomBarThemeData>()`.
 /// 3. The `theme:` argument on [BottomBar].
 /// 4. Per-widget config arguments (`layout`, `motion`, `scrollBehavior`).
+///
+/// [items] follows the same order and continues it: [BottomBarItems]
+/// arguments, then [BottomBarItem] arguments. See [BottomBarItemThemeData].
 @immutable
 class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
   const BottomBarThemeData({
@@ -35,6 +39,7 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
     this.layout,
     this.motion,
     this.scrollBehavior,
+    this.items,
   });
 
   /// Decoration applied to the floating bar's outer container.
@@ -67,8 +72,15 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
   /// `scrollBehavior:` argument on the individual [BottomBar] widget.
   final BottomBarScrollBehavior? scrollBehavior;
 
+  /// Defaults for [BottomBarItem]s and [BottomBarItems] rows.
+  ///
+  /// [BottomBar] passes its resolved value to its `child` subtree. Items
+  /// outside a [BottomBar] read the `ThemeData.extensions` value.
+  final BottomBarItemThemeData? items;
+
   /// Returns a new theme where non-null fields of [other] override fields of
-  /// `this`. Null fields of [other] preserve `this`.
+  /// `this`. Null fields of [other] preserve `this`. [items] merges field by
+  /// field.
   BottomBarThemeData merge(BottomBarThemeData? other) {
     if (other == null) return this;
     return BottomBarThemeData(
@@ -79,6 +91,7 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
       layout: other.layout ?? layout,
       motion: other.motion ?? motion,
       scrollBehavior: other.scrollBehavior ?? scrollBehavior,
+      items: items?.merge(other.items) ?? other.items,
     );
   }
 
@@ -93,6 +106,7 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
     BottomBarLayout? layout,
     BottomBarMotion? motion,
     BottomBarScrollBehavior? scrollBehavior,
+    BottomBarItemThemeData? items,
   }) {
     return BottomBarThemeData(
       barDecoration: barDecoration ?? this.barDecoration,
@@ -102,6 +116,7 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
       layout: layout ?? this.layout,
       motion: motion ?? this.motion,
       scrollBehavior: scrollBehavior ?? this.scrollBehavior,
+      items: items ?? this.items,
     );
   }
 
@@ -110,6 +125,7 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
   /// Decoration fields use [BoxDecoration.lerp]. Numeric fields use standard
   /// linear interpolation. Config objects ([layout], [motion], [scrollBehavior])
   /// step at `t == 0.5` — `this` for `t < 0.5`, [other] for `t >= 0.5`.
+  /// [items] uses [BottomBarItemThemeData.lerp].
   @override
   BottomBarThemeData lerp(
     covariant ThemeExtension<BottomBarThemeData>? other,
@@ -129,6 +145,7 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
       layout: t < 0.5 ? layout : other.layout,
       motion: t < 0.5 ? motion : other.motion,
       scrollBehavior: t < 0.5 ? scrollBehavior : other.scrollBehavior,
+      items: BottomBarItemThemeData.lerp(items, other.items, t),
     );
   }
 }

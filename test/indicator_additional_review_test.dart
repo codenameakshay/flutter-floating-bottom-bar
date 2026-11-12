@@ -270,6 +270,12 @@ void main() {
                       ),
                     ),
                   )
+                  .where(
+                    (state) =>
+                        state.context
+                            .findAncestorWidgetOfExactType<BottomBarItem>() ==
+                        null,
+                  )
                   .whereType<WidgetsBindingObserver>()
                   .whereType<TickerProvider>()
                   .single

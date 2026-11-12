@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:motor/motor.dart';
 
 import '../internal/bottom_bar_item_height.dart';
+import '../internal/item_theme_scope.dart';
 import '../internal/reduce_motion.dart';
 import 'bottom_bar_indicator.dart';
 
@@ -96,12 +97,15 @@ class BottomBarItems extends StatelessWidget {
 
   /// The selection indicator drawn behind the selected child. Only used when
   /// [selectedIndex] is non-null.
+  ///
+  /// Defaults to [BottomBarItemThemeData.indicator]. Pass
+  /// [BottomBarIndicator.none] to draw none whatever the theme says.
   final BottomBarIndicator? indicator;
 
   /// The spring the [indicator] moves on.
   ///
-  /// Defaults to a snappy Cupertino spring. Reduced motion skips the
-  /// animation.
+  /// Defaults to [BottomBarItemThemeData.indicatorMotion], then to a snappy
+  /// Cupertino spring. Reduced motion skips the animation.
   final Motion? indicatorMotion;
 
   @override
@@ -184,6 +188,7 @@ class _SelectableItemsState extends State<_SelectableItems>
 
   late final IndicatorMotion _motion;
   bool _reduceMotion = false;
+  BottomBarIndicator? _indicator;
 
   @override
   void initState() {
@@ -192,14 +197,26 @@ class _SelectableItemsState extends State<_SelectableItems>
       vsync: this,
       index: widget.items.selectedIndex!,
       motion: widget.items.indicatorMotion ?? _defaultMotion,
-    )..indicator = widget.items.indicator;
+    );
     WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _syncTheme();
     _updateReducedMotion();
+  }
+
+  void _syncTheme() {
+    final theme = itemThemeOf(context);
+    _indicator = effectiveIndicator(widget.items.indicator, theme.indicator);
+    _motion
+      ..motion =
+          widget.items.indicatorMotion ??
+          theme.indicatorMotion ??
+          _defaultMotion
+      ..indicator = _indicator;
   }
 
   @override
@@ -220,8 +237,7 @@ class _SelectableItemsState extends State<_SelectableItems>
     super.didUpdateWidget(oldWidget);
     final items = widget.items;
     final old = oldWidget.items;
-    _motion.motion = items.indicatorMotion ?? _defaultMotion;
-    _motion.indicator = items.indicator;
+    _syncTheme();
     final index = items.selectedIndex!;
     final moved = index != old.selectedIndex;
     if (items.children.length != old.children.length ||
@@ -242,7 +258,7 @@ class _SelectableItemsState extends State<_SelectableItems>
   @override
   Widget build(BuildContext context) {
     final items = widget.items;
-    final indicator = items.indicator;
+    final indicator = _indicator;
     final selectedIndex = items.selectedIndex!;
     final onSelected = items.onSelected;
     final foreground = indicatorForeground(

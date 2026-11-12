@@ -6,6 +6,7 @@ import 'package:motor/motor.dart';
 import 'bottom_bar_controller.dart';
 import 'bottom_bar_scope.dart';
 import 'bottom_bar_theme.dart';
+import 'internal/item_theme_scope.dart';
 import 'config/bottom_bar_layout.dart';
 import 'config/bottom_bar_motion.dart';
 import 'internal/reduce_motion.dart';
@@ -596,7 +597,10 @@ class _BottomBarState extends State<BottomBar>
           child: Material(
             color: Colors.transparent,
             borderRadius: _effectiveBarBorderRadius(theme, l),
-            child: Focus(focusNode: _barFocusNode, child: widget.child),
+            child: Focus(
+              focusNode: _barFocusNode,
+              child: ItemThemeScope(items: theme.items, child: widget.child),
+            ),
           ),
         );
         if (!animate) return bar;

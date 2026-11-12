@@ -15,6 +15,7 @@ export 'src/config/bottom_bar_motion.dart';
 export 'src/config/bottom_bar_scroll_behavior.dart';
 export 'src/bottom_bar_theme.dart';
 export 'src/widgets/bottom_bar_item.dart';
+export 'src/widgets/bottom_bar_item_theme.dart' show BottomBarItemThemeData;
 export 'src/widgets/bottom_bar_body_padding.dart';
 export 'src/widgets/bottom_bar_indicator.dart'
     show BottomBarIndicator, BottomBarIndicatorBuilder;

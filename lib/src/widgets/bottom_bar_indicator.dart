@@ -91,6 +91,12 @@ sealed class BottomBarIndicator {
   const factory BottomBarIndicator.builder(BottomBarIndicatorBuilder builder) =
       _BuilderIndicator;
 
+  /// No indicator.
+  ///
+  /// Use it on [BottomBarItems.indicator] to opt a row out of the theme's
+  /// [BottomBarItemThemeData.indicator].
+  const factory BottomBarIndicator.none() = _NoIndicator;
+
   Rect _target(IndicatorGeometry geometry, TextDirection direction);
 
   /// The indicator's painted shape at [rect], or null if it does not paint.
@@ -121,6 +127,16 @@ sealed class BottomBarIndicator {
 /// from the item's default.
 Color? indicatorForeground(BottomBarIndicator? indicator, ColorScheme colors) =>
     indicator?._foreground(colors);
+
+/// The indicator a row draws: its own [row] argument, else the theme's
+/// [theme] one, and null for [BottomBarIndicator.none].
+BottomBarIndicator? effectiveIndicator(
+  BottomBarIndicator? row,
+  BottomBarIndicator? theme,
+) => switch (row ?? theme) {
+  _NoIndicator() => null,
+  final indicator => indicator,
+};
 
 /// Whether [indicator] reveals the selected look only where it covers an
 /// item.
@@ -261,6 +277,14 @@ final class _DotIndicator extends BottomBarIndicator {
 
   @override
   Color _fill(ColorScheme colors) => color ?? colors.primary;
+}
+
+final class _NoIndicator extends BottomBarIndicator {
+  const _NoIndicator() : super._();
+
+  @override
+  Rect _target(IndicatorGeometry geometry, TextDirection direction) =>
+      geometry.slot;
 }
 
 final class _BuilderIndicator extends BottomBarIndicator {
@@ -766,6 +790,7 @@ class RenderIndicatorTrack extends RenderBox
   Rect? _builderRect;
   bool _layingOutRow = false;
   bool _needsInitialReveal = true;
+  ({int index, Rect rect})? _revealedSlot;
   int _revealGeneration = 0;
   int? _geometryFrameCallback;
 
@@ -921,9 +946,18 @@ class RenderIndicatorTrack extends RenderBox
 
     _invalidateInk();
     final motion = _motion;
+    final slots = _reveal ? _slots : const <RenderIndicatorAnchor>[];
+    final slot = motion._to >= 0 && motion._to < slots.length
+        ? (index: motion._to, rect: _rectOf(slots[motion._to]))
+        : null;
+    final resized =
+        slot != null &&
+        _revealedSlot?.index == slot.index &&
+        _revealedSlot?.rect != slot.rect;
+    _revealedSlot = slot;
     final reveal =
         motion._takeReveal() ??
-        (_reveal && _needsInitialReveal
+        (_reveal && (_needsInitialReveal || resized)
             ? (index: motion._to, animated: false)
             : null);
     final revision = motion._revealRevision;
