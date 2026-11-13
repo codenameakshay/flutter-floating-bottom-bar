@@ -15,6 +15,7 @@ tool/
 !/screenshots/pub/
 clips/
 RELEASING.md
+docs/
 
 # FVM (Flutter Version Management) — local toolchain, not needed by consumers
 .fvm/
