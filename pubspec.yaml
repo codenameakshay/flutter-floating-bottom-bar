@@ -1,6 +1,6 @@
 name: flutter_floating_bottom_bar
 description: An adaptable Flutter floating bottom bar for navigation, search, and custom widgets, with scroll-aware visibility and accessible interactions.
-version: 3.0.1
+version: 3.1.0
 homepage: https://hashstudios.in
 repository: https://github.com/codenameakshay/flutter-floating-bottom-bar
 issue_tracker: https://github.com/codenameakshay/flutter-floating-bottom-bar/issues
