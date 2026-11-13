@@ -91,9 +91,21 @@ class RenderBarGroup extends RenderBox
   @override
   void performLayout() {
     final children = getChildrenAsList();
+    if (children.isEmpty) {
+      size = constraints.smallest;
+      return;
+    }
     final pill = children[_pillIndex];
+    if (children.length == 1) {
+      pill.layout(constraints, parentUsesSize: true);
+      size = pill.size;
+      (pill.parentData! as _GroupParentData).offset = Offset.zero;
+      return;
+    }
     final pieces = [...children]..removeAt(_pillIndex);
-    final width = constraints.maxWidth;
+    final width = constraints.hasBoundedWidth
+        ? constraints.maxWidth
+        : getMaxIntrinsicWidth(constraints.maxHeight);
     final gaps = _spacing * pieces.length;
 
     void layoutPill() {
@@ -145,6 +157,90 @@ class RenderBarGroup extends RenderBox
       x += w + _spacing;
     }
   }
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) {
+    final children = getChildrenAsList();
+    if (children.isEmpty) return constraints.smallest;
+    final pill = children[_pillIndex];
+    if (children.length == 1) return pill.getDryLayout(constraints);
+    final pieces = [...children]..removeAt(_pillIndex);
+    final width = constraints.hasBoundedWidth
+        ? constraints.maxWidth
+        : getMaxIntrinsicWidth(constraints.maxHeight);
+    final gaps = _spacing * pieces.length;
+    BoxConstraints pillConstraints(double piecesWidth) => BoxConstraints(
+      minWidth: math.max(0, width - gaps - piecesWidth),
+      maxWidth: math.max(0, width - gaps - piecesWidth),
+      maxHeight: constraints.maxHeight,
+    );
+    var pillSize = pill.getDryLayout(pillConstraints(0));
+    final barHeight = math.max(
+      0.0,
+      pillSize.height - (pill is RenderBarSurface ? pill.layoutRaise : 0),
+    );
+    var piecesWidth = 0.0;
+    for (final piece in pieces) {
+      piecesWidth += piece
+          .getDryLayout(
+            BoxConstraints(
+              minWidth: barHeight,
+              maxWidth: math.max(barHeight, width),
+              minHeight: barHeight,
+              maxHeight: barHeight,
+            ),
+          )
+          .width;
+    }
+    pillSize = pill.getDryLayout(pillConstraints(piecesWidth));
+    return constraints.constrain(
+      Size(
+        piecesWidth + gaps + pillSize.width,
+        math.max(pillSize.height, barHeight),
+      ),
+    );
+  }
+
+  double _intrinsicWidth(double height, {required bool minimum}) {
+    final children = getChildrenAsList();
+    if (children.isEmpty) return 0;
+    final pill = children[_pillIndex];
+    double widthOf(RenderBox child, double height) => minimum
+        ? child.getMinIntrinsicWidth(height)
+        : child.getMaxIntrinsicWidth(height);
+    final pillWidth = widthOf(pill, height);
+    if (children.length == 1) return pillWidth;
+    final barHeight =
+        (minimum
+            ? pill.getMinIntrinsicHeight(pillWidth)
+            : pill.getMaxIntrinsicHeight(pillWidth)) -
+        (pill is RenderBarSurface ? pill.layoutRaise : 0);
+    return pillWidth +
+        _spacing * (children.length - 1) +
+        children
+            .where((child) => child != pill)
+            .fold<double>(
+              0,
+              (width, child) =>
+                  width + math.max(barHeight, widthOf(child, barHeight)),
+            );
+  }
+
+  @override
+  double computeMinIntrinsicWidth(double height) =>
+      _intrinsicWidth(height, minimum: true);
+
+  @override
+  double computeMaxIntrinsicWidth(double height) =>
+      _intrinsicWidth(height, minimum: false);
+
+  @override
+  double computeMinIntrinsicHeight(double width) =>
+      computeDryLayout(BoxConstraints(maxWidth: width)).height;
+
+  @override
+  double computeMaxIntrinsicHeight(double width) =>
+      computeDryLayout(BoxConstraints(maxWidth: width)).height;
 
   @override
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
