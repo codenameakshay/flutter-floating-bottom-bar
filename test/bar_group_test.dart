@@ -640,4 +640,32 @@ void main() {
       const Size(50, 50),
     );
   });
+
+  testWidgets('side pieces match a pill whose height follows its width', (
+    tester,
+  ) async {
+    tester.view
+      ..physicalSize = const Size(400, 300)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BottomBar(
+          showIcon: false,
+          layout: const BottomBarLayout(width: 360),
+          body: const SizedBox.expand(),
+          leading: const SizedBox(width: 10, height: 10),
+          trailing: const SizedBox(width: 10, height: 10),
+          child: LayoutBuilder(
+            builder: (context, constraints) =>
+                SizedBox(height: constraints.maxWidth < 300 ? 60 : 40),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.getSize(find.byKey(const ValueKey('pill'))).height, 60);
+    expect(tester.getSize(find.byKey(const ValueKey('leading'))).height, 60);
+    expect(tester.getSize(find.byKey(const ValueKey('trailing'))).height, 60);
+  });
 }

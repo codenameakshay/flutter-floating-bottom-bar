@@ -120,28 +120,37 @@ class RenderBarGroup extends RenderBox
       );
     }
 
-    layoutPill();
-    // ponytail: assumes the pill's height does not depend on its width, true
-    // for item rows and tab bars; lay the pieces out again if one ever does.
-    final barHeight = pill is RenderBarSurface
-        ? pill.barHeight
-        : pill.size.height;
-    var piecesWidth = 0.0;
-    for (final piece in pieces) {
-      piece.layout(
-        BoxConstraints(
-          minWidth: barHeight,
-          maxWidth: math.max(barHeight, width),
-          minHeight: barHeight,
-          maxHeight: barHeight,
-        ),
-        parentUsesSize: true,
-      );
-      piecesWidth += piece.size.width;
+    double barHeightOf(RenderBox pill) =>
+        pill is RenderBarSurface ? pill.barHeight : pill.size.height;
+    double layoutPieces(double barHeight) {
+      var piecesWidth = 0.0;
+      for (final piece in pieces) {
+        piece.layout(
+          BoxConstraints(
+            minWidth: barHeight,
+            maxWidth: math.max(barHeight, width),
+            minHeight: barHeight,
+            maxHeight: barHeight,
+          ),
+          parentUsesSize: true,
+        );
+        piecesWidth += piece.size.width;
+      }
+      return piecesWidth;
     }
+
+    layoutPill();
+    var barHeight = barHeightOf(pill);
+    var piecesWidth = layoutPieces(barHeight);
     if (piecesWidth != _piecesWidth) {
       _piecesWidth = piecesWidth;
       layoutPill();
+      // ponytail: a pill whose height follows its width resizes the pieces
+      // once more; pieces that then change width overflow or leave a gap.
+      if (barHeightOf(pill) != barHeight) {
+        barHeight = barHeightOf(pill);
+        piecesWidth = layoutPieces(barHeight);
+      }
     }
 
     final height = math.max(pill.size.height, barHeight);
