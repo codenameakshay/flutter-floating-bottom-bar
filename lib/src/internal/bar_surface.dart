@@ -293,8 +293,7 @@ class RenderBarSurface extends RenderShiftedBox {
     super.attach(owner);
     _visibility?.addListener(_visibilityChanged);
     _edge?.addListener(_edgeChanged);
-    _surfaceChanged();
-    if (_fades) markNeedsPaint();
+    _edgeChanged();
   }
 
   @override

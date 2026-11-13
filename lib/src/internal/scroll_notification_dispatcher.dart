@@ -10,7 +10,8 @@ import 'package:flutter/widgets.dart';
 /// [activeScrollable] can pick the target for
 /// `BottomBarController.scrollToStart`/`scrollToEnd`.
 ///
-/// Bounded to 16 tracked scrollables (LRU eviction).
+/// Bounded to 16 tracked scrollables. Evicts metrics-only sources before
+/// the least recently scrolled source.
 class ScrollNotificationDispatcher {
   ScrollNotificationDispatcher({
     required this.onShouldHide,
@@ -39,10 +40,13 @@ class ScrollNotificationDispatcher {
   ///
   /// Drops tracked scrollables that were disposed or got a new position.
   /// Skips ones hidden by an ancestor [Visibility] (such as an inactive
-  /// [IndexedStack] child) or a disabled [TickerMode] (such as a route covered
-  /// by an opaque one). The returned context lets callers locate an enclosing
+  /// [IndexedStack] child), an [Offstage], or a disabled [TickerMode] (such as
+  /// a route covered by an opaque one). Before any visible list has scrolled,
+  /// falls back to the most recently laid out visible list. The returned
+  /// context lets callers locate an enclosing
   /// [NestedScrollView].
   ({ScrollPosition position, BuildContext context})? activeScrollable() {
+    ({ScrollPosition position, BuildContext context})? fallback;
     for (final key in _trackedScrollables.keys.toList().reversed) {
       final state = _trackedScrollables[key]!;
       final position = state.position;
@@ -55,12 +59,35 @@ class ScrollNotificationDispatcher {
       }
       if (position.hasPixels &&
           position.hasContentDimensions &&
-          TickerMode.getValuesNotifier(context).value.enabled &&
-          Visibility.of(context)) {
-        return (position: position, context: context);
+          isPositionVisible(position)) {
+        final active = (position: position, context: context);
+        if (state.interacted) return active;
+        fallback ??= active;
       }
     }
-    return null;
+    return fallback;
+  }
+
+  static bool isPositionVisible(ScrollPosition position) {
+    final context = position.context.notificationContext;
+    return context != null &&
+        context.mounted &&
+        TickerMode.getValuesNotifier(context).value.enabled &&
+        Visibility.of(context) &&
+        _isOnstage(context);
+  }
+
+  static bool _isOnstage(BuildContext context) {
+    var onstage = true;
+    context.visitAncestorElements((element) {
+      final widget = element.widget;
+      if (widget is Offstage && widget.offstage) {
+        onstage = false;
+        return false;
+      }
+      return true;
+    });
+    return onstage;
   }
 
   int _keyFor(ScrollNotification n, ScrollPosition? position) {
@@ -123,8 +150,8 @@ class ScrollNotificationDispatcher {
 
   /// Tracks the scrollable that sent [notification] without changing the
   /// bar's visibility, so [activeScrollable] knows a list that has laid out
-  /// but not scrolled yet. A new scrollable becomes the most recent one. A
-  /// known one keeps its place.
+  /// but not scrolled yet. New sources are fallback targets until they scroll;
+  /// a known source keeps its place in scroll recency order.
   void track(ScrollMetricsNotification notification) {
     final update = notification.asScrollUpdate();
     final filter = predicate;
@@ -157,9 +184,14 @@ class ScrollNotificationDispatcher {
         : known;
     _trackedScrollables[key] = state
       ..position = position
-      ..context = context;
+      ..context = context
+      ..interacted = state.interacted || touch;
     while (_trackedScrollables.length > _maxTracked) {
-      _trackedScrollables.remove(_trackedScrollables.keys.first);
+      final oldest = _trackedScrollables.keys.firstWhere(
+        (key) => !_trackedScrollables[key]!.interacted,
+        orElse: () => _trackedScrollables.keys.first,
+      );
+      _trackedScrollables.remove(oldest);
     }
     return state;
   }
@@ -217,6 +249,7 @@ class _TrackedScrollState {
   double anchorPixels;
   double lastPixels;
   double? direction;
+  bool interacted = false;
   ScrollPosition? position;
   BuildContext? context;
 }

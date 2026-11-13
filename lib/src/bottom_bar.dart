@@ -624,9 +624,15 @@ class _BottomBarState extends State<BottomBar>
     // a short list never animates in from the standard surface.
     final snap = !_edgeSeen;
     _edgeSeen |= active != null;
-    if (atEdge == _atEdge) return;
-    _atEdge = atEdge;
     final target = atEdge ? 1.0 : 0.0;
+    if (atEdge == _atEdge) {
+      if (_disableAnimations && _edgeController.value != target) {
+        _edgeController.stop(canceled: true);
+        _edgeController.value = target;
+      }
+      return;
+    }
+    _atEdge = atEdge;
     if (snap || _disableAnimations) {
       _edgeController.stop(canceled: true);
       _edgeController.value = target;
@@ -646,7 +652,9 @@ class _BottomBarState extends State<BottomBar>
       final inner = owns(nested.innerController)
           ? [position]
           : owns(nested.outerController)
-          ? nested.innerController.positions
+          ? nested.innerController.positions.where(
+              ScrollNotificationDispatcher.isPositionVisible,
+            )
           : null;
       if (inner != null) {
         return [
