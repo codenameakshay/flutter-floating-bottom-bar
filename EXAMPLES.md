@@ -3,6 +3,9 @@
 Runnable demos live under `example/lib/demos/`. This file keeps the docs-side
 snippets short, current, and directly compilable.
 
+Moving from another bottom bar? See the
+[migration guides](./docs/migrate/README.md).
+
 Run the demo app:
 
 ```bash

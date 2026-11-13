@@ -786,6 +786,14 @@ and `iconSize` apply to icons in the pieces.
 
 Try the [groups demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/groups) live.
 
+## Migrating from another bar
+
+The [migration guides](./docs/migrate/README.md) move an existing bottom bar
+to this package. Each one has before and after code, a property mapping and
+the behaviour differences. They cover Flutter's `BottomNavigationBar` and
+`NavigationBar`, `google_nav_bar`, `convex_bottom_bar`, `salomon_bottom_bar`,
+`persistent_bottom_nav_bar_v2` and `animated_bottom_navigation_bar`.
+
 ## Migration from v1.x
 
 | v1.x | v2.x | Migration |

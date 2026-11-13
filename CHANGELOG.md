@@ -5,6 +5,12 @@
   least as wide, uses the bar's surface and hides with it. Add
   `BottomBarLayout.groupSpacing` for the gap, default 8, and lerp it. A narrow
   row narrows the pill first, then its items scroll. Gaps pass taps through.
+- Add migration guides in `docs/migrate/` from Flutter's
+  `BottomNavigationBar` and `NavigationBar`, `google_nav_bar`,
+  `convex_bottom_bar`, `salomon_bottom_bar`, `persistent_bottom_nav_bar_v2`
+  and `animated_bottom_navigation_bar`. Each has before and after code, a
+  property mapping and the behaviour differences. The after code lives in
+  `example/lib/migrate/`, and a test keeps the guides in sync with it.
 
 ## 3.1.0
 
