@@ -1,8 +1,10 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
+import '../widgets/bottom_bar_surface.dart';
 import 'bar_outline.dart';
 
 /// Paints the bar's decoration through its [BarOutline] and hosts a raised
@@ -12,13 +14,43 @@ import 'bar_outline.dart';
 /// bar's top edge counts in the bar's footprint: it hit-tests, it sits inside
 /// semantics and focus exclusion, and [BottomBarScope.barHeight] includes it.
 class BarSurface extends SingleChildRenderObjectWidget {
-  const BarSurface({super.key, this.decoration, super.child});
+  const BarSurface({
+    super.key,
+    this.decoration,
+    this.surface,
+    this.visibility,
+    this.fades = false,
+    this.backdropKey,
+    super.child,
+  });
 
+  /// Painted when [surface] is null. Its radius shapes the outline either way.
   final BoxDecoration? decoration;
+
+  /// Paints the bar instead of [decoration]'s fill, border and shadows. Its
+  /// colours are already resolved against the theme.
+  final BottomBarSurface? surface;
+
+  /// The bar's show progress. At 0 or below the bar is hidden and its glass
+  /// reads no backdrop.
+  final Animation<double>? visibility;
+
+  /// Whether the bar fades itself by [visibility] instead of sitting inside a
+  /// fade transition. A backdrop blur inside an opacity layer has no backdrop
+  /// to read on Impeller, so the glass fades by scaling its blur instead.
+  final bool fades;
+
+  /// Shares one backdrop read with other glass that uses the same key and
+  /// does not overlap the bar.
+  final BackdropKey? backdropKey;
 
   @override
   RenderBarSurface createRenderObject(BuildContext context) => RenderBarSurface(
     decoration: decoration,
+    surface: surface,
+    visibility: visibility,
+    fades: fades,
+    backdropKey: backdropKey,
     configuration: createLocalImageConfiguration(context),
   );
 
@@ -26,13 +58,31 @@ class BarSurface extends SingleChildRenderObjectWidget {
   void updateRenderObject(BuildContext context, RenderBarSurface renderObject) {
     renderObject
       ..decoration = decoration
+      ..surface = surface
+      ..visibility = visibility
+      ..fades = fades
+      ..backdropKey = backdropKey
       ..configuration = createLocalImageConfiguration(context);
   }
 }
 
 class RenderBarSurface extends RenderShiftedBox {
-  RenderBarSurface({this._decoration, required this._configuration})
-    : super(null);
+  RenderBarSurface({
+    this._decoration,
+    this._surface,
+    this._visibility,
+    this._fades = false,
+    this._backdropKey,
+    required this._configuration,
+  }) : super(null);
+
+  @override
+  set child(RenderBox? value) {
+    if (identical(value, child)) return;
+    super.child = value;
+    _surfaceChanged();
+    if (value == null) _opacityLayer.layer = null;
+  }
 
   BoxDecoration? _decoration;
   set decoration(BoxDecoration? value) {
@@ -47,6 +97,77 @@ class RenderBarSurface extends RenderShiftedBox {
     _configuration = value;
     markNeedsPaint();
   }
+
+  BottomBarSurface? _surface;
+  set surface(BottomBarSurface? value) {
+    if (value == _surface) return;
+    _surface = value;
+    if (value == null) _opacityLayer.layer = null;
+    _surfaceChanged();
+    markNeedsPaint();
+  }
+
+  Animation<double>? _visibility;
+  set visibility(Animation<double>? value) {
+    if (identical(value, _visibility)) return;
+    if (attached) _visibility?.removeListener(_visibilityChanged);
+    _visibility = value;
+    if (attached) value?.addListener(_visibilityChanged);
+    _surfaceChanged();
+    if (_fades) markNeedsPaint();
+  }
+
+  bool _fades;
+  set fades(bool value) {
+    if (value == _fades) return;
+    _fades = value;
+    if (!value) _opacityLayer.layer = null;
+    _surfaceChanged();
+    markNeedsPaint();
+  }
+
+  double get _opacity =>
+      _fades ? (_visibility?.value ?? 1).clamp(0.0, 1.0) : 1.0;
+
+  void _visibilityChanged() {
+    if (_fades) markNeedsPaint();
+    _surfaceChanged();
+  }
+
+  BackdropKey? _backdropKey;
+  set backdropKey(BackdropKey? value) {
+    if (value == _backdropKey) return;
+    _backdropKey = value;
+    markNeedsPaint();
+  }
+
+  bool get _blurs =>
+      child != null &&
+      (_surface?.blur ?? 0) > 0 &&
+      (_visibility?.value ?? 1) > 0;
+
+  // Non-fading glass repaints only when its backdrop turns on or off.
+  bool _composited = false;
+  void _surfaceChanged() {
+    if (!_blurs) {
+      _clipLayer.layer = null;
+      _backdropLayer.layer = null;
+    }
+    if (_opacity == 0 || _opacity == 1) _opacityLayer.layer = null;
+    if (alwaysNeedsCompositing == _composited) return;
+    _composited = alwaysNeedsCompositing;
+    markNeedsCompositingBitsUpdate();
+    markNeedsPaint();
+  }
+
+  @override
+  bool get alwaysNeedsCompositing =>
+      _blurs ||
+      (_surface != null && child != null && _opacity > 0 && _opacity < 1);
+
+  final _clipLayer = LayerHandle<ClipPathLayer>();
+  final _backdropLayer = LayerHandle<BackdropFilterLayer>();
+  final _opacityLayer = LayerHandle<OpacityLayer>();
 
   final List<RenderCenterActionSlot> _actions = [];
   RenderCenterActionSlot? _action;
@@ -99,10 +220,11 @@ class RenderBarSurface extends RenderShiftedBox {
         radius: diameter / 2,
       );
     }
+    final surface = _surface;
     return BarOutline(
       borderRadius: decoration?.borderRadius ?? BorderRadius.zero,
       notch: notch,
-      border: decoration?.border,
+      border: surface != null ? surface.border : decoration?.border,
     );
   }
 
@@ -123,7 +245,19 @@ class RenderBarSurface extends RenderShiftedBox {
   }
 
   @override
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    _visibility?.addListener(_visibilityChanged);
+    _surfaceChanged();
+    if (_fades) markNeedsPaint();
+  }
+
+  @override
   void detach() {
+    _visibility?.removeListener(_visibilityChanged);
+    _clipLayer.layer = null;
+    _backdropLayer.layer = null;
+    _opacityLayer.layer = null;
     _painter?.dispose();
     _painter = null;
     _paintedDecoration = null;
@@ -133,6 +267,9 @@ class RenderBarSurface extends RenderShiftedBox {
   @override
   void dispose() {
     _painter?.dispose();
+    _clipLayer.layer = null;
+    _backdropLayer.layer = null;
+    _opacityLayer.layer = null;
     super.dispose();
   }
 
@@ -191,6 +328,32 @@ class RenderBarSurface extends RenderShiftedBox {
 
   @override
   void paint(PaintingContext context, Offset offset) {
+    final surface = _surface;
+    if (surface == null || child == null || !_blurs) {
+      _clipLayer.layer = null;
+      _backdropLayer.layer = null;
+    }
+    if (surface != null && child != null) {
+      final opacity = _opacity;
+      if (opacity == 0) {
+        _opacityLayer.layer = null;
+        return;
+      }
+      _paintSurface(context, offset, surface, opacity);
+      if (opacity < 1) {
+        _opacityLayer.layer = context.pushOpacity(
+          offset,
+          (opacity * 255).round(),
+          super.paint,
+          oldLayer: _opacityLayer.layer,
+        );
+      } else {
+        _opacityLayer.layer = null;
+        super.paint(context, offset);
+      }
+      return;
+    }
+    _opacityLayer.layer = null;
     final decoration = _decoration;
     if (decoration != null && child != null) {
       final paintable = _paintable(decoration);
@@ -208,6 +371,161 @@ class RenderBarSurface extends RenderShiftedBox {
       if (decoration.isComplex) context.setIsComplexHint();
     }
     super.paint(context, offset);
+  }
+
+  // The blurred backdrop clipped to the outline, then the fill,
+  // edge highlight and border. The child paints on top, outside the clip, so
+  // a raised action is never cut.
+  void _paintSurface(
+    PaintingContext context,
+    Offset offset,
+    BottomBarSurface surface,
+    double opacity,
+  ) {
+    final outline = this.outline;
+    final rect = _barRect;
+    final textDirection = _configuration.textDirection;
+    final path = outline.getOuterPath(rect, textDirection: textDirection);
+    void faded(Canvas canvas, Rect bounds, VoidCallback paint) {
+      if (opacity == 1) return paint();
+      canvas.saveLayer(
+        bounds,
+        Paint()..color = Color.fromRGBO(0, 0, 0, opacity),
+      );
+      paint();
+      canvas.restore();
+    }
+
+    void paintFill(PaintingContext context, Offset offset) =>
+        faded(context.canvas, rect.shift(offset).inflate(1), () {
+          final canvas = context.canvas;
+          final shifted = rect.shift(offset);
+          final shape = path.shift(offset);
+          final tint = surface.tint;
+          if (tint != null) {
+            canvas.drawPath(
+              shape,
+              Paint()
+                ..color = tint.withValues(alpha: tint.a * surface.fillOpacity),
+            );
+          }
+          final gradient = surface.gradient;
+          if (gradient != null) {
+            canvas.drawPath(
+              shape,
+              Paint()
+                ..shader = gradient.createShader(
+                  shifted,
+                  textDirection: textDirection,
+                )
+                ..color = Color.fromRGBO(0, 0, 0, surface.fillOpacity),
+            );
+          }
+          final highlight = surface.edgeHighlight;
+          if (highlight != null && highlight.a > 0) {
+            // A 2px stroke clipped to the inside leaves 1px along the edge.
+            canvas
+              ..save()
+              ..clipPath(shape)
+              ..drawPath(
+                shape,
+                Paint()
+                  ..style = PaintingStyle.stroke
+                  ..strokeWidth = 2
+                  ..shader = LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [highlight, highlight.withValues(alpha: 0)],
+                    stops: const [0, 0.6],
+                  ).createShader(shifted),
+              )
+              ..restore();
+          }
+          outline.paint(canvas, shifted, textDirection: textDirection);
+        });
+
+    if (!_blurs) {
+      paintFill(context, offset);
+    } else {
+      final backdrop = _backdropLayer.layer ??= BackdropFilterLayer();
+      backdrop
+        ..filter = _filter(surface, opacity)
+        ..backdropKey = _backdropKey;
+      _clipLayer.layer = context.pushClipPath(
+        needsCompositing,
+        offset,
+        rect,
+        path,
+        (context, offset) => context.pushLayer(backdrop, paintFill, offset),
+        oldLayer: _clipLayer.layer,
+      );
+    }
+    // Exterior shadows must not become part of the backdrop being blurred.
+    faded(
+      context.canvas,
+      Rect.largest,
+      () => _paintShadows(context.canvas, offset, rect, outline, path, surface),
+    );
+  }
+
+  // A fading bar scales its blur and saturation toward none.
+  static ui.ImageFilter _filter(BottomBarSurface surface, double opacity) {
+    final sigma = surface.blur * opacity;
+    final blur = ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma);
+    final s = 1 + (surface.saturation - 1) * opacity;
+    if (s == 1) return blur;
+    final r = 0.2126 * (1 - s), g = 0.7152 * (1 - s), b = 0.0722 * (1 - s);
+    return ui.ImageFilter.compose(
+      outer: ColorFilter.matrix([
+        r + s, g, b, 0, 0, //
+        r, g + s, b, 0, 0, //
+        r, g, b + s, 0, 0, //
+        0, 0, 0, 1, 0, //
+      ]),
+      inner: blur,
+    );
+  }
+
+  // Clipped to the outside of the outline, so a translucent fill never shows
+  // the shadow through it.
+  void _paintShadows(
+    Canvas canvas,
+    Offset offset,
+    Rect rect,
+    BarOutline outline,
+    Path path,
+    BottomBarSurface surface,
+  ) {
+    final shadows = surface.shadows;
+    if (shadows == null || shadows.isEmpty) return;
+    final reach = shadows.fold<double>(
+      0,
+      (reach, shadow) => math.max(
+        reach,
+        shadow.blurRadius * 2 +
+            shadow.spreadRadius.abs() +
+            shadow.offset.distance,
+      ),
+    );
+    final shifted = rect.shift(offset);
+    canvas
+      ..save()
+      ..clipPath(
+        Path()
+          ..fillType = PathFillType.evenOdd
+          ..addRect(shifted.inflate(reach + 1))
+          ..addPath(path, offset),
+      );
+    for (final shadow in shadows) {
+      canvas.drawPath(
+        outline.getOuterPath(
+          shifted.shift(shadow.offset).inflate(shadow.spreadRadius),
+          textDirection: _configuration.textDirection,
+        ),
+        shadow.toPaint(),
+      );
+    }
+    canvas.restore();
   }
 
   bool _actionAllowsHit(Offset position) {

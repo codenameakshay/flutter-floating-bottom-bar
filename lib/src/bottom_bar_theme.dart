@@ -6,6 +6,7 @@ import 'config/bottom_bar_layout.dart';
 import 'config/bottom_bar_motion.dart';
 import 'config/bottom_bar_scroll_behavior.dart';
 import 'widgets/bottom_bar_item_theme.dart';
+import 'widgets/bottom_bar_surface.dart';
 
 /// App-wide defaults for [BottomBar].
 ///
@@ -40,6 +41,7 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
     this.motion,
     this.scrollBehavior,
     this.items,
+    this.surface,
   });
 
   /// Decoration applied to the floating bar's outer container.
@@ -78,6 +80,14 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
   /// outside a [BottomBar] read the `ThemeData.extensions` value.
   final BottomBarItemThemeData? items;
 
+  /// How the bar's surface paints, such as [BottomBarSurface.glass].
+  ///
+  /// When set, it paints the bar instead of the fill, gradient, image, border
+  /// and shadows of [barDecoration]. The corner radius still comes from
+  /// [BottomBarLayout.borderRadius] when a layout is given, else from
+  /// [barDecoration]. Null paints [barDecoration] as before.
+  final BottomBarSurface? surface;
+
   /// Returns a new theme where non-null fields of [other] override fields of
   /// `this`. Null fields of [other] preserve `this`. [items] merges field by
   /// field.
@@ -92,6 +102,7 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
       motion: other.motion ?? motion,
       scrollBehavior: other.scrollBehavior ?? scrollBehavior,
       items: items?.merge(other.items) ?? other.items,
+      surface: other.surface ?? surface,
     );
   }
 
@@ -107,6 +118,7 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
     BottomBarMotion? motion,
     BottomBarScrollBehavior? scrollBehavior,
     BottomBarItemThemeData? items,
+    BottomBarSurface? surface,
   }) {
     return BottomBarThemeData(
       barDecoration: barDecoration ?? this.barDecoration,
@@ -117,6 +129,7 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
       motion: motion ?? this.motion,
       scrollBehavior: scrollBehavior ?? this.scrollBehavior,
       items: items ?? this.items,
+      surface: surface ?? this.surface,
     );
   }
 
@@ -125,7 +138,8 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
   /// Decoration fields use [BoxDecoration.lerp]. Numeric fields use standard
   /// linear interpolation. Config objects ([layout], [motion], [scrollBehavior])
   /// step at `t == 0.5` — `this` for `t < 0.5`, [other] for `t >= 0.5`.
-  /// [items] uses [BottomBarItemThemeData.lerp].
+  /// [items] uses [BottomBarItemThemeData.lerp] and [surface] uses
+  /// [BottomBarSurface.lerp].
   @override
   BottomBarThemeData lerp(
     covariant ThemeExtension<BottomBarThemeData>? other,
@@ -146,6 +160,7 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
       motion: t < 0.5 ? motion : other.motion,
       scrollBehavior: t < 0.5 ? scrollBehavior : other.scrollBehavior,
       items: BottomBarItemThemeData.lerp(items, other.items, t),
+      surface: BottomBarSurface.lerp(surface, other.surface, t),
     );
   }
 }
