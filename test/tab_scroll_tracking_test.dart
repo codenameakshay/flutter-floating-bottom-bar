@@ -369,6 +369,92 @@ void main() {
     });
   }
 
+  testWidgets(
+    'the bar follows a page once it looks still, before the iOS spring ends',
+    (tester) async {
+      final controller = BottomBarController();
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        _app(host: _Host.pageView, controller: controller),
+      );
+      await tester.pumpAndSettle();
+      await _scrollDown(tester, 0);
+      expect(controller.isVisible, isFalse);
+
+      final host = _tabs.currentState!.pages.position;
+      final width = tester.getSize(find.byType(_Tabs)).width;
+      await tester.flingFrom(
+        const Offset(400, 300),
+        Offset(-width * 0.6, 0),
+        800,
+      );
+      Duration? shown;
+      Duration? stopped;
+      for (
+        var t = Duration.zero;
+        stopped == null;
+        t += const Duration(milliseconds: 16)
+      ) {
+        await tester.pump(const Duration(milliseconds: 16));
+        if (controller.isVisible) shown ??= t;
+        if (!host.isScrollingNotifier.value) stopped = t;
+      }
+      expect(host.pixels, width);
+      expect(shown, isNotNull);
+      expect(
+        stopped - shown!,
+        greaterThan(const Duration(milliseconds: 200)),
+        reason: 'shown when the page looks still, not when the spring ends',
+      );
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+  );
+
+  testWidgets('a fast page animation does not land on the page it passes', (
+    tester,
+  ) async {
+    final controller = BottomBarController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      _app(
+        host: _Host.pageView,
+        controller: controller,
+        scrollBehavior: _restore,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _select(tester, 1);
+    controller.hide();
+    await tester.pumpAndSettle();
+    await _select(tester, 0);
+    expect(
+      controller.isVisible,
+      isTrue,
+      reason: 'tab 0 gets its own state back',
+    );
+
+    final hidden = <bool>[];
+    void record() => hidden.add(!controller.isVisible);
+    controller.addListener(record);
+    addTearDown(() => controller.removeListener(record));
+    final pages = _tabs.currentState!.pages;
+    final width = pages.position.viewportDimension;
+    pages.animateToPage(
+      2,
+      duration: Duration(milliseconds: (width * 2 / 5).round()),
+      curve: Curves.linear,
+    );
+    var crossed = false;
+    while (pages.position.isScrollingNotifier.value || !crossed) {
+      await tester.pump(const Duration(milliseconds: 16));
+      crossed |= (pages.position.pixels - width).abs() < 8;
+    }
+    await tester.pumpAndSettle();
+    expect(crossed, isTrue, reason: 'a frame landed on page 1 mid-flight');
+    expect(hidden, isNot(contains(true)), reason: 'page 1 never took over');
+    expect(find.text('2:0'), findsOneWidget);
+  });
+
   testWidgets('pushing a route whose list sits in a Visibility is not a tab '
       'change', (tester) async {
     final controller = BottomBarController();

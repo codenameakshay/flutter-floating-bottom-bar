@@ -133,6 +133,7 @@ class _TabsDemoPageState extends State<TabsDemoPage>
                 SizedBox(
                   width: double.infinity,
                   child: SegmentedButton<_Host>(
+                    showSelectedIcon: false,
                     segments: [
                       for (final host in _Host.values)
                         ButtonSegment<_Host>(

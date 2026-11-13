@@ -1,6 +1,7 @@
 import 'dart:collection';
 
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
 /// The tab a list sits in: its nearest [IndexedStack] with the index shown,
@@ -144,11 +145,12 @@ class ScrollNotificationDispatcher {
   /// [ScrollPosition] that is a [PageMetrics], as in [PageView] and
   /// `TabBarView`.
   ///
-  /// [moving] is true while any page host above is scrolling. Otherwise
+  /// [moving] is true while any page host above is scrolling, unless it is
+  /// gliding the last pixel into a page (see [_isLanding]). Otherwise
   /// [inView] is true when the list belongs to the selected page and is shown
   /// in full by every page host above it. [tab] is the nearest [ScrollTab]
   /// above the list.
-  static ({bool moving, bool inView, ScrollTab? tab}) _pagePlacement(
+  ({bool moving, bool inView, ScrollTab? tab}) _pagePlacement(
     ScrollPosition position,
   ) {
     final list = position.context.storageContext;
@@ -167,16 +169,25 @@ class ScrollNotificationDispatcher {
       if (host is! ScrollableState) return true;
       final hostPosition = host.position;
       if (hostPosition is! PageMetrics) return true;
-      if (hostPosition.isScrollingNotifier.value) {
+      final metrics = hostPosition as PageMetrics;
+      final landing =
+          hostPosition.isScrollingNotifier.value &&
+          _isLanding(hostPosition, metrics);
+      if (hostPosition.isScrollingNotifier.value && !landing) {
         moving = true;
         return false;
       }
-      final metrics = hostPosition as PageMetrics;
       final page = metrics.page;
       final hostIndex = pageHostIndex++;
       if (page != null) {
         final item = _pageIndex(list, hostIndex);
-        inView &= item == page.round() && _showsInFull(host, list);
+        inView &=
+            item == page.round() &&
+            _showsInFull(
+              host,
+              list,
+              tolerance: landing ? _landingDistance : _pageTolerance,
+            );
         tab ??= (hostPosition, item ?? page.round());
       } else {
         inView = false;
@@ -211,9 +222,48 @@ class ScrollNotificationDispatcher {
   /// Content this close to a page host's edge still counts as inside it.
   static const double _pageTolerance = 1;
 
+  /// A page host within this many logical pixels of a page, and slower than
+  /// [_landingSpeed] logical pixels per second, has landed on that page.
+  static const double _landingDistance = 8;
+  static const double _landingSpeed = 100;
+
+  final Expando<({Duration time, double pixels, double speed})> _hostMotion =
+      Expando();
+
+  /// Whether [host] is gliding the last few pixels into a page. An iOS page
+  /// spring reports scrolling for a few hundred milliseconds after the page
+  /// looks still, and a touch on it restarts that tail. A host passing a page
+  /// mid-flight is too fast to count. Speed comes from one sample per frame.
+  bool _isLanding(ScrollPosition host, PageMetrics metrics) {
+    final now = SchedulerBinding.instance.currentSystemFrameTimeStamp;
+    final last = _hostMotion[host];
+    var speed = double.infinity;
+    if (last != null) {
+      final seconds =
+          (now - last.time).inMicroseconds / Duration.microsecondsPerSecond;
+      speed = seconds > 0
+          ? (host.pixels - last.pixels).abs() / seconds
+          : last.speed;
+    }
+    if (last == null || last.time != now) {
+      _hostMotion[host] = (time: now, pixels: host.pixels, speed: speed);
+    }
+    final page = metrics.page;
+    if (page == null) return false;
+    final offset =
+        (page - page.round()).abs() *
+        host.viewportDimension *
+        metrics.viewportFraction;
+    return offset <= _landingDistance && speed <= _landingSpeed;
+  }
+
   /// Whether [list] lies inside [host]'s viewport along [host]'s axis.
   /// A kept-alive page that is off screen paints with a zero transform.
-  static bool _showsInFull(ScrollableState host, BuildContext list) {
+  static bool _showsInFull(
+    ScrollableState host,
+    BuildContext list, {
+    required double tolerance,
+  }) {
     final hostBox = host.context.findRenderObject();
     final listBox = list.findRenderObject();
     if (hostBox is! RenderBox ||
@@ -232,17 +282,15 @@ class ScrollNotificationDispatcher {
     final size = hostBox.size;
     return switch (host.position.axis) {
       Axis.horizontal =>
-        rect.left >= -_pageTolerance &&
-            rect.right <= size.width + _pageTolerance,
+        rect.left >= -tolerance && rect.right <= size.width + tolerance,
       Axis.vertical =>
-        rect.top >= -_pageTolerance &&
-            rect.bottom <= size.height + _pageTolerance,
+        rect.top >= -tolerance && rect.bottom <= size.height + tolerance,
     };
   }
 
   /// Whether a scroll of [position] may drive the bar: its list is visible
   /// and on the settled page in view.
-  static bool _drives(ScrollPosition position) {
+  bool _drives(ScrollPosition position) {
     if (!isPositionVisible(position)) return false;
     final page = _pagePlacement(position);
     return !page.moving && page.inView;
