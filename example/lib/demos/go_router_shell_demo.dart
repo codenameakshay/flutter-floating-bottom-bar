@@ -184,6 +184,10 @@ class _ScaffoldWithBottomBarState extends State<ScaffoldWithBottomBar> {
             offset: 16,
             borderRadius: BorderRadius.all(Radius.circular(28)),
           ),
+          // Profile clears its bar at the list end, so the bar stays to show it.
+          scrollBehavior: BottomBarScrollBehavior(
+            hideOnScroll: shell.currentIndex != 3,
+          ),
           theme: BottomBarThemeData(
             barDecoration: BoxDecoration(
               color: Colors.white,
@@ -196,7 +200,7 @@ class _ScaffoldWithBottomBarState extends State<ScaffoldWithBottomBar> {
                 ),
               ],
             ),
-            scrollEdgeSurface: shell.currentIndex == 0
+            scrollEdgeSurface: shell.currentIndex == 3
                 ? const BottomBarSurface(fillOpacity: 0)
                 : null,
           ),

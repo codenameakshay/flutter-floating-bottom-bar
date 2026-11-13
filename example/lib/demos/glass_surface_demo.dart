@@ -116,7 +116,7 @@ class _GlassSurfaceDemoPageState extends State<GlassSurfaceDemoPage> {
               valueListenable: BottomBarScope.of(context).barHeight,
               builder: (context, barHeight, _) => ListView.builder(
                 padding: EdgeInsets.only(bottom: barHeight),
-                itemCount: _shortList ? 3 : 61,
+                itemCount: _shortList ? 1 : 61,
                 itemBuilder: (context, index) =>
                     index == 0 ? _buildControls() : _FeedTile(index: index - 1),
               ),
