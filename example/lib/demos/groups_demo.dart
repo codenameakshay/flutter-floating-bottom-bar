@@ -69,11 +69,15 @@ class _GroupsDemoPageState extends State<GroupsDemoPage> {
                 ? const BottomBarSurface.glass()
                 : const BottomBarSurface.solid(),
           ),
-          body: BottomBarBodyPadding(
-            child: ListView.builder(
-              itemCount: 61,
-              itemBuilder: (context, index) =>
-                  index == 0 ? _buildControls() : _FeedTile(index: index - 1),
+          body: Builder(
+            builder: (context) => ValueListenableBuilder<double>(
+              valueListenable: BottomBarScope.of(context).barHeight,
+              builder: (context, barHeight, _) => ListView.builder(
+                padding: EdgeInsets.only(bottom: barHeight),
+                itemCount: 61,
+                itemBuilder: (context, index) =>
+                    index == 0 ? _buildControls() : _FeedTile(index: index - 1),
+              ),
             ),
           ),
           leading: _leading
