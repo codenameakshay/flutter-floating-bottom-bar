@@ -1,5 +1,11 @@
 ## Unreleased
 
+- Add `BottomBar.leading` and `BottomBar.trailing`, detached pieces beside the
+  pill like the iOS 26 split tab bar. Each piece is as tall as the bar and at
+  least as wide, uses the bar's surface and hides with it. Add
+  `BottomBarLayout.groupSpacing` for the gap, default 8, and lerp it. A narrow
+  row narrows the pill first, then its items scroll. Gaps pass taps through.
+
 ## 3.1.0
 
 ### Selection and indicator

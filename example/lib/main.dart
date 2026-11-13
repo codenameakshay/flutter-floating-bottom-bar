@@ -8,6 +8,7 @@ import 'demos/center_action_demo.dart';
 import 'demos/custom_transition_demo.dart';
 import 'demos/glass_surface_demo.dart';
 import 'demos/go_router_shell_demo.dart';
+import 'demos/groups_demo.dart';
 import 'demos/indicators_demo.dart';
 import 'demos/issues_dock_demo.dart';
 import 'demos/item_theme_demo.dart';
@@ -77,6 +78,7 @@ final demos = <({String slug, String title, WidgetBuilder builder})>[
     title: 'Glass surface',
     builder: (_) => const GlassSurfaceDemoPage(),
   ),
+  (slug: 'groups', title: 'Groups', builder: (_) => const GroupsDemoPage()),
 ];
 
 class ExampleApp extends StatelessWidget {

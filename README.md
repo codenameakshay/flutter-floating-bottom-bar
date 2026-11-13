@@ -97,7 +97,10 @@ into your Claude skills directory.
 
 ```dart
 BottomBar(
-  layout: const BottomBarLayout.adaptive(maxWidth: 420),
+  layout: const BottomBarLayout.adaptive(
+    maxWidth: 420,
+    borderRadius: BorderRadius.all(Radius.circular(999)),
+  ),
   body: BottomBarBodyPadding(
     padding: const EdgeInsets.only(top: 24),
     child: ListView.builder(
@@ -731,6 +734,57 @@ When `surface` is null, the bar blends from the fill, gradient, border and
 shadows of `barDecoration`, and drops its image.
 
 High contrast paints the opaque fallback in both states.
+
+### Groups
+
+iOS 26's split tab bar puts the tabs in one pill and sets a search circle and a
+profile button apart from it. `BottomBar.leading` and `BottomBar.trailing` do
+the same. Each piece is as tall as the bar, at least as wide, and has the bar's
+corner radius, so a capsule bar gets round pieces. The pill takes the width
+that is left.
+
+```dart
+BottomBar(
+  layout: const BottomBarLayout.adaptive(
+    maxWidth: 420,
+    borderRadius: BorderRadius.all(Radius.circular(999)),
+  ),
+  body: const BottomBarBodyPadding(child: Placeholder()),
+  leading: IconButton(
+    tooltip: 'Profile',
+    icon: const CircleAvatar(radius: 16, child: Text('JD')),
+    onPressed: () {},
+  ),
+  trailing: IconButton(
+    tooltip: 'Search',
+    icon: const Icon(Icons.search),
+    onPressed: () {},
+  ),
+  child: BottomBarItems(
+    selectedIndex: index,
+    onSelected: (i) => setState(() => index = i),
+    children: [
+      BottomBarItem(icon: const Icon(Icons.home), label: const Text('Home')),
+      BottomBarItem(icon: const Icon(Icons.inbox), label: const Text('Inbox')),
+    ],
+  ),
+)
+```
+
+The pieces use the bar's surface, so glass stays glass. They hide and show with
+the bar. Taps in the gaps reach the content under the bar.
+
+`BottomBarLayout.groupSpacing` sets the gap between the pill and each piece. It
+defaults to `8`.
+
+When the row is too narrow, the pieces keep their size. The pill narrows
+first, and its items scroll. If the pieces alone do not fit, the row overflows
+at its end.
+
+Wrap a child in `Center` to keep its own size. `BottomBarItemThemeData.color`
+and `iconSize` apply to icons in the pieces.
+
+Try the [groups demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/groups) live.
 
 ## Migration from v1.x
 
