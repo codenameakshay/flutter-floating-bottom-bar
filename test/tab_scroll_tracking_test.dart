@@ -369,6 +369,49 @@ void main() {
     });
   }
 
+  testWidgets('pushing a route whose list sits in a Visibility is not a tab '
+      'change', (tester) async {
+    final controller = BottomBarController();
+    addTearDown(controller.dispose);
+    final navigator = GlobalKey<NavigatorState>();
+    Widget page(String name) => Visibility(
+      child: ListView.builder(
+        key: ValueKey(name),
+        itemCount: 60,
+        itemBuilder: (_, row) =>
+            SizedBox(height: 50, child: Text('$name $row')),
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: BottomBar(
+            controller: controller,
+            body: Navigator(
+              key: navigator,
+              onGenerateRoute: (_) =>
+                  MaterialPageRoute<void>(builder: (_) => page('root')),
+            ),
+            child: const SizedBox(height: 56, width: 300),
+          ),
+        ),
+      ),
+    );
+    await tester.drag(
+      find.byKey(const ValueKey('root')),
+      const Offset(0, -300),
+    );
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isFalse);
+
+    navigator.currentState!.push(
+      MaterialPageRoute<void>(builder: (_) => page('detail')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('detail 0'), findsOneWidget);
+    expect(controller.isVisible, isFalse);
+  });
+
   testWidgets('scrollToStart with no list in the body returns quietly', (
     tester,
   ) async {

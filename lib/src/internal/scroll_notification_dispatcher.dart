@@ -1,10 +1,10 @@
 import 'dart:collection';
 
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
-/// The tab a list sits in: the nearest [Visibility] above it with index 0
-/// (how [IndexedStack] hides inactive children), or the nearest page host
-/// with the page in view.
+/// The tab a list sits in: its nearest [IndexedStack] with the index shown,
+/// or the nearest page host with the page in view.
 typedef ScrollTab = (Object anchor, int index);
 
 typedef ActiveScrollable = ({
@@ -51,7 +51,7 @@ class ScrollNotificationDispatcher {
 
   _TrackedScrollState? _externalState;
 
-  ScrollTab? _tab;
+  (WeakReference<Object>, int)? _tab;
   final Expando<Map<int, bool>> _tabVisibility = Expando();
 
   /// The most recently scrolled scrollable that is still attached and in
@@ -70,7 +70,7 @@ class ScrollNotificationDispatcher {
   /// above it was still moving. While [paging], the page in view is not
   /// known yet, so callers should keep what they show.
   ({ActiveScrollable? active, bool paging}) resolve() {
-    ActiveScrollable? fallback;
+    final candidates = <({ActiveScrollable active, bool interacted})>[];
     var paging = false;
     for (final key in _trackedScrollables.keys.toList().reversed) {
       final state = _trackedScrollables[key]!;
@@ -94,10 +94,32 @@ class ScrollNotificationDispatcher {
       }
       if (!page.inView) continue;
       final active = (position: position, context: context, tab: page.tab);
-      if (state.interacted) return (active: active, paging: paging);
-      fallback ??= active;
+      candidates.add((active: active, interacted: state.interacted));
     }
-    return (active: fallback, paging: paging);
+    if (candidates.isEmpty) return (active: null, paging: paging);
+    var selected = candidates.firstWhere(
+      (candidate) => candidate.interacted,
+      orElse: () => candidates.first,
+    );
+    final nested = selected.active.context
+        .findAncestorStateOfType<NestedScrollViewState>();
+    final selectedIsOuter =
+        nested?.outerController.positions.any(
+          (candidate) => identical(candidate, selected.active.position),
+        ) ??
+        false;
+    if (selectedIsOuter && nested != null) {
+      for (final candidate in candidates) {
+        final isInner = nested.innerController.positions.any(
+          (position) => identical(position, candidate.active.position),
+        );
+        if (isInner) {
+          selected = candidate;
+          break;
+        }
+      }
+    }
+    return (active: selected.active, paging: paging);
   }
 
   /// Records [tab] as the tab the bar follows, with the bar at [barVisible].
@@ -106,24 +128,26 @@ class ScrollNotificationDispatcher {
   /// visibility the bar should take: `true`, or with [restoreTabVisibility]
   /// the visibility the bar had when it last left [tab].
   bool? enterTab(ScrollTab? tab, {required bool barVisible}) {
-    final previous = _tab;
+    final hadPrevious = _tab != null;
+    final anchor = _tab?.$1.target;
+    final previous = anchor == null ? null : (anchor, _tab!.$2);
     if (tab == null || tab == previous) return null;
-    _tab = tab;
-    if (previous == null) return null;
-    (_tabVisibility[previous.$1] ??= {})[previous.$2] = barVisible;
+    _tab = (WeakReference(tab.$1), tab.$2);
+    if (!hadPrevious) return null;
+    if (previous != null) {
+      (_tabVisibility[previous.$1] ??= {})[previous.$2] = barVisible;
+    }
     return !restoreTabVisibility || (_tabVisibility[tab.$1]?[tab.$2] ?? true);
   }
-
-  /// Content this close to a page host's edge still counts as inside it.
-  static const double _pageTolerance = 1;
 
   /// Where [position]'s list sits among the page hosts above it: a
   /// [ScrollPosition] that is a [PageMetrics], as in [PageView] and
   /// `TabBarView`.
   ///
   /// [moving] is true while any page host above is scrolling. Otherwise
-  /// [inView] is true when every page host shows the list in full along its
-  /// axis. [tab] is the nearest [ScrollTab] above the list.
+  /// [inView] is true when the list belongs to the selected page and is shown
+  /// in full by every page host above it. [tab] is the nearest [ScrollTab]
+  /// above the list.
   static ({bool moving, bool inView, ScrollTab? tab}) _pagePlacement(
     ScrollPosition position,
   ) {
@@ -131,10 +155,12 @@ class ScrollNotificationDispatcher {
     var moving = false;
     var inView = true;
     ScrollTab? tab;
+    var pageHostIndex = 0;
     list.visitAncestorElements((element) {
-      if (element.widget is Visibility) {
-        tab ??= (element, 0);
-        return true;
+      final widget = element.widget;
+      if (widget is IndexedStack) {
+        final index = widget.index;
+        if (index != null) tab ??= (element, index);
       }
       if (element is! StatefulElement) return true;
       final host = element.state;
@@ -145,13 +171,45 @@ class ScrollNotificationDispatcher {
         moving = true;
         return false;
       }
-      inView &= _showsInFull(host, list);
-      final page = (hostPosition as PageMetrics).page;
-      if (page != null) tab ??= (hostPosition, page.round());
+      final metrics = hostPosition as PageMetrics;
+      final page = metrics.page;
+      final hostIndex = pageHostIndex++;
+      if (page != null) {
+        final item = _pageIndex(list, hostIndex);
+        inView &= item == page.round() && _showsInFull(host, list);
+        tab ??= (hostPosition, item ?? page.round());
+      } else {
+        inView = false;
+      }
       return true;
     });
     return (moving: moving, inView: inView, tab: tab);
   }
+
+  /// Reads the child index stored by the page sliver, rather than inferring it
+  /// from geometry. A page may be fully visible alongside its neighbor when
+  /// `viewportFraction` is below one.
+  static int? _pageIndex(BuildContext list, int hostIndex) {
+    final listBox = list.findRenderObject();
+    if (listBox is! RenderBox || !listBox.attached) return null;
+    var pageHostIndex = 0;
+    for (
+      RenderObject child = listBox;
+      child.parent != null;
+      child = child.parent!
+    ) {
+      final parent = child.parent!;
+      if (parent is RenderSliverFillViewport) {
+        if (pageHostIndex++ != hostIndex) continue;
+        final data = child.parentData;
+        if (data is SliverMultiBoxAdaptorParentData) return data.index;
+      }
+    }
+    return null;
+  }
+
+  /// Content this close to a page host's edge still counts as inside it.
+  static const double _pageTolerance = 1;
 
   /// Whether [list] lies inside [host]'s viewport along [host]'s axis.
   /// A kept-alive page that is off screen paints with a zero transform.

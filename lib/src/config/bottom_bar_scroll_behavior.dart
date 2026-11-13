@@ -79,9 +79,9 @@ class BottomBarScrollBehavior {
   /// What happens to the bar's visibility when the active tab changes.
   ///
   /// The bar sees a tab change when the list it follows moves to another
-  /// tab: another [IndexedStack] child (or any tab hidden with
-  /// [Visibility]), or another page of a [PageView] or `TabBarView` once the
-  /// swipe settles. Pushing a route inside a tab is not a tab change.
+  /// tab: another [IndexedStack] child, or another page of a [PageView] or
+  /// `TabBarView` once the swipe settles. Pushing a route inside a tab is not
+  /// a tab change.
   ///
   /// [BottomBarTabVisibility.show] (the default) shows the bar.
   /// [BottomBarTabVisibility.restore] gives each tab back the visibility it

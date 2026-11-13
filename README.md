@@ -543,8 +543,8 @@ shell builder, or
 
 **Which list drives the bar.** The bar follows one vertical list at a time:
 
-- It must be visible. Lists in an inactive `IndexedStack` child (or any tab
-  hidden with `Visibility`), an `Offstage`, or a covered route do not count.
+- It must be visible. Lists in an inactive `IndexedStack` child, under a
+  hidden `Visibility` or an `Offstage`, or in a covered route do not count.
 - Inside a `PageView` or `TabBarView`, it must be on the page in view, shown
   in full. A neighbour page that peeks in, or a kept-alive page that was
   swiped away, does not count.
