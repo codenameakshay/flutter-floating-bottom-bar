@@ -76,6 +76,14 @@ class RenderBarSurface extends RenderShiftedBox {
     required this._configuration,
   }) : super(null);
 
+  @override
+  set child(RenderBox? value) {
+    if (identical(value, child)) return;
+    super.child = value;
+    _surfaceChanged();
+    if (value == null) _opacityLayer.layer = null;
+  }
+
   BoxDecoration? _decoration;
   set decoration(BoxDecoration? value) {
     if (value == _decoration) return;
@@ -94,7 +102,8 @@ class RenderBarSurface extends RenderShiftedBox {
   set surface(BottomBarSurface? value) {
     if (value == _surface) return;
     _surface = value;
-    _blursChanged();
+    if (value == null) _opacityLayer.layer = null;
+    _surfaceChanged();
     markNeedsPaint();
   }
 
@@ -104,13 +113,16 @@ class RenderBarSurface extends RenderShiftedBox {
     if (attached) _visibility?.removeListener(_visibilityChanged);
     _visibility = value;
     if (attached) value?.addListener(_visibilityChanged);
-    _blursChanged();
+    _surfaceChanged();
+    if (_fades) markNeedsPaint();
   }
 
   bool _fades;
   set fades(bool value) {
     if (value == _fades) return;
     _fades = value;
+    if (!value) _opacityLayer.layer = null;
+    _surfaceChanged();
     markNeedsPaint();
   }
 
@@ -119,7 +131,7 @@ class RenderBarSurface extends RenderShiftedBox {
 
   void _visibilityChanged() {
     if (_fades) markNeedsPaint();
-    _blursChanged();
+    _surfaceChanged();
   }
 
   BackdropKey? _backdropKey;
@@ -134,17 +146,24 @@ class RenderBarSurface extends RenderShiftedBox {
       (_surface?.blur ?? 0) > 0 &&
       (_visibility?.value ?? 1) > 0;
 
-  // Repaints only when the glass turns on or off, not on every tick.
-  bool _blurred = false;
-  void _blursChanged() {
-    if (_blurs == _blurred) return;
-    _blurred = _blurs;
+  // Non-fading glass repaints only when its backdrop turns on or off.
+  bool _composited = false;
+  void _surfaceChanged() {
+    if (!_blurs) {
+      _clipLayer.layer = null;
+      _backdropLayer.layer = null;
+    }
+    if (_opacity == 0 || _opacity == 1) _opacityLayer.layer = null;
+    if (alwaysNeedsCompositing == _composited) return;
+    _composited = alwaysNeedsCompositing;
     markNeedsCompositingBitsUpdate();
     markNeedsPaint();
   }
 
   @override
-  bool get alwaysNeedsCompositing => _blurs;
+  bool get alwaysNeedsCompositing =>
+      _blurs ||
+      (_surface != null && child != null && _opacity > 0 && _opacity < 1);
 
   final _clipLayer = LayerHandle<ClipPathLayer>();
   final _backdropLayer = LayerHandle<BackdropFilterLayer>();
@@ -229,12 +248,16 @@ class RenderBarSurface extends RenderShiftedBox {
   void attach(PipelineOwner owner) {
     super.attach(owner);
     _visibility?.addListener(_visibilityChanged);
-    _blurred = _blurs;
+    _surfaceChanged();
+    if (_fades) markNeedsPaint();
   }
 
   @override
   void detach() {
     _visibility?.removeListener(_visibilityChanged);
+    _clipLayer.layer = null;
+    _backdropLayer.layer = null;
+    _opacityLayer.layer = null;
     _painter?.dispose();
     _painter = null;
     _paintedDecoration = null;
@@ -350,7 +373,7 @@ class RenderBarSurface extends RenderShiftedBox {
     super.paint(context, offset);
   }
 
-  // Shadows, then the blurred backdrop clipped to the outline, then the fill,
+  // The blurred backdrop clipped to the outline, then the fill,
   // edge highlight and border. The child paints on top, outside the clip, so
   // a raised action is never cut.
   void _paintSurface(
@@ -372,12 +395,6 @@ class RenderBarSurface extends RenderShiftedBox {
       paint();
       canvas.restore();
     }
-
-    faded(
-      context.canvas,
-      Rect.largest,
-      () => _paintShadows(context.canvas, offset, rect, outline, path, surface),
-    );
 
     void paintFill(PaintingContext context, Offset offset) =>
         faded(context.canvas, rect.shift(offset).inflate(1), () {
@@ -429,19 +446,25 @@ class RenderBarSurface extends RenderShiftedBox {
 
     if (!_blurs) {
       paintFill(context, offset);
-      return;
+    } else {
+      final backdrop = _backdropLayer.layer ??= BackdropFilterLayer();
+      backdrop
+        ..filter = _filter(surface, opacity)
+        ..backdropKey = _backdropKey;
+      _clipLayer.layer = context.pushClipPath(
+        needsCompositing,
+        offset,
+        rect,
+        path,
+        (context, offset) => context.pushLayer(backdrop, paintFill, offset),
+        oldLayer: _clipLayer.layer,
+      );
     }
-    final backdrop = _backdropLayer.layer ??= BackdropFilterLayer();
-    backdrop
-      ..filter = _filter(surface, opacity)
-      ..backdropKey = _backdropKey;
-    _clipLayer.layer = context.pushClipPath(
-      needsCompositing,
-      offset,
-      rect,
-      path,
-      (context, offset) => context.pushLayer(backdrop, paintFill, offset),
-      oldLayer: _clipLayer.layer,
+    // Exterior shadows must not become part of the backdrop being blurred.
+    faded(
+      context.canvas,
+      Rect.largest,
+      () => _paintShadows(context.canvas, offset, rect, outline, path, surface),
     );
   }
 

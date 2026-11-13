@@ -629,13 +629,14 @@ class _BottomBarState extends State<BottomBar>
             ),
           ),
         );
-        if (!animate) return bar;
+        final paintedBar = surface == null ? bar : RepaintBoundary(child: bar);
+        if (!animate) return paintedBar;
         return VisibilityAnimator(
           animation: _motionController,
           isVisible: _targetVisible,
           motion: _motion,
           fade: !fadesItself,
-          child: bar,
+          child: paintedBar,
         );
       },
     );
@@ -648,8 +649,9 @@ class _BottomBarState extends State<BottomBar>
     if (surface == null) return null;
     final fill = Theme.of(context).colorScheme.surfaceContainer;
     if (MediaQuery.highContrastOf(context)) {
+      final fallback = surface.fallbackColor ?? fill;
       return BottomBarSurface(
-        tint: surface.fallbackColor ?? fill,
+        tint: fallback.a == 1 ? fallback : fallback.withValues(alpha: 1),
         border: surface.border,
         shadows: surface.shadows,
       );
