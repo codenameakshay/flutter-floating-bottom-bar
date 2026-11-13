@@ -540,6 +540,51 @@ pops the tab, then goes Home, then leaves the app. See the
 shell builder, or
 [try it live](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/go-router-shell).
 
+### Tabs and pages
+
+`BottomBar` follows the active tab in an `IndexedStack`, a `PageView` or a
+`TabBarView` with no extra wiring.
+
+**Which list drives the bar.** The bar follows one vertical list at a time:
+
+- It must be visible. Lists in an inactive `IndexedStack` child, under a
+  hidden `Visibility` or an `Offstage`, or in a covered route do not count.
+- Inside a `PageView` or `TabBarView`, it must be on the page in view, shown
+  in full. A neighbour page that peeks in, or a kept-alive page that was
+  swiped away, does not count.
+- Of those, the list that scrolled last wins. Before any list scrolls, the
+  list that laid out last wins, so a fresh tab works at once.
+
+The horizontal page swipe never hides or shows the bar. While a page swipe is
+in progress, nothing under the moving pages drives the bar, and the bar keeps
+its target and its scroll edge surface. When the swipe settles, the page in
+view becomes the target for hide on scroll, `scrollToStart()`,
+`scrollToStartOnReselect`, the hidden back-to-top action and the scroll edge
+surface. The scroll edge surface reads the new tab's list on the first frame,
+with no transition and no scroll needed.
+
+**Tab changes.** The bar sees a tab change when the list it follows moves to
+another `IndexedStack` child or another settled page. Pushing a route inside
+a tab is not a tab change. `BottomBarScrollBehavior.visibilityOnTabChange`
+picks what happens:
+
+```dart
+BottomBar(
+  scrollBehavior: const BottomBarScrollBehavior(
+    // Default: BottomBarTabVisibility.show shows the bar on every tab change.
+    visibilityOnTabChange: BottomBarTabVisibility.restore,
+  ),
+  body: PageView(children: [inbox, starred, archive]),
+  child: items,
+)
+```
+
+With `restore`, each tab gets back the visibility it had when the user left
+it. A tab seen for the first time shows the bar. You no longer need to call
+`BottomBarController.show()` on a tab change. Remove that call if you use
+`restore`, because it would override the restored state.
+[Try it live](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/tabs).
+
 ### Centre action
 
 `BottomBarItems.centerAction` adds a primary button to the middle of the row,
@@ -994,6 +1039,7 @@ animating.
 | `showOnScrollEnd` | `bool` | `false` | Forces the bar visible when scrolling settles. |
 | `keepVisibleOnFocus` | `bool` | `true` | Skip scroll-hide while the floating child has focus. `BottomBarController.hide()` still hides it. |
 | `predicate` | `bool Function(ScrollNotification)?` | `null` | Skip notifications entirely when it returns false. |
+| `visibilityOnTabChange` | `BottomBarTabVisibility` | `show` | On a tab change, `show` shows the bar and `restore` gives the tab back the visibility it had when the user left it. See [Tabs and pages](#tabs-and-pages). |
 
 ### `BottomBarController`
 
@@ -1006,12 +1052,13 @@ animating.
 | `scrollToEnd()` | Scrolls the newest eligible scrollable to its maximum extent, then shows the bar. |
 | `reportScroll(delta: ...)` | Drives visibility from a source that doesn't emit `ScrollNotification`s (e.g. WebView). Visibility only; doesn't affect `scrollToStart`/`scrollToEnd`. |
 
-Boundary actions choose the most recently observed scrollable that still owns
-its position, has laid out, and is mounted and on stage. Disposed lists and
-scrollables hidden by `Visibility` or disabled `TickerMode` are skipped. The
-controller methods do nothing, including leaving bar visibility unchanged,
-when no eligible scrollable has been observed. They also report a `FlutterError`
-in debug mode.
+Boundary actions choose the most recently scrolled list that still owns its
+position, has laid out, and is mounted and on stage. Before any list scrolls,
+they choose the list that laid out last. Disposed lists, scrollables hidden by
+`Visibility` or disabled `TickerMode`, and pages of a `PageView` or
+`TabBarView` that are not in view are skipped. See
+[Tabs and pages](#tabs-and-pages). The controller methods do nothing,
+including leaving bar visibility unchanged, when there is no such list.
 
 `hide()` does not lock visibility. Later accepted scroll notifications can show
 the bar again, including when scrolling settles at the start unless `reverse`.

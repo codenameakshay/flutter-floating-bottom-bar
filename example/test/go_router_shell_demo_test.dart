@@ -185,6 +185,31 @@ void main() {
     }
   });
 
+  testWidgets('scrollToStart before any scroll scrolls the visible branch', (
+    tester,
+  ) async {
+    await _openShell(tester);
+    final bar = tester.widget<BottomBar>(find.byType(BottomBar)).controller!;
+    bar.scrollToStart();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull, reason: 'no list scrolled yet');
+
+    await _tapTab(tester, 'Search');
+    final position = tester
+        .state<ScrollableState>(
+          find.descendant(
+            of: find.byKey(const PageStorageKey<String>('Search')),
+            matching: find.byType(Scrollable),
+          ),
+        )
+        .position;
+    position.jumpTo(400);
+    bar.scrollToStart();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(position.pixels, 0);
+  });
+
   testWidgets('programmatic branch navigation shows the hidden bar', (
     tester,
   ) async {

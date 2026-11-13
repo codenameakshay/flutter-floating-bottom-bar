@@ -880,8 +880,9 @@ void main() {
 
     tabController.animateTo(1);
     await tester.pumpAndSettle();
+    expect(controller.isVisible, isTrue, reason: 'a tab change shows the bar');
 
-    await tester.drag(find.byKey(const Key('list-b')), const Offset(0, -5));
+    await tester.drag(find.byKey(const Key('list-b')), const Offset(0, -500));
     await tester.pumpAndSettle();
     expect(controller.isVisible, isFalse);
   });

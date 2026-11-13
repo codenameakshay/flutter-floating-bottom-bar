@@ -254,6 +254,7 @@ class _BottomBarState extends State<BottomBar>
       showAtStart: _scrollBehavior.showAtStart,
       showOnScrollEnd: _scrollBehavior.showOnScrollEnd,
       predicate: _scrollBehavior.predicate,
+      restoreTabVisibility: _restoresTabs(_scrollBehavior),
       onShouldHide: (hide) => _setBarVisible(!hide, notifyCallbacks: true),
     );
 
@@ -293,11 +294,15 @@ class _BottomBarState extends State<BottomBar>
       _dispatcher.showAtStart = newScroll.showAtStart;
       _dispatcher.showOnScrollEnd = newScroll.showOnScrollEnd;
       _dispatcher.predicate = newScroll.predicate;
+      _dispatcher.restoreTabVisibility = _restoresTabs(newScroll);
     }
 
     _motion = newMotion;
     _scrollBehavior = newScroll;
   }
+
+  static bool _restoresTabs(BottomBarScrollBehavior behavior) =>
+      behavior.visibilityOnTabChange == BottomBarTabVisibility.restore;
 
   // -- visibility plumbing ---------------------------------------------------
 
@@ -352,20 +357,7 @@ class _BottomBarState extends State<BottomBar>
   Future<void> scrollToBoundary({required bool toEnd}) async {
     if (await _scrollActiveToBoundary(toEnd: toEnd)) {
       _setBarVisible(true, notifyCallbacks: true, fromController: true);
-      return;
     }
-    assert(() {
-      FlutterError.reportError(
-        FlutterErrorDetails(
-          exception: FlutterError(
-            'BottomBarController.scrollToStart/scrollToEnd found no attached, '
-            'visible scrollable in BottomBar.body; nothing to scroll.',
-          ),
-          library: 'flutter_floating_bottom_bar',
-        ),
-      );
-      return true;
-    }());
   }
 
   void _scrollToStartOnReselect() {
@@ -483,7 +475,7 @@ class _BottomBarState extends State<BottomBar>
     final theme = _resolvedTheme(context);
     final l = _effectiveLayout(theme);
     _tracksEdge = theme.scrollEdgeSurface != null;
-    if (_tracksEdge) _scheduleEdgeCheck();
+    _scheduleTargetCheck();
     final slideOutsideLayout =
         _motion.transition == BottomBarTransition.slide &&
         _motion.transitionBuilder == null;
@@ -648,51 +640,61 @@ class _BottomBarState extends State<BottomBar>
   bool _tracksEdge = false;
   bool _atEdge = false;
   bool _edgeSeen = false;
-  bool _edgeCheckScheduled = false;
+  bool _targetCheckScheduled = false;
 
-  /// Re-reads the edge after every frame while a scroll edge surface is set.
-  /// One check covers scrolls, flings, content changes and tab switches,
-  /// none of which reliably notify the bar.
-  void _scheduleEdgeCheck() {
-    if (_edgeCheckScheduled) return;
-    _edgeCheckScheduled = true;
+  /// Re-reads the list the bar follows after every frame. One check covers
+  /// scrolls, flings, content changes and tab switches, none of which
+  /// reliably notify the bar.
+  void _scheduleTargetCheck() {
+    if (_targetCheckScheduled) return;
+    _targetCheckScheduled = true;
     SchedulerBinding.instance.addPostFrameCallback((_) {
-      _edgeCheckScheduled = false;
-      if (!mounted || !_tracksEdge) return;
-      _syncEdge();
-      _scheduleEdgeCheck();
+      _targetCheckScheduled = false;
+      if (!mounted) return;
+      _followTarget();
+      _scheduleTargetCheck();
     });
   }
 
   bool _handleScrollMetrics(ScrollMetricsNotification notification) {
     _dispatcher.track(notification);
-    if (_tracksEdge) _syncEdge();
+    _followTarget();
     return false;
   }
 
-  void _syncEdge() {
-    final active = _dispatcher.activeScrollable();
+  /// Applies a tab change and the scroll edge of the list the bar follows.
+  /// Keeps both as they are while a page swipe settles.
+  void _followTarget() {
+    final (:active, :paging) = _dispatcher.resolve();
+    if (paging) return;
+    final tabVisible = active == null
+        ? null
+        : _dispatcher.enterTab(active.tab, barVisible: _targetVisible);
+    if (tabVisible != null) {
+      _setBarVisible(tabVisible, notifyCallbacks: true, fromController: true);
+    }
+    // A new tab shows its own edge at once, not a fade from the old tab's.
+    if (_tracksEdge) _syncEdge(active, snap: tabVisible != null);
+  }
+
+  void _syncEdge(ActiveScrollable? active, {required bool snap}) {
     final atEdge =
         active != null && _isAtScrollEdge(active.position, active.context);
     // The first list the bar sees sets the surface without a transition, so
     // a short list never animates in from the standard surface.
-    final snap = !_edgeSeen;
+    snap |= !_edgeSeen;
     _edgeSeen |= active != null;
     final target = atEdge ? 1.0 : 0.0;
-    if (atEdge == _atEdge) {
-      if (_disableAnimations && _edgeController.value != target) {
+    final changed = atEdge != _atEdge;
+    _atEdge = atEdge;
+    if (snap || _disableAnimations) {
+      if (_edgeController.value != target) {
         _edgeController.stop(canceled: true);
         _edgeController.value = target;
       }
       return;
     }
-    _atEdge = atEdge;
-    if (snap || _disableAnimations) {
-      _edgeController.stop(canceled: true);
-      _edgeController.value = target;
-      return;
-    }
-    _edgeController.animateTo(target, forward: atEdge);
+    if (changed) _edgeController.animateTo(target, forward: atEdge);
   }
 
   /// Whether no content of [position]'s list reaches under the bar. Inside a

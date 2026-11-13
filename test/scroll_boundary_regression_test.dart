@@ -209,7 +209,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await controller.scrollToStart();
-      expect(tester.takeException(), isFlutterError);
+      expect(tester.takeException(), isNull);
       expect(controller.isVisible, isFalse);
 
       showList.value = true;

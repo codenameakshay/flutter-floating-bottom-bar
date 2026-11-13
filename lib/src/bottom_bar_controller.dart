@@ -86,9 +86,11 @@ class BottomBarController extends ChangeNotifier {
   /// [BottomBarScrollBehavior.scrollOpposite], which only changes the built-in
   /// hidden action's direction.
   ///
-  /// No-op and logs a [FlutterError] in debug mode if no attached, visible
-  /// scrollable has been observed. Scrollables that were disposed, or that
-  /// sit in an inactive [IndexedStack] child or a covered route, are skipped.
+  /// The target is the visible list that scrolled last, or before any list
+  /// scrolls, the visible list that laid out last. Inside a [PageView] or
+  /// `TabBarView` only the page in view counts. Lists that were disposed, or
+  /// that sit in an inactive [IndexedStack] child, a covered route, or a page
+  /// swiped away, are skipped. Does nothing when there is no such list.
   Future<void> scrollToStart() async {
     await _binding?.scrollToBoundary(toEnd: false);
   }
@@ -100,9 +102,7 @@ class BottomBarController extends ChangeNotifier {
   /// [BottomBarScrollBehavior.scrollOpposite], which only changes the built-in
   /// hidden action's direction.
   ///
-  /// No-op and logs a [FlutterError] in debug mode if no attached, visible
-  /// scrollable has been observed. Scrollables that were disposed, or that
-  /// sit in an inactive [IndexedStack] child or a covered route, are skipped.
+  /// Picks its list like [scrollToStart]. Does nothing when there is no list.
   Future<void> scrollToEnd() async {
     await _binding?.scrollToBoundary(toEnd: true);
   }
