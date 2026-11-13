@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
 import '../bottom_bar_scope.dart';
@@ -10,6 +12,16 @@ import '../bottom_bar_scope.dart';
 /// bar's layout footprint, not its animated transform. That footprint includes
 /// the measured bar height plus [BottomBarLayout.offset] and bottom safe-area
 /// when enabled.
+///
+/// The bottom safe-area inset counts exactly once:
+///
+/// * The footprint already includes it, so this widget removes the bottom
+///   padding from the [MediaQuery] below it. A `ListView` or `SafeArea` inside
+///   does not add the inset again.
+/// * When a `SafeArea` between the [BottomBar] and this widget already
+///   padded the body by the inset, this widget reserves that much less.
+/// * When a `SafeArea` above the [BottomBar] removed the inset, the bar sees
+///   none and the footprint excludes it.
 ///
 /// This widget is intentionally bottom-edge clearance for bottom-aligned bars.
 /// It does not inspect [BottomBarLayout.alignment] or try to reserve space on
@@ -29,10 +41,12 @@ class BottomBarBodyPadding extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final barHeight = BottomBarScope.of(context).barHeight;
+    final scope = BottomBarScope.of(context);
+    final remainingInset = MediaQuery.maybePaddingOf(context)?.bottom ?? 0;
+    final consumedAbove = math.max(0.0, scope.bottomInset - remainingInset);
 
     return ValueListenableBuilder<double>(
-      valueListenable: barHeight,
+      valueListenable: scope.barHeight,
       builder: (context, value, child) {
         final resolved = padding.resolve(Directionality.of(context));
         return Padding(
@@ -40,12 +54,18 @@ class BottomBarBodyPadding extends StatelessWidget {
             resolved.left,
             resolved.top,
             resolved.right,
-            resolved.bottom + value,
+            resolved.bottom + math.max(0.0, value - consumedAbove),
           ),
           child: child,
         );
       },
-      child: child,
+      child: MediaQuery.maybeOf(context) == null
+          ? child
+          : MediaQuery.removePadding(
+              context: context,
+              removeBottom: true,
+              child: child,
+            ),
     );
   }
 }
