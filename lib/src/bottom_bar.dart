@@ -16,6 +16,7 @@ import 'internal/scroll_notification_dispatcher.dart';
 import 'internal/size_observer.dart';
 import 'internal/bottom_bar_action.dart';
 import 'internal/visibility_animator.dart';
+import 'widgets/bottom_bar_surface.dart';
 
 /// Builds the back-to-top icon child.
 ///
@@ -596,9 +597,22 @@ class _BottomBarState extends State<BottomBar>
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final surface = _effectiveSurface(theme);
+        final fadesItself =
+            surface != null &&
+            _motion.transitionBuilder == null &&
+            (_motion.transition == BottomBarTransition.fade ||
+                _motion.transition == BottomBarTransition.slideAndFade);
         final bar = BarSurface(
           key: _barRenderKey,
-          decoration: _effectiveBarDecoration(theme, l),
+          decoration: surface == null
+              ? _effectiveBarDecoration(theme, l)
+              : BoxDecoration(
+                  borderRadius: _effectiveBarBorderRadius(theme, l),
+                ),
+          surface: surface,
+          visibility: _motionController,
+          fades: fadesItself,
           child: SizedBox(
             width: _effectiveBarWidth(constraints, l),
             child: Material(
@@ -620,10 +634,27 @@ class _BottomBarState extends State<BottomBar>
           animation: _motionController,
           isVisible: _targetVisible,
           motion: _motion,
+          fade: !fadesItself,
           child: bar,
         );
       },
     );
+  }
+
+  /// [BottomBarThemeData.surface] with its colours filled in from the
+  /// [ColorScheme]. High contrast swaps the glass for an opaque fill.
+  BottomBarSurface? _effectiveSurface(BottomBarThemeData theme) {
+    final surface = theme.surface;
+    if (surface == null) return null;
+    final fill = Theme.of(context).colorScheme.surfaceContainer;
+    if (MediaQuery.highContrastOf(context)) {
+      return BottomBarSurface(
+        tint: surface.fallbackColor ?? fill,
+        border: surface.border,
+        shadows: surface.shadows,
+      );
+    }
+    return surface.copyWith(tint: surface.tint ?? fill);
   }
 
   double _effectiveBarWidth(

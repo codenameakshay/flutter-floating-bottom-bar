@@ -16,6 +16,7 @@ class VisibilityAnimator extends StatelessWidget {
     required this.motion,
     required this.child,
     this.slideTargetResolver,
+    this.fade = true,
   });
 
   final Animation<double> animation;
@@ -23,6 +24,10 @@ class VisibilityAnimator extends StatelessWidget {
   final BottomBarMotion motion;
   final Widget child;
   final RenderBox? Function()? slideTargetResolver;
+
+  /// False when the child fades itself, so the fade transitions keep their
+  /// tree shape but hold full opacity.
+  final bool fade;
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +41,9 @@ class VisibilityAnimator extends StatelessWidget {
         ),
       );
     }
-    final clamped = _ClampedAnimation(animation, max: 1);
+    final Animation<double> clamped = fade
+        ? _ClampedAnimation(animation, max: 1)
+        : kAlwaysCompleteAnimation;
 
     switch (motion.transition) {
       case BottomBarTransition.slide:
