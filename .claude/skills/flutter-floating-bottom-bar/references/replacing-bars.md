@@ -4,7 +4,7 @@ Recipes for converting common bottom-bar patterns to `flutter_floating_bottom_ba
 
 **Full guides with a property-by-property mapping live in the repo at [`docs/migrate/`](https://github.com/codenameakshay/flutter-floating-bottom-bar/blob/main/docs/migrate/README.md):** `BottomNavigationBar`, `NavigationBar`, `google_nav_bar`, `convex_bottom_bar`, `salomon_bottom_bar`, `persistent_bottom_nav_bar_v2` and `animated_bottom_navigation_bar`. Each guide's after code is a compiled file in `example/lib/migrate/`. Prefer those guides over the short notes below when the user is on one of those bars.
 
-**Version check first.** `selectedIndex`/`onSelected`, indicators, badges, the item theme, the centre action and `BottomBarSurface` are since 3.1.0 (on `main`, not on pub.dev yet; 3.0.1 is the latest published). On 3.0.1, drive selection with `selected:` + `onTap:` on each `BottomBarItem` instead.
+**Version check first.** `selectedIndex`/`onSelected`, indicators, badges, the item theme, the centre action and `BottomBarSurface` are since 3.1.0. Check the user's resolved version in `pubspec.lock`. On 3.0.1, drive selection with `selected:` + `onTap:` on each `BottomBarItem` instead.
 
 The general transformation is:
 1. Find the `Scaffold` and its `body` + `bottomNavigationBar` (or equivalent).

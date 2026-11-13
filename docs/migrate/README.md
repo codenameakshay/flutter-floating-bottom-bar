@@ -24,8 +24,8 @@ differently.
 - Every after snippet is a file in
   [`example/lib/migrate`](../../example/lib/migrate) that compiles and runs in
   the example app's tests.
-- APIs marked "since 3.1.0" are on `main` and not yet on pub.dev. The latest
-  published version is 3.0.1.
+- APIs marked "since 3.1.0" need version 3.1.0 or later. Each guide says what
+  to use on 3.0.1.
 
 ## The common steps
 
