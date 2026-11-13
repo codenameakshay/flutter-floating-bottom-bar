@@ -383,7 +383,7 @@ void main() {
         .evaluate()
         .map((e) => e.widget)
         .cast<FadeTransition>()
-        .firstWhere((widget) => widget.child is Focus);
+        .firstWhere((widget) => widget.child is Semantics);
     expect(fade.opacity.value, greaterThan(0.1));
   });
 

@@ -100,7 +100,7 @@ void main() {
     bool hasBarFade = false;
     for (final element in fades.evaluate()) {
       final fade = element.widget as FadeTransition;
-      if (fade.child is Focus) {
+      if (fade.child is Semantics) {
         hasBarFade = true;
         break;
       }
@@ -268,5 +268,5 @@ FadeTransition _barFade(WidgetTester tester) {
       .evaluate()
       .map((element) => element.widget)
       .cast<FadeTransition>()
-      .firstWhere((widget) => widget.child is Focus);
+      .firstWhere((widget) => widget.child is Semantics);
 }

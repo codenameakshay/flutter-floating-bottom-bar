@@ -759,24 +759,29 @@ class _BottomBarState extends State<BottomBar>
         );
         final leading = widget.leading;
         final trailing = widget.trailing;
-        final bar = Focus(
-          focusNode: _barFocusNode,
-          child: ItemThemeScope(
-            items: theme.items,
-            scrollToStart: _scrollToStartOnReselect,
-            child: SizedBox(
-              width: _effectiveBarWidth(constraints, l),
-              child: BarGroup(
-                key: _barRenderKey,
-                pillIndex: leading == null ? 0 : 1,
-                spacing: l.groupSpacing,
-                children: [
-                  if (leading != null)
-                    piece('leading', _GroupPiece(child: leading)),
-                  piece('pill', widget.child),
-                  if (trailing != null)
-                    piece('trailing', _GroupPiece(child: trailing)),
-                ],
+        // Semantics sort the pieces by the nearest text direction above
+        // them, which the bar would otherwise not set.
+        final bar = Semantics(
+          textDirection: Directionality.of(context),
+          child: Focus(
+            focusNode: _barFocusNode,
+            child: ItemThemeScope(
+              items: theme.items,
+              scrollToStart: _scrollToStartOnReselect,
+              child: SizedBox(
+                width: _effectiveBarWidth(constraints, l),
+                child: BarGroup(
+                  key: _barRenderKey,
+                  pillIndex: leading == null ? 0 : 1,
+                  spacing: l.groupSpacing,
+                  children: [
+                    if (leading != null)
+                      piece('leading', _GroupPiece(child: leading)),
+                    piece('pill', widget.child),
+                    if (trailing != null)
+                      piece('trailing', _GroupPiece(child: trailing)),
+                  ],
+                ),
               ),
             ),
           ),
