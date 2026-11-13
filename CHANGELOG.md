@@ -1,5 +1,15 @@
 ## Unreleased
 
+- The bar and `BottomBarController` follow the active tab in an
+  `IndexedStack`, `PageView` or `TabBarView`. Only the list on the page in
+  view drives the bar. A page swipe never hides or shows it, and a neighbour
+  page mid-swipe never takes over. A tab change shows the bar and snaps the
+  scroll edge surface to the new tab's list on the next frame. Add
+  `BottomBarScrollBehavior.visibilityOnTabChange` and
+  `BottomBarTabVisibility.restore` to give each tab back its own hidden or
+  shown state. `scrollToStart()` and `scrollToEnd()` no longer log a debug
+  error when there is no list to scroll.
+
 - Add `BottomBar.leading` and `BottomBar.trailing`, detached pieces beside the
   pill like the iOS 26 split tab bar. Each piece is as tall as the bar and at
   least as wide, uses the bar's surface and hides with it. Add

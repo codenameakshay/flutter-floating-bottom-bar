@@ -258,7 +258,10 @@ Related runnable demo: `example/lib/demos/go_router_shell_demo.dart`
 
 `StatefulShellRoute.indexedStack` gives each tab its own `Navigator` and
 keeps visited tabs alive in an `IndexedStack`. Put the `navigationShell` in
-`BottomBar.body` and drive `BottomBarItems` from `currentIndex`. Add
+`BottomBar.body` and drive `BottomBarItems` from `currentIndex`. The bar
+follows the active branch and shows itself on a branch change; see
+[Tabs and pages](./README.md#tabs-and-pages) for the rule and the
+`visibilityOnTabChange` option. Add
 `go_router` to your app's `pubspec.yaml`. This package does not depend on it.
 
 ```dart
@@ -408,10 +411,9 @@ so the last rows clear the bar. Give the app the router with
   list to the top.
 
 `onSelected` also fires on a reselect, after `onReselected`, so it ignores the
-current index. The recipe uses `scrollToStartOnReselect: atRoot` and not
-`BottomBarController.scrollToStart`. The flag shows the bar and does nothing
-when no list has scrolled yet. The controller method logs a debug error in
-that case. At depth the flag is off, so the reselect does not scroll the page
+current index. The recipe uses `scrollToStartOnReselect: atRoot`. It shows
+the bar and scrolls the branch's visible list, even before that list has
+scrolled. At depth the flag is off, so the reselect does not scroll the page
 that is about to close.
 
 **Back rule.** Android system back goes in this order:
@@ -451,6 +453,7 @@ your app's router.
 - `example/lib/demos/badges_demo.dart`
 - `example/lib/demos/custom_transition_demo.dart`
 - `example/lib/demos/go_router_shell_demo.dart`
+- `example/lib/demos/tabs_demo.dart`
 
 ## Recording gifs
 

@@ -1,5 +1,17 @@
 import 'package:flutter/widgets.dart';
 
+/// What [BottomBar] does with its visibility when the active tab changes.
+///
+/// See [BottomBarScrollBehavior.visibilityOnTabChange].
+enum BottomBarTabVisibility {
+  /// Shows the bar on every tab change.
+  show,
+
+  /// Gives the new tab the visibility it had when the user last left it.
+  /// A tab seen for the first time shows the bar.
+  restore,
+}
+
 /// Configuration for how [BottomBar] reacts to scrolling in its body subtree.
 @immutable
 class BottomBarScrollBehavior {
@@ -12,6 +24,7 @@ class BottomBarScrollBehavior {
     this.showOnScrollEnd = false,
     this.keepVisibleOnFocus = true,
     this.predicate,
+    this.visibilityOnTabChange = BottomBarTabVisibility.show,
   }) : assert(deltaThreshold >= 0, 'deltaThreshold must be >= 0');
 
   /// When false, scroll events never hide the bar (the [BottomBarController]
@@ -63,6 +76,18 @@ class BottomBarScrollBehavior {
   /// settling behavior).
   final bool Function(ScrollNotification notification)? predicate;
 
+  /// What happens to the bar's visibility when the active tab changes.
+  ///
+  /// The bar sees a tab change when the list it follows moves to another
+  /// tab: another [IndexedStack] child (or any tab hidden with
+  /// [Visibility]), or another page of a [PageView] or `TabBarView` once the
+  /// swipe settles. Pushing a route inside a tab is not a tab change.
+  ///
+  /// [BottomBarTabVisibility.show] (the default) shows the bar.
+  /// [BottomBarTabVisibility.restore] gives each tab back the visibility it
+  /// had when the user left it.
+  final BottomBarTabVisibility visibilityOnTabChange;
+
   /// Returns a copy of this scroll behaviour with the given fields replaced by
   /// non-null values. Null arguments leave the corresponding field unchanged.
   BottomBarScrollBehavior copyWith({
@@ -74,6 +99,7 @@ class BottomBarScrollBehavior {
     bool? showOnScrollEnd,
     bool? keepVisibleOnFocus,
     bool Function(ScrollNotification notification)? predicate,
+    BottomBarTabVisibility? visibilityOnTabChange,
   }) {
     return BottomBarScrollBehavior(
       hideOnScroll: hideOnScroll ?? this.hideOnScroll,
@@ -84,6 +110,8 @@ class BottomBarScrollBehavior {
       showOnScrollEnd: showOnScrollEnd ?? this.showOnScrollEnd,
       keepVisibleOnFocus: keepVisibleOnFocus ?? this.keepVisibleOnFocus,
       predicate: predicate ?? this.predicate,
+      visibilityOnTabChange:
+          visibilityOnTabChange ?? this.visibilityOnTabChange,
     );
   }
 
@@ -98,7 +126,8 @@ class BottomBarScrollBehavior {
         other.showAtStart == showAtStart &&
         other.showOnScrollEnd == showOnScrollEnd &&
         other.keepVisibleOnFocus == keepVisibleOnFocus &&
-        other.predicate == predicate;
+        other.predicate == predicate &&
+        other.visibilityOnTabChange == visibilityOnTabChange;
   }
 
   @override
@@ -111,5 +140,6 @@ class BottomBarScrollBehavior {
     showOnScrollEnd,
     keepVisibleOnFocus,
     predicate,
+    visibilityOnTabChange,
   );
 }

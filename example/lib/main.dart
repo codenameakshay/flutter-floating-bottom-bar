@@ -13,6 +13,7 @@ import 'demos/indicators_demo.dart';
 import 'demos/issues_dock_demo.dart';
 import 'demos/item_theme_demo.dart';
 import 'demos/nested_scroll_demo.dart';
+import 'demos/tabs_demo.dart';
 
 void main() => runApp(const ExampleApp());
 
@@ -79,6 +80,7 @@ final demos = <({String slug, String title, WidgetBuilder builder})>[
     builder: (_) => const GlassSurfaceDemoPage(),
   ),
   (slug: 'groups', title: 'Groups', builder: (_) => const GroupsDemoPage()),
+  (slug: 'tabs', title: 'Tabs and pages', builder: (_) => const TabsDemoPage()),
 ];
 
 class ExampleApp extends StatelessWidget {
