@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/scheduler.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:motor/motor.dart';
 
@@ -168,9 +169,13 @@ class BottomBar extends StatefulWidget {
 }
 
 class _BottomBarState extends State<BottomBar>
-    with SingleTickerProviderStateMixin
+    with TickerProviderStateMixin
     implements BottomBarBindingForController {
   late BoundedSingleMotionController _motionController;
+
+  /// 0 paints [BottomBarThemeData.surface], 1 paints
+  /// [BottomBarThemeData.scrollEdgeSurface].
+  late BoundedSingleMotionController _edgeController;
   late ScrollNotificationDispatcher _dispatcher;
   late BottomBarMotion _motion;
   late BottomBarScrollBehavior _scrollBehavior;
@@ -213,6 +218,10 @@ class _BottomBarState extends State<BottomBar>
       vsync: this,
       initialValue: 1,
     );
+    _edgeController = BoundedSingleMotionController(
+      motion: _motion.resolveMotion(),
+      vsync: this,
+    );
 
     _dispatcher = ScrollNotificationDispatcher(
       deltaThreshold: _scrollBehavior.deltaThreshold,
@@ -250,6 +259,7 @@ class _BottomBarState extends State<BottomBar>
 
     if (_motion != newMotion) {
       _motionController.motion = newMotion.resolveMotion();
+      _edgeController.motion = newMotion.resolveMotion();
     }
 
     if (_scrollBehavior != newScroll) {
@@ -434,6 +444,7 @@ class _BottomBarState extends State<BottomBar>
   void dispose() {
     widget.controller?.detach(this);
     _motionController.dispose();
+    _edgeController.dispose();
     _barHeight.dispose();
     _isVisibleNotifier.dispose();
     _barFocusNode.dispose();
@@ -446,6 +457,8 @@ class _BottomBarState extends State<BottomBar>
   Widget build(BuildContext context) {
     final theme = _resolvedTheme(context);
     final l = _effectiveLayout(theme);
+    _tracksEdge = theme.scrollEdgeSurface != null;
+    if (_tracksEdge) _scheduleEdgeCheck();
     final slideOutsideLayout =
         _motion.transition == BottomBarTransition.slide &&
         _motion.transitionBuilder == null;
@@ -470,12 +483,15 @@ class _BottomBarState extends State<BottomBar>
       alignment: l.alignment,
       clipBehavior: l.clip,
       children: [
-        NotificationListener<ScrollNotification>(
-          onNotification: _handleBodyScrollNotification,
-          child: BottomBarScope(
-            barHeight: _barHeight,
-            isVisible: _isVisibleNotifier,
-            child: widget.body,
+        NotificationListener<ScrollMetricsNotification>(
+          onNotification: _handleScrollMetrics,
+          child: NotificationListener<ScrollNotification>(
+            onNotification: _handleBodyScrollNotification,
+            child: BottomBarScope(
+              barHeight: _barHeight,
+              isVisible: _isVisibleNotifier,
+              child: widget.body,
+            ),
           ),
         ),
         if (widget.showIcon)
@@ -568,6 +584,97 @@ class _BottomBarState extends State<BottomBar>
     _motionController.animateTo(target, forward: visible);
   }
 
+  // -- scroll edge -----------------------------------------------------------
+
+  /// Content closer than this to the bar's side of the viewport does not
+  /// count as under the bar, so a fling that settles a fraction short of the
+  /// end stays at the edge.
+  static const double _edgeTolerance = 1;
+
+  bool _tracksEdge = false;
+  bool _atEdge = false;
+  bool _edgeSeen = false;
+  bool _edgeCheckScheduled = false;
+
+  /// Re-reads the edge after every frame while a scroll edge surface is set.
+  /// One check covers scrolls, flings, content changes and tab switches,
+  /// none of which reliably notify the bar.
+  void _scheduleEdgeCheck() {
+    if (_edgeCheckScheduled) return;
+    _edgeCheckScheduled = true;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _edgeCheckScheduled = false;
+      if (!mounted || !_tracksEdge) return;
+      _syncEdge();
+      _scheduleEdgeCheck();
+    });
+  }
+
+  bool _handleScrollMetrics(ScrollMetricsNotification notification) {
+    _dispatcher.track(notification);
+    if (_tracksEdge) _syncEdge();
+    return false;
+  }
+
+  void _syncEdge() {
+    final active = _dispatcher.activeScrollable();
+    final atEdge =
+        active != null && _isAtScrollEdge(active.position, active.context);
+    // The first list the bar sees sets the surface without a transition, so
+    // a short list never animates in from the standard surface.
+    final snap = !_edgeSeen;
+    _edgeSeen |= active != null;
+    final target = atEdge ? 1.0 : 0.0;
+    if (atEdge == _atEdge) {
+      if (_disableAnimations && _edgeController.value != target) {
+        _edgeController.stop(canceled: true);
+        _edgeController.value = target;
+      }
+      return;
+    }
+    _atEdge = atEdge;
+    if (snap || _disableAnimations) {
+      _edgeController.stop(canceled: true);
+      _edgeController.value = target;
+      return;
+    }
+    _edgeController.animateTo(target, forward: atEdge);
+  }
+
+  /// Whether no content of [position]'s list reaches under the bar. Inside a
+  /// [NestedScrollView] the outer header must be collapsed too, since a
+  /// floating header pushes the inner list's end back under the bar.
+  bool _isAtScrollEdge(ScrollPosition position, BuildContext context) {
+    final nested = _nestedScrollViewOf(context);
+    if (nested != null) {
+      bool owns(ScrollController c) =>
+          c.positions.any((p) => identical(p, position));
+      final inner = owns(nested.innerController)
+          ? [position]
+          : owns(nested.outerController)
+          ? nested.innerController.positions.where(
+              ScrollNotificationDispatcher.isPositionVisible,
+            )
+          : null;
+      if (inner != null) {
+        return [
+          ...nested.outerController.positions,
+          ...inner,
+        ].where((p) => p.hasPixels && p.hasContentDimensions).every(_isAtEnd);
+      }
+    }
+    return _isAtEnd(position);
+  }
+
+  static bool _isAtEnd(ScrollPosition position) {
+    final under = switch (position.axisDirection) {
+      AxisDirection.down => position.extentAfter,
+      AxisDirection.up => position.extentBefore,
+      AxisDirection.left || AxisDirection.right => double.infinity,
+    };
+    return under <= _edgeTolerance;
+  }
+
   bool get _disableAnimations => reduceMotion(context);
 
   Widget _buildIconChild(double iconWidth, double iconHeight) {
@@ -597,7 +704,11 @@ class _BottomBarState extends State<BottomBar>
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final surface = _effectiveSurface(theme);
+        final edgeSurface = _effectiveSurface(theme.scrollEdgeSurface);
+        final surface = _effectiveSurface(
+          theme.surface ??
+              (edgeSurface == null ? null : _decorationSurface(theme, l)),
+        );
         final fadesItself =
             surface != null &&
             _motion.transitionBuilder == null &&
@@ -611,6 +722,8 @@ class _BottomBarState extends State<BottomBar>
                   borderRadius: _effectiveBarBorderRadius(theme, l),
                 ),
           surface: surface,
+          edgeSurface: edgeSurface,
+          edge: _edgeController,
           visibility: _motionController,
           fades: fadesItself,
           child: SizedBox(
@@ -642,10 +755,9 @@ class _BottomBarState extends State<BottomBar>
     );
   }
 
-  /// [BottomBarThemeData.surface] with its colours filled in from the
-  /// [ColorScheme]. High contrast swaps the glass for an opaque fill.
-  BottomBarSurface? _effectiveSurface(BottomBarThemeData theme) {
-    final surface = theme.surface;
+  /// [surface] with its colours filled in from the [ColorScheme]. High
+  /// contrast swaps the glass for an opaque fill.
+  BottomBarSurface? _effectiveSurface(BottomBarSurface? surface) {
     if (surface == null) return null;
     final fill = Theme.of(context).colorScheme.surfaceContainer;
     if (MediaQuery.highContrastOf(context)) {
@@ -657,6 +769,21 @@ class _BottomBarState extends State<BottomBar>
       );
     }
     return surface.copyWith(tint: surface.tint ?? fill);
+  }
+
+  /// The fill, gradient, border and shadows of the bar decoration as a
+  /// surface, so a bar without one can still blend to the scroll edge surface.
+  BottomBarSurface _decorationSurface(
+    BottomBarThemeData theme,
+    BottomBarLayout layout,
+  ) {
+    final decoration = _effectiveBarDecoration(theme, layout);
+    return BottomBarSurface(
+      tint: decoration?.color ?? const Color(0x00000000),
+      gradient: decoration?.gradient,
+      border: decoration?.border,
+      shadows: decoration?.boxShadow,
+    );
   }
 
   double _effectiveBarWidth(

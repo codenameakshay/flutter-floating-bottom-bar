@@ -1,5 +1,11 @@
 ## Unreleased
 
+- Add `BottomBarThemeData.scrollEdgeSurface`, like UIKit's
+  `scrollEdgeAppearance`. The bar paints `surface` while content scrolls under
+  it and this surface at the edge: the end of the visible list, the start of a
+  `reverse: true` list, or a list shorter than the viewport. It blends with
+  `BottomBarSurface.lerp` on the bar's spring. Reduced motion snaps, high
+  contrast paints the opaque fallback, and bars without it paint as before.
 - Add `BottomBarSurface` and `BottomBarThemeData.surface`.
   `BottomBarSurface.glass()` blurs and tints what scrolls under the bar, with an
   edge highlight and shadows. `.solid()` is an opaque fill, and both lerp. The

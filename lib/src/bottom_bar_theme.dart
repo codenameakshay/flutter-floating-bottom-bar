@@ -42,6 +42,7 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
     this.scrollBehavior,
     this.items,
     this.surface,
+    this.scrollEdgeSurface,
   });
 
   /// Decoration applied to the floating bar's outer container.
@@ -88,6 +89,23 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
   /// [barDecoration]. Null paints [barDecoration] as before.
   final BottomBarSurface? surface;
 
+  /// The surface while nothing scrolls under the bar, like UIKit's
+  /// `scrollEdgeAppearance`. For example `BottomBarSurface(fillOpacity: 0)`
+  /// for a clear bar.
+  ///
+  /// The bar follows the vertical list that scrolled last and is on screen.
+  /// It is at the edge when that list's content does not reach under the bar:
+  /// it is scrolled to its end, or to its start when it is reversed, or it is
+  /// shorter than the viewport. A horizontal list never counts. With no list,
+  /// the bar paints [surface].
+  ///
+  /// The bar blends between [surface] and this surface with
+  /// [BottomBarSurface.lerp] and the bar's motion. Reduced motion snaps.
+  /// When [surface] is null, the bar blends from the fill, gradient, border
+  /// and shadows of [barDecoration] instead, and drops its image. Null always
+  /// paints [surface].
+  final BottomBarSurface? scrollEdgeSurface;
+
   /// Returns a new theme where non-null fields of [other] override fields of
   /// `this`. Null fields of [other] preserve `this`. [items] merges field by
   /// field.
@@ -103,6 +121,7 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
       scrollBehavior: other.scrollBehavior ?? scrollBehavior,
       items: items?.merge(other.items) ?? other.items,
       surface: other.surface ?? surface,
+      scrollEdgeSurface: other.scrollEdgeSurface ?? scrollEdgeSurface,
     );
   }
 
@@ -119,6 +138,7 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
     BottomBarScrollBehavior? scrollBehavior,
     BottomBarItemThemeData? items,
     BottomBarSurface? surface,
+    BottomBarSurface? scrollEdgeSurface,
   }) {
     return BottomBarThemeData(
       barDecoration: barDecoration ?? this.barDecoration,
@@ -130,6 +150,7 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
       scrollBehavior: scrollBehavior ?? this.scrollBehavior,
       items: items ?? this.items,
       surface: surface ?? this.surface,
+      scrollEdgeSurface: scrollEdgeSurface ?? this.scrollEdgeSurface,
     );
   }
 
@@ -138,8 +159,8 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
   /// Decoration fields use [BoxDecoration.lerp]. Numeric fields use standard
   /// linear interpolation. Config objects ([layout], [motion], [scrollBehavior])
   /// step at `t == 0.5` — `this` for `t < 0.5`, [other] for `t >= 0.5`.
-  /// [items] uses [BottomBarItemThemeData.lerp] and [surface] uses
-  /// [BottomBarSurface.lerp].
+  /// [items] uses [BottomBarItemThemeData.lerp], and [surface] and
+  /// [scrollEdgeSurface] use [BottomBarSurface.lerp].
   @override
   BottomBarThemeData lerp(
     covariant ThemeExtension<BottomBarThemeData>? other,
@@ -161,6 +182,39 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
       scrollBehavior: t < 0.5 ? scrollBehavior : other.scrollBehavior,
       items: BottomBarItemThemeData.lerp(items, other.items, t),
       surface: BottomBarSurface.lerp(surface, other.surface, t),
+      scrollEdgeSurface: BottomBarSurface.lerp(
+        scrollEdgeSurface,
+        other.scrollEdgeSurface,
+        t,
+      ),
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      other is BottomBarThemeData &&
+      other.barDecoration == barDecoration &&
+      other.iconDecoration == iconDecoration &&
+      other.iconWidth == iconWidth &&
+      other.iconHeight == iconHeight &&
+      other.layout == layout &&
+      other.motion == motion &&
+      other.scrollBehavior == scrollBehavior &&
+      other.items == items &&
+      other.surface == surface &&
+      other.scrollEdgeSurface == scrollEdgeSurface;
+
+  @override
+  int get hashCode => Object.hash(
+    barDecoration,
+    iconDecoration,
+    iconWidth,
+    iconHeight,
+    layout,
+    motion,
+    scrollBehavior,
+    items,
+    surface,
+    scrollEdgeSurface,
+  );
 }

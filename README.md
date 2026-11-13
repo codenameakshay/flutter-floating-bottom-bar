@@ -698,6 +698,35 @@ is pushed.
 
 Try the [glass surface demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/glass-surface) live.
 
+#### Scroll edge surface
+
+`scrollEdgeSurface` works like UIKit's `scrollEdgeAppearance`. The bar paints
+`surface` while content scrolls under it, and `scrollEdgeSurface` when nothing
+is under it.
+
+```dart
+const BottomBarThemeData(
+  surface: BottomBarSurface.glass(),
+  scrollEdgeSurface: BottomBarSurface(fillOpacity: 0),
+)
+```
+
+The bar follows the vertical list that scrolled last and is still on screen.
+Tabs that are not visible do not count, and horizontal lists never count. The
+bar is at the edge when that list does not reach under it:
+
+- The list is scrolled to its end.
+- The list is `reverse: true`, such as a chat, and is scrolled to its start.
+- The list is shorter than the viewport.
+
+With no list, the bar paints `surface`. Inside a `NestedScrollView`, the header
+must be collapsed too.
+
+When `surface` is null, the bar blends from the fill, gradient, border and
+shadows of `barDecoration`, and drops its image.
+
+High contrast paints the opaque fallback in both states.
+
 ## Migration from v1.x
 
 | v1.x | v2.x | Migration |
