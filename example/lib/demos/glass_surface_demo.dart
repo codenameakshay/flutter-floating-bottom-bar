@@ -16,6 +16,8 @@ class _GlassSurfaceDemoPageState extends State<GlassSurfaceDemoPage> {
   bool _highlight = true;
   bool _notched = false;
   bool _highContrast = false;
+  bool _scrollEdge = false;
+  bool _shortList = false;
 
   Widget _buildControls() {
     return Card(
@@ -65,6 +67,16 @@ class _GlassSurfaceDemoPageState extends State<GlassSurfaceDemoPage> {
               value: _highContrast,
               onChanged: (value) => setState(() => _highContrast = value),
             ),
+            SwitchListTile(
+              title: const Text('Clear at scroll end'),
+              value: _scrollEdge,
+              onChanged: (value) => setState(() => _scrollEdge = value),
+            ),
+            SwitchListTile(
+              title: const Text('Short list'),
+              value: _shortList,
+              onChanged: (value) => setState(() => _shortList = value),
+            ),
           ],
         ),
       ),
@@ -90,14 +102,21 @@ class _GlassSurfaceDemoPageState extends State<GlassSurfaceDemoPage> {
             width: 360,
             borderRadius: BorderRadius.all(Radius.circular(28)),
           ),
-          theme: BottomBarThemeData(surface: surface),
+          // A bar that hides on scroll is gone by the time the list ends.
+          scrollBehavior: BottomBarScrollBehavior(hideOnScroll: !_scrollEdge),
+          theme: BottomBarThemeData(
+            surface: surface,
+            scrollEdgeSurface: _scrollEdge
+                ? const BottomBarSurface(fillOpacity: 0)
+                : null,
+          ),
           // The feed scrolls under the bar, so only its end is padded.
           body: Builder(
             builder: (context) => ValueListenableBuilder<double>(
               valueListenable: BottomBarScope.of(context).barHeight,
               builder: (context, barHeight, _) => ListView.builder(
                 padding: EdgeInsets.only(bottom: barHeight),
-                itemCount: 61,
+                itemCount: _shortList ? 3 : 61,
                 itemBuilder: (context, index) =>
                     index == 0 ? _buildControls() : _FeedTile(index: index - 1),
               ),

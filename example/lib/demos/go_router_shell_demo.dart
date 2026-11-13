@@ -196,6 +196,9 @@ class _ScaffoldWithBottomBarState extends State<ScaffoldWithBottomBar> {
                 ),
               ],
             ),
+            scrollEdgeSurface: shell.currentIndex == 0
+                ? const BottomBarSurface(fillOpacity: 0)
+                : null,
           ),
           body: shell,
           child: Padding(
