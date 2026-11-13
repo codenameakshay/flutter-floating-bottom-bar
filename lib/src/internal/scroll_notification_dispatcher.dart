@@ -95,30 +95,13 @@ class ScrollNotificationDispatcher {
       return;
     }
 
-    final context = notification.context;
-    final position = context != null && context.mounted
-        ? Scrollable.maybeOf(context)?.position
-        : null;
-    final key = _keyFor(notification, position);
     // Overscroll and its spring-back (BouncingScrollPhysics) aren't the user
     // scrolling: pin tracking to the edge so the rebound off the top doesn't
     // read as a scroll down.
     final pixels = metrics.pixels
         .clamp(metrics.minScrollExtent, metrics.maxScrollExtent)
         .toDouble();
-
-    // LRU touch.
-    final state =
-        _trackedScrollables.remove(key) ??
-        _TrackedScrollState(anchorPixels: pixels, lastPixels: pixels);
-    _trackedScrollables[key] = state
-      ..position = position
-      ..context = context;
-
-    // Evict oldest if over capacity.
-    while (_trackedScrollables.length > _maxTracked) {
-      _trackedScrollables.remove(_trackedScrollables.keys.first);
-    }
+    final state = _track(notification, pixels, touch: true);
 
     if (notification is ScrollStartNotification) {
       _resetState(state, pixels);
@@ -136,6 +119,49 @@ class ScrollNotificationDispatcher {
     }
 
     _handlePixels(state, pixels);
+  }
+
+  /// Tracks the scrollable that sent [notification] without changing the
+  /// bar's visibility, so [activeScrollable] knows a list that has laid out
+  /// but not scrolled yet. A new scrollable becomes the most recent one. A
+  /// known one keeps its place.
+  void track(ScrollMetricsNotification notification) {
+    final update = notification.asScrollUpdate();
+    final filter = predicate;
+    if (filter != null && !filter(update)) return;
+    final metrics = notification.metrics;
+    if (metrics.axis != Axis.vertical) return;
+    _track(
+      update,
+      metrics.pixels
+          .clamp(metrics.minScrollExtent, metrics.maxScrollExtent)
+          .toDouble(),
+      touch: false,
+    );
+  }
+
+  _TrackedScrollState _track(
+    ScrollNotification notification,
+    double pixels, {
+    required bool touch,
+  }) {
+    final context = notification.context;
+    final position = context != null && context.mounted
+        ? Scrollable.maybeOf(context)?.position
+        : null;
+    final key = _keyFor(notification, position);
+    final known = _trackedScrollables[key];
+    final state = touch || known == null
+        ? (_trackedScrollables.remove(key) ??
+              _TrackedScrollState(anchorPixels: pixels, lastPixels: pixels))
+        : known;
+    _trackedScrollables[key] = state
+      ..position = position
+      ..context = context;
+    while (_trackedScrollables.length > _maxTracked) {
+      _trackedScrollables.remove(_trackedScrollables.keys.first);
+    }
+    return state;
   }
 
   /// Reports a scroll delta from a source that never emits

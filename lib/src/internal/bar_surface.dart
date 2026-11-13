@@ -18,6 +18,8 @@ class BarSurface extends SingleChildRenderObjectWidget {
     super.key,
     this.decoration,
     this.surface,
+    this.edgeSurface,
+    this.edge,
     this.visibility,
     this.fades = false,
     this.backdropKey,
@@ -30,6 +32,12 @@ class BarSurface extends SingleChildRenderObjectWidget {
   /// Paints the bar instead of [decoration]'s fill, border and shadows. Its
   /// colours are already resolved against the theme.
   final BottomBarSurface? surface;
+
+  /// Blended over [surface] by [edge]. Ignored when [surface] is null.
+  final BottomBarSurface? edgeSurface;
+
+  /// How far the bar is from [surface] (0) to [edgeSurface] (1).
+  final Animation<double>? edge;
 
   /// The bar's show progress. At 0 or below the bar is hidden and its glass
   /// reads no backdrop.
@@ -48,6 +56,8 @@ class BarSurface extends SingleChildRenderObjectWidget {
   RenderBarSurface createRenderObject(BuildContext context) => RenderBarSurface(
     decoration: decoration,
     surface: surface,
+    edgeSurface: edgeSurface,
+    edge: edge,
     visibility: visibility,
     fades: fades,
     backdropKey: backdropKey,
@@ -59,6 +69,8 @@ class BarSurface extends SingleChildRenderObjectWidget {
     renderObject
       ..decoration = decoration
       ..surface = surface
+      ..edgeSurface = edgeSurface
+      ..edge = edge
       ..visibility = visibility
       ..fades = fades
       ..backdropKey = backdropKey
@@ -70,6 +82,8 @@ class RenderBarSurface extends RenderShiftedBox {
   RenderBarSurface({
     this._decoration,
     this._surface,
+    this._edgeSurface,
+    this._edge,
     this._visibility,
     this._fades = false,
     this._backdropKey,
@@ -105,6 +119,36 @@ class RenderBarSurface extends RenderShiftedBox {
     if (value == null) _opacityLayer.layer = null;
     _surfaceChanged();
     markNeedsPaint();
+  }
+
+  BottomBarSurface? _edgeSurface;
+  set edgeSurface(BottomBarSurface? value) {
+    if (value == _edgeSurface) return;
+    _edgeSurface = value;
+    _edgeChanged();
+  }
+
+  Animation<double>? _edge;
+  set edge(Animation<double>? value) {
+    if (identical(value, _edge)) return;
+    if (attached) _edge?.removeListener(_edgeChanged);
+    _edge = value;
+    if (attached) value?.addListener(_edgeChanged);
+    _edgeChanged();
+  }
+
+  void _edgeChanged() {
+    _surfaceChanged();
+    markNeedsPaint();
+  }
+
+  /// [_surface] blended toward [_edgeSurface] by [_edge].
+  BottomBarSurface? get _painted {
+    final surface = _surface;
+    final edgeSurface = _edgeSurface;
+    if (surface == null || edgeSurface == null) return surface;
+    final t = (_edge?.value ?? 0).clamp(0.0, 1.0);
+    return BottomBarSurface.lerp(surface, edgeSurface, t);
   }
 
   Animation<double>? _visibility;
@@ -143,7 +187,7 @@ class RenderBarSurface extends RenderShiftedBox {
 
   bool get _blurs =>
       child != null &&
-      (_surface?.blur ?? 0) > 0 &&
+      (_painted?.blur ?? 0) > 0 &&
       (_visibility?.value ?? 1) > 0;
 
   // Non-fading glass repaints only when its backdrop turns on or off.
@@ -220,7 +264,7 @@ class RenderBarSurface extends RenderShiftedBox {
         radius: diameter / 2,
       );
     }
-    final surface = _surface;
+    final surface = _painted;
     return BarOutline(
       borderRadius: decoration?.borderRadius ?? BorderRadius.zero,
       notch: notch,
@@ -248,6 +292,7 @@ class RenderBarSurface extends RenderShiftedBox {
   void attach(PipelineOwner owner) {
     super.attach(owner);
     _visibility?.addListener(_visibilityChanged);
+    _edge?.addListener(_edgeChanged);
     _surfaceChanged();
     if (_fades) markNeedsPaint();
   }
@@ -255,6 +300,7 @@ class RenderBarSurface extends RenderShiftedBox {
   @override
   void detach() {
     _visibility?.removeListener(_visibilityChanged);
+    _edge?.removeListener(_edgeChanged);
     _clipLayer.layer = null;
     _backdropLayer.layer = null;
     _opacityLayer.layer = null;
@@ -328,7 +374,7 @@ class RenderBarSurface extends RenderShiftedBox {
 
   @override
   void paint(PaintingContext context, Offset offset) {
-    final surface = _surface;
+    final surface = _painted;
     if (surface == null || child == null || !_blurs) {
       _clipLayer.layer = null;
       _backdropLayer.layer = null;
