@@ -34,6 +34,7 @@ class _TabsDemoPageState extends State<TabsDemoPage>
   final _pages = PageController();
   late final _tabs = TabController(length: _sections.length, vsync: this);
   final _bar = BottomBarController();
+  final _storage = {for (final host in _Host.values) host: PageStorageBucket()};
 
   @override
   void initState() {
@@ -189,7 +190,10 @@ class _TabsDemoPageState extends State<TabsDemoPage>
           ),
           scrollEdgeSurface: const BottomBarSurface(fillOpacity: 0),
         ),
-        body: KeyedSubtree(key: ValueKey(_host), child: _buildHost()),
+        body: PageStorage(
+          bucket: _storage[_host]!,
+          child: KeyedSubtree(key: ValueKey(_host), child: _buildHost()),
+        ),
         child: Padding(
           padding: const EdgeInsets.all(8),
           child: BottomBarItems(
