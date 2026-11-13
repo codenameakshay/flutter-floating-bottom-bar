@@ -233,19 +233,30 @@ class ScrollNotificationDispatcher {
   /// Whether [host] is gliding the last few pixels into a page. An iOS page
   /// spring reports scrolling for a few hundred milliseconds after the page
   /// looks still, and a touch on it restarts that tail. A host passing a page
-  /// mid-flight is too fast to count. Speed comes from one sample per frame.
+  /// mid-flight is too fast to count. Speed needs two frame samples no more
+  /// than 100 ms apart, so an old sample cannot dilute a fast crossing.
   bool _isLanding(ScrollPosition host, PageMetrics metrics) {
-    final now = SchedulerBinding.instance.currentSystemFrameTimeStamp;
+    final scheduler = SchedulerBinding.instance;
+    final now = scheduler.currentSystemFrameTimeStamp;
+    final inFrame = scheduler.schedulerPhase != SchedulerPhase.idle;
     final last = _hostMotion[host];
     var speed = double.infinity;
     if (last != null) {
-      final seconds =
-          (now - last.time).inMicroseconds / Duration.microsecondsPerSecond;
-      speed = seconds > 0
-          ? (host.pixels - last.pixels).abs() / seconds
-          : last.speed;
+      final elapsed = now - last.time;
+      if (inFrame &&
+          elapsed > Duration.zero &&
+          elapsed <= const Duration(milliseconds: 100)) {
+        speed =
+            (host.pixels - last.pixels).abs() *
+            Duration.microsecondsPerSecond /
+            elapsed.inMicroseconds;
+      } else if (elapsed == Duration.zero && host.pixels == last.pixels) {
+        speed = last.speed;
+      }
     }
-    if (last == null || last.time != now) {
+    // Pointer events share the previous frame's timestamp. Keep its pixels
+    // until a new frame so their movement is included in the next estimate.
+    if (inFrame && (last == null || last.time != now)) {
       _hostMotion[host] = (time: now, pixels: host.pixels, speed: speed);
     }
     final page = metrics.page;
