@@ -1,5 +1,11 @@
 ## Unreleased
 
+- Add `BottomBarSurface` and `BottomBarThemeData.surface`.
+  `BottomBarSurface.glass()` blurs and tints what scrolls under the bar, with an
+  edge highlight and shadows. `.solid()` is an opaque fill, and both lerp. The
+  glass clips to the bar's outline, notch included, and hides with the bar.
+  Shadows never darken a translucent fill. High contrast swaps the glass for an
+  opaque `fallbackColor`. Bars without a surface paint as before.
 - Add a go_router `StatefulShellRoute` recipe to `EXAMPLES.md` and a
   `go-router-shell` demo. Only the example app depends on go_router.
 - Add `BottomBarItems.centerAction`, a `BottomBarCenterAction` button for the

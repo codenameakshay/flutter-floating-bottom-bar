@@ -52,6 +52,8 @@ surface, or any custom child.
   velocity-preserving redirects when scroll direction changes mid-animation.
 - Custom transitions are supported, but they must stay paint-only and preserve
   the child's layout footprint.
+- `BottomBarThemeData.surface` paints the bar as frosted glass or a solid fill.
+  High contrast swaps the glass for an opaque fill.
 - The hidden action is accessibility-safe by default: it is non-interactive and
   excluded from semantics while the bar is visible, keeps at least a 48x48 hit
   target when active, uses direction-aware icon/tooltip text, and defaults its
@@ -607,6 +609,94 @@ centre sits on the edge. `notchMargin` defaults to 6.
 Precedence matches the item theme. The order is built-in defaults,
 `ThemeData.extensions`, `BottomBar(theme:)`, then the arguments on
 `BottomBarCenterAction`, which win.
+
+### Glass surface
+
+`BottomBarThemeData.surface` paints the bar as frosted glass that blurs the
+content under it, or as a solid fill.
+
+```dart
+int index = 0;
+
+BottomBar(
+  theme: const BottomBarThemeData(surface: BottomBarSurface.glass()),
+  body: const BottomBarBodyPadding(child: Placeholder()),
+  child: BottomBarItems(
+    selectedIndex: index,
+    onSelected: (i) => setState(() => index = i),
+    children: [
+      BottomBarItem(icon: const Icon(Icons.home), label: const Text('Home')),
+      BottomBarItem(icon: const Icon(Icons.search), label: const Text('Search')),
+    ],
+  ),
+)
+```
+
+Pass options to the glass. This sample blurs more, lets more colour through,
+and removes the edge highlight.
+
+```dart
+const BottomBarThemeData(
+  surface: BottomBarSurface.glass(
+    blur: 24,
+    fillOpacity: 0.7,
+    edgeHighlight: null,
+  ),
+)
+```
+
+The fields are below. The defaults shown are the `glass` defaults.
+
+| Field | Glass default | Effect |
+| --- | --- | --- |
+| `blur` | `16` | Gaussian blur sigma for the content behind the bar. `0` reads no backdrop. |
+| `saturation` | `1.6` | Saturation of the blurred backdrop. `1` leaves colours unchanged. Ignored when `blur` is `0`. |
+| `tint` | `ColorScheme.surfaceContainer` | Fill colour. |
+| `fillOpacity` | `0.8` | Opacity of `tint` and `gradient`. `1` is opaque. |
+| `gradient` | none | Gradient drawn over `tint`. |
+| `border` | none | Border drawn along the outline. The notch is included. |
+| `edgeHighlight` | 35 percent white | A 1 pixel line along the inside of the top edge. It fades down the sides. `null` draws none. |
+| `shadows` | One soft drop shadow | Shadows drawn outside the outline. They never show through a translucent fill. `null` draws none. |
+| `fallbackColor` | Opaque `ColorScheme.surfaceContainer` | Fill used in high contrast. |
+
+`BottomBarSurface.solid()` is an opaque fill. It sets `blur` to `0` and
+`fillOpacity` to `1`.
+
+When `surface` is set, it replaces the colour, gradient, image, border and
+shadows of `barDecoration`. The corner radius still comes from
+`layout.borderRadius`. If that is not set, it comes from
+`barDecoration.borderRadius`.
+
+`surface` resolves in the same order as the rest of the theme. The order is
+the built-in defaults, then `ThemeExtension`, then `BottomBar(theme:)`.
+
+`solid` and `glass` are presets of one class. `BottomBarSurface.lerp` blends
+between them. Blur grows from `0`, and the fill opacity moves smoothly. A null
+surface on one side switches at the halfway point.
+
+A notched centre action cuts its notch out of the surface. The blur and the
+fill follow the notch.
+
+When the platform asks for high contrast, `MediaQuery.highContrastOf` returns
+`true`. The bar then paints no blur. It fills with `fallbackColor`, and it keeps
+the outline, `border` and `shadows`.
+
+Flutter 3.44 has no reduced-transparency flag. So the package cannot read the
+iOS Reduce Transparency setting. An app that wants a solid bar can set
+`surface: BottomBarSurface.solid()` itself.
+
+The built-in `fade` and `slideAndFade` transitions fade the glass by scaling
+its blur, so the glass fades in and out with no jump. A custom
+`transitionBuilder` that wraps the bar in `Opacity` puts the glass inside an
+opacity layer. There Impeller has no backdrop to blur, so the blur shows only
+when the fade ends. Fade a glass bar with a built-in transition, or move or
+scale it in a custom one.
+
+A backdrop blur samples the screen behind the bar again on every frame where
+the content moves. With blur `0`, or while the bar is hidden, no backdrop layer
+is pushed.
+
+Try the [glass surface demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/glass-surface) live.
 
 ## Migration from v1.x
 
