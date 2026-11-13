@@ -6,6 +6,7 @@ import 'demos/basic_demo.dart';
 import 'demos/basic_tab_bar_demo.dart';
 import 'demos/center_action_demo.dart';
 import 'demos/custom_transition_demo.dart';
+import 'demos/glass_surface_demo.dart';
 import 'demos/go_router_shell_demo.dart';
 import 'demos/indicators_demo.dart';
 import 'demos/issues_dock_demo.dart';
@@ -70,6 +71,11 @@ final demos = <({String slug, String title, WidgetBuilder builder})>[
     slug: 'center-action',
     title: 'Centre action',
     builder: (_) => const CenterActionDemoPage(),
+  ),
+  (
+    slug: 'glass-surface',
+    title: 'Glass surface',
+    builder: (_) => const GlassSurfaceDemoPage(),
   ),
 ];
 

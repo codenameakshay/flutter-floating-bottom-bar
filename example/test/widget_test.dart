@@ -13,6 +13,8 @@ void main() {
     'Badged nav',
     'Custom transition',
     'go_router shell',
+    'Centre action',
+    'Glass surface',
   ];
 
   testWidgets('demo picker lists and opens every registered demo', (
