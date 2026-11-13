@@ -786,6 +786,112 @@ and `iconSize` apply to icons in the pieces.
 
 Try the [groups demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/groups) live.
 
+### RTL
+
+`alignment`, `borderRadius` and `iconOffset` are physical. They do not mirror
+under `TextDirection.rtl`. Set the directional field to follow the reading
+direction. When it is set, it wins over its physical field:
+
+- `directionalAlignment` replaces `alignment`, such as
+  `AlignmentDirectional.bottomStart`.
+- `directionalBorderRadius` replaces `borderRadius`, such as
+  `BorderRadiusDirectional.only(topStart: Radius.circular(16))`.
+- `directionalIconOffset` replaces `iconOffset`. Its `dx` points to the end
+  side.
+
+`BottomBarMotion.directionalSlide` does the same for `slideStart` and
+`slideEnd`. Items, the indicator, badges, the centre action and groups already
+mirror, so they need no setup.
+
+```dart
+const BottomBarLayout(
+  width: 320,
+  directionalAlignment: AlignmentDirectional.bottomStart,
+)
+```
+
+The bar sits on the left in `TextDirection.ltr` and on the right in
+`TextDirection.rtl`. The [docked demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/docked)
+has a right to left switch.
+
+### Edge-to-edge and safe area
+
+Android 15 forces edge-to-edge for apps that target SDK 35. The body draws
+behind the system bars, so the bar and the body need the insets.
+
+- `respectSafeArea` is true by default. It keeps the bar above the gesture or
+  3-button navigation, the home indicator and the side insets in landscape.
+- A bottom-aligned bar ignores the top inset. A top-aligned bar ignores the
+  bottom one.
+- `avoidKeyboard` lifts the bar by `viewInsets.bottom`. The bar does not jump
+  when the keyboard opens. Flutter drops the bottom padding once the keyboard
+  covers the navigation area, so the bar does not move twice.
+
+Body padding follows one rule. `BottomBarBodyPadding` reserves the bar height,
+the `offset` and the bottom inset exactly once.
+
+- The footprint already includes the bottom inset. `BottomBarBodyPadding`
+  removes the bottom padding from `MediaQuery` below it, so a `ListView` or
+  `SafeArea` inside does not add it again.
+- A `SafeArea` between the `BottomBar` and `BottomBarBodyPadding` already pads
+  the body by the inset. `BottomBarBodyPadding` then reserves that much less.
+- A `SafeArea` above the `BottomBar` removes the inset. The bar sees none, so
+  the footprint leaves it out.
+
+To draw the Android navigation bar transparent, set edge-to-edge mode and an
+overlay style before `runApp`. Import `package:flutter/services.dart` for
+`SystemChrome`.
+
+```dart
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      systemNavigationBarColor: Color(0x00000000),
+      systemNavigationBarDividerColor: Color(0x00000000),
+      systemNavigationBarContrastEnforced: false,
+      statusBarColor: Color(0x00000000),
+    ),
+  );
+  runApp(const MyApp());
+}
+```
+
+### Docked
+
+`BottomBarLayout.docked()` gives a full-width bar on the bottom edge, like the
+Material 3 docked toolbar. It has no side margin and no `offset`.
+
+```dart
+BottomBar(
+  layout: const BottomBarLayout.docked(
+    borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+  ),
+  body: const BottomBarBodyPadding(child: Placeholder()),
+  child: BottomBarItems(
+    selectedIndex: index,
+    onSelected: (i) => setState(() => index = i),
+    indicator: const BottomBarIndicator.pill(),
+    children: [
+      BottomBarItem(icon: const Icon(Icons.home), label: const Text('Home')),
+      BottomBarItem(icon: const Icon(Icons.inbox), label: const Text('Inbox')),
+    ],
+  ),
+)
+```
+
+- The corners are square. Pass `borderRadius` to round them.
+- The surface runs down under the bottom inset, and the items stay above it.
+- Hiding slides the whole surface off screen, inset included.
+- `barHeight` and `BottomBarBodyPadding` include the inset.
+- The indicator, a raised or notched centre action, glass or solid surfaces,
+  the scroll edge surface and high contrast all work.
+- A docked bar is one surface, so it ignores `leading` and `trailing`. Put
+  those widgets in `child`.
+
+Try the [docked demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/docked) live.
+
 ## Migrating from another bar
 
 The [migration guides](./docs/migrate/README.md) move an existing bottom bar
@@ -845,9 +951,14 @@ scrollable is eligible, it still shows the bar.
 | `clip` | `Clip` | `Clip.hardEdge` | Host stack clip behavior. |
 | `respectSafeArea` | `bool` | `true` | Wraps the bar and hidden action in `SafeArea`. |
 | `avoidKeyboard` | `bool` | `true` | Pads the bar and hidden action by `MediaQuery.viewInsets.bottom` so they sit above the keyboard. No-op when insets are 0 (typical inside a `Scaffold` body). |
+| `directionalAlignment` | `AlignmentGeometry?` | `null` | Reading-direction alignment, such as `AlignmentDirectional.bottomStart`. Replaces `alignment` when set. |
+| `directionalBorderRadius` | `BorderRadiusGeometry?` | `null` | Reading-direction corners, such as `BorderRadiusDirectional`. Replaces `borderRadius` when set. |
+| `directionalIconOffset` | `Offset?` | `null` | Like `iconOffset`, but `dx` points to the end side. Replaces `iconOffset` when set. |
+| `docked` | `bool` | `false` | Set by `BottomBarLayout.docked()`. The surface reaches the bottom edge under the inset. |
 
 Use `BottomBarLayout.adaptive(maxWidth: ...)` to fill available width up to a
-hard cap. When deriving layouts, `copyWith(clearMaxWidth: true)` explicitly
+hard cap. Use `BottomBarLayout.docked()` for a full-width bar on the bottom
+edge. When deriving layouts, `copyWith(clearMaxWidth: true)` explicitly
 removes an existing cap.
 
 ### `BottomBarMotion`
@@ -862,6 +973,7 @@ removes an existing cap.
 | `transitionBuilder` | `Widget Function(BuildContext, Animation<double>, Widget)?` | `null` | Overrides the enum. Must preserve layout footprint and stay paint-only. |
 | `slideStart` | `Offset` | `Offset(0, 2)` | Hidden offset in bar sizes. For `slide`, measured from the owning `BottomBar` edge the bar slides toward, so `Offset(0, 1)` just hides the bar. For `slideAndFade`, measured from the bar's resting position. |
 | `slideEnd` | `Offset` | `Offset.zero` | Visible offset for `slide` and `slideAndFade`, in bar sizes from the resting position. |
+| `directionalSlide` | `bool` | `false` | When true, the `dx` of `slideStart` and `slideEnd` points to the end side, so the slide mirrors under RTL. |
 
 Reduced-motion environments snap to the target shown/hidden state instead of
 animating.

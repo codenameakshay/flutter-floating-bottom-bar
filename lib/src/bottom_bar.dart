@@ -490,6 +490,7 @@ class _BottomBarState extends State<BottomBar>
 
     Widget bar = _wrapWithSafeArea(
       l,
+      insetInside: l.docked,
       onSizeChanged: _handleBarFootprintChanged,
       child: _buildBottomBar(theme, l, animate: !slideOutsideLayout),
     );
@@ -503,9 +504,13 @@ class _BottomBarState extends State<BottomBar>
       );
     }
 
+    final bottomInset = _avoidsBottomInset(l)
+        ? (MediaQuery.maybePaddingOf(context)?.bottom ?? 0)
+        : 0.0;
+
     return Stack(
       fit: l.fit,
-      alignment: l.alignment,
+      alignment: l.effectiveAlignment,
       clipBehavior: l.clip,
       children: [
         NotificationListener<ScrollMetricsNotification>(
@@ -515,6 +520,7 @@ class _BottomBarState extends State<BottomBar>
             child: BottomBarScope(
               barHeight: _barHeight,
               isVisible: _isVisibleNotifier,
+              bottomInset: bottomInset,
               child: widget.body,
             ),
           ),
@@ -522,7 +528,7 @@ class _BottomBarState extends State<BottomBar>
         if (widget.showIcon)
           _wrapWithSafeArea(
             l,
-            translate: l.iconOffset,
+            translate: l.resolveIconOffset(Directionality.of(context)),
             child: _buildIcon(theme),
           ),
         bar,
@@ -535,15 +541,35 @@ class _BottomBarState extends State<BottomBar>
     return false;
   }
 
+  /// The bar's vertical side of the stack, from -1 (top) to 1 (bottom).
+  double _alignmentY(BottomBarLayout l) =>
+      l.effectiveAlignment.resolve(Directionality.of(context)).y;
+
+  /// Whether the bar keeps clear of the bottom inset, and so counts it in
+  /// its footprint. A top-aligned bar ignores the bottom inset.
+  bool _avoidsBottomInset(BottomBarLayout l) =>
+      l.respectSafeArea && _alignmentY(l) >= 0;
+
+  /// Places [child] in the stack. With [insetInside] the safe-area padding is
+  /// left to [child], which paints under the inset instead.
   Widget _wrapWithSafeArea(
     BottomBarLayout l, {
     required Widget child,
     Offset translate = Offset.zero,
     ValueChanged<Size>? onSizeChanged,
+    bool insetInside = false,
   }) {
     Widget content = Padding(padding: EdgeInsets.all(l.offset), child: child);
-    if (l.respectSafeArea) {
-      content = SafeArea(child: content);
+    if (MediaQuery.maybeOf(context) != null) {
+      final y = _alignmentY(l);
+      final outside = l.respectSafeArea && !insetInside;
+      content = SafeArea(
+        top: outside && y <= 0,
+        bottom: outside && y >= 0,
+        left: outside,
+        right: outside,
+        child: content,
+      );
     }
     if (onSizeChanged != null) {
       content = SizeObserver(onSizeChanged: onSizeChanged, child: content);
@@ -556,12 +582,15 @@ class _BottomBarState extends State<BottomBar>
     if (translate != Offset.zero) {
       content = Transform.translate(offset: translate, child: content);
     }
-    content = Align(alignment: l.alignment, child: content);
+    content = Align(alignment: l.effectiveAlignment, child: content);
     if (l.avoidKeyboard) {
       // Always wrap, even at zero inset: inserting the Transform only when the
       // keyboard opens would remount the bar and drop a focused text field.
       content = Transform.translate(
-        offset: Offset(0, -MediaQuery.viewInsetsOf(context).bottom),
+        offset: Offset(
+          0,
+          -(MediaQuery.maybeViewInsetsOf(context)?.bottom ?? 0),
+        ),
         child: content,
       );
     }
@@ -757,8 +786,8 @@ class _BottomBarState extends State<BottomBar>
             child: child,
           ),
         );
-        final leading = widget.leading;
-        final trailing = widget.trailing;
+        final leading = l.docked ? null : widget.leading;
+        final trailing = l.docked ? null : widget.trailing;
         // Semantics sort the pieces by the nearest text direction above
         // them, which the bar would otherwise not set.
         final bar = Semantics(
@@ -777,7 +806,18 @@ class _BottomBarState extends State<BottomBar>
                   children: [
                     if (leading != null)
                       piece('leading', _GroupPiece(child: leading)),
-                    piece('pill', widget.child),
+                    piece(
+                      'pill',
+                      MediaQuery.maybeOf(context) != null
+                          ? SafeArea(
+                              top: false,
+                              bottom: l.docked && l.respectSafeArea,
+                              left: l.docked && l.respectSafeArea,
+                              right: l.docked && l.respectSafeArea,
+                              child: widget.child,
+                            )
+                          : widget.child,
+                    ),
                     if (trailing != null)
                       piece('trailing', _GroupPiece(child: trailing)),
                   ],
@@ -804,7 +844,7 @@ class _BottomBarState extends State<BottomBar>
   BottomBarSurface? _effectiveSurface(BottomBarSurface? surface) {
     if (surface == null) return null;
     final fill = Theme.of(context).colorScheme.surfaceContainer;
-    if (MediaQuery.highContrastOf(context)) {
+    if (MediaQuery.maybeHighContrastOf(context) == true) {
       final fallback = surface.fallbackColor ?? fill;
       return BottomBarSurface(
         tint: fallback.a == 1 ? fallback : fallback.withValues(alpha: 1),
@@ -868,7 +908,7 @@ class _BottomBarState extends State<BottomBar>
     final decoration = theme.barDecoration;
     final hasExplicitLayoutOverride =
         widget.layout != null || theme.layout != null;
-    if (hasExplicitLayoutOverride) return layout.borderRadius;
+    if (hasExplicitLayoutOverride) return layout.effectiveBorderRadius;
     return decoration?.borderRadius;
   }
 }
