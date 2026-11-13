@@ -1,6 +1,6 @@
 ---
 name: flutter-floating-bottom-bar
-description: Integrate, replace, or migrate to the `flutter_floating_bottom_bar` Flutter package — a floating widget host that sits above scrollable content and reacts to scroll events. Use this skill whenever the user mentions floating bottom bars, hide-on-scroll bars, replacing `BottomNavigationBar` / `NavigationBar` / `BottomAppBar`, swapping out third-party nav-bar packages (salomon, google_nav_bar, convex, persistent_bottom_nav_bar), migrating from `flutter_floating_bottom_bar` v1.x → v2.x, or fixing glitches with the package (jumpy springs, content clipped behind the bar, NestedScrollView not triggering hide, custom transition overshoot, FAB notch issues, double-attached controllers). Trigger even when the user does not say "flutter_floating_bottom_bar" by name — phrases like "I want a floating tab bar", "make my bottom bar hide on scroll", "iOS-style spring bottom navigation", or pasting a `BottomNavigationBar` and asking to "make it nicer" all qualify.
+description: Integrate, replace, or migrate to the `flutter_floating_bottom_bar` Flutter package — a floating widget host that sits above scrollable content and reacts to scroll events. Use this skill whenever the user mentions floating bottom bars, hide-on-scroll bars, replacing `BottomNavigationBar` / `NavigationBar` / `BottomAppBar`, swapping out third-party nav-bar packages (salomon, google_nav_bar, convex, persistent_bottom_nav_bar_v2, animated_bottom_navigation_bar), migrating from `flutter_floating_bottom_bar` v1.x → v2.x, or fixing glitches with the package (jumpy springs, content clipped behind the bar, NestedScrollView not triggering hide, custom transition overshoot, FAB notch issues, double-attached controllers). Trigger even when the user does not say "flutter_floating_bottom_bar" by name — phrases like "I want a floating tab bar", "make my bottom bar hide on scroll", "iOS-style spring bottom navigation", or pasting a `BottomNavigationBar` and asking to "make it nicer" all qualify.
 ---
 
 # flutter_floating_bottom_bar integration & migration
@@ -33,7 +33,7 @@ Read what's actually in the user's project before touching anything.
   - `NavigationBar` (Material 3)
   - `BottomAppBar` (often with FAB notch via `Scaffold.floatingActionButton` + `notchedShape`)
   - Hand-rolled `Container` + `Row` of icons / `GestureDetector`s
-  - Third-party packages — `salomon_bottom_bar`, `google_nav_bar`, `convex_bottom_bar`, `persistent_bottom_nav_bar`, etc.
+  - Third-party packages — `salomon_bottom_bar`, `google_nav_bar`, `convex_bottom_bar`, `persistent_bottom_nav_bar_v2`, `animated_bottom_navigation_bar`, etc. Full guides: `docs/migrate/` in the repo.
   - `flutter_floating_bottom_bar` v1.x (look for `body: (context, controller) => ...`, `barColor:`, flat `width`/`offset`/`borderRadius` params, `BottomBarScrollControllerProvider`, etc.)
 - **The page that hosts the bar** — find the scrollable (`ListView`, `CustomScrollView`, `NestedScrollView`, `TabBarView`, `PageView`+inner scrollables). The new `BottomBar` will wrap this scrollable as its `body`.
 - **Theme signals** — `MaterialApp.theme`, `useMaterial3`, custom `ThemeData`. These drive your motion + theme choice.
