@@ -41,6 +41,15 @@ class VisibilityAnimator extends StatelessWidget {
         ),
       );
     }
+    final mirror =
+        motion.directionalSlide &&
+        Directionality.maybeOf(context) == TextDirection.rtl;
+    final slideStart = mirror
+        ? Offset(-motion.slideStart.dx, motion.slideStart.dy)
+        : motion.slideStart;
+    final slideEnd = mirror
+        ? Offset(-motion.slideEnd.dx, motion.slideEnd.dy)
+        : motion.slideEnd;
     final Animation<double> clamped = fade
         ? _ClampedAnimation(animation, max: 1)
         : kAlwaysCompleteAnimation;
@@ -52,8 +61,8 @@ class VisibilityAnimator extends StatelessWidget {
             animation: animation,
             child: child,
             builder: (context, child) => EdgeSlide(
-              start: motion.slideStart,
-              end: motion.slideEnd,
+              start: slideStart,
+              end: slideEnd,
               progress: animation.value,
               targetResolver: slideTargetResolver,
               child: child,
@@ -72,8 +81,8 @@ class VisibilityAnimator extends StatelessWidget {
             opacity: clamped,
             child: SlideTransition(
               position: Tween<Offset>(
-                begin: motion.slideStart,
-                end: motion.slideEnd,
+                begin: slideStart,
+                end: slideEnd,
               ).animate(animation),
               child: child,
             ),

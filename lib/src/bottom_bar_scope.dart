@@ -11,6 +11,7 @@ class BottomBarScope extends InheritedWidget {
     required super.child,
     required this.barHeight,
     required this.isVisible,
+    this.bottomInset = 0,
   });
 
   /// Live rendered layout footprint of the bar in logical pixels.
@@ -23,6 +24,13 @@ class BottomBarScope extends InheritedWidget {
   /// Live visibility state — equivalent to `BottomBarController.isVisible`,
   /// but available without owning a controller.
   final ValueListenable<bool> isVisible;
+
+  /// The bottom safe-area inset that [barHeight] includes, in logical pixels.
+  ///
+  /// Zero when [BottomBarLayout.respectSafeArea] is false, when an ancestor
+  /// `SafeArea` already removed the inset, or while the keyboard covers it.
+  /// [BottomBarBodyPadding] uses it to reserve the inset exactly once.
+  final double bottomInset;
 
   /// Returns the nearest [BottomBarScope] ancestor.
   ///
@@ -49,6 +57,8 @@ class BottomBarScope extends InheritedWidget {
 
   @override
   bool updateShouldNotify(BottomBarScope oldWidget) {
-    return barHeight != oldWidget.barHeight || isVisible != oldWidget.isVisible;
+    return barHeight != oldWidget.barHeight ||
+        isVisible != oldWidget.isVisible ||
+        bottomInset != oldWidget.bottomInset;
   }
 }

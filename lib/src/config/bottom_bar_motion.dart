@@ -109,6 +109,7 @@ class BottomBarMotion {
     this.transitionBuilder,
     this.slideStart = const Offset(0, 2),
     this.slideEnd = Offset.zero,
+    this.directionalSlide = false,
   }) : mode = duration == null && curve == null
            ? BottomBarMotionMode.cupertino
            : BottomBarMotionMode.curved,
@@ -137,6 +138,7 @@ class BottomBarMotion {
     this.transitionBuilder,
     this.slideStart = const Offset(0, 2),
     this.slideEnd = Offset.zero,
+    this.directionalSlide = false,
   }) : mode = BottomBarMotionMode.cupertino,
        curve = _defaultCurve,
        cupertinoPreset = preset,
@@ -154,6 +156,7 @@ class BottomBarMotion {
     this.transitionBuilder,
     this.slideStart = const Offset(0, 2),
     this.slideEnd = Offset.zero,
+    this.directionalSlide = false,
   }) : mode = BottomBarMotionMode.curved,
        cupertinoPreset = BottomBarCupertinoMotion.snappy,
        extraBounce = 0,
@@ -175,6 +178,7 @@ class BottomBarMotion {
     this.transitionBuilder,
     this.slideStart = const Offset(0, 2),
     this.slideEnd = Offset.zero,
+    this.directionalSlide = false,
   }) : mode = BottomBarMotionMode.motor,
        cupertinoPreset = BottomBarCupertinoMotion.snappy,
        extraBounce = 0,
@@ -233,6 +237,12 @@ class BottomBarMotion {
   /// Slide rest offset (the visible position).
   final Offset slideEnd;
 
+  /// When true, the `dx` of [slideStart] and [slideEnd] points toward the end
+  /// side: right in [TextDirection.ltr] and left in [TextDirection.rtl]. A bar
+  /// that slides out to its start side then mirrors with the reading
+  /// direction. Defaults to false, where `dx` is physical.
+  final bool directionalSlide;
+
   /// Returns a copy of this motion with the given fields replaced by
   /// non-null values. Null arguments leave the corresponding field unchanged.
   ///
@@ -250,6 +260,7 @@ class BottomBarMotion {
     Widget Function(BuildContext, Animation<double>, Widget)? transitionBuilder,
     Offset? slideStart,
     Offset? slideEnd,
+    bool? directionalSlide,
   }) {
     duration ??= this.duration;
     curve ??= this.curve;
@@ -257,6 +268,7 @@ class BottomBarMotion {
     transitionBuilder ??= this.transitionBuilder;
     slideStart ??= this.slideStart;
     slideEnd ??= this.slideEnd;
+    directionalSlide ??= this.directionalSlide;
     return switch (mode ?? this.mode) {
       BottomBarMotionMode.cupertino => BottomBarMotion.cupertino(
         preset: cupertinoPreset ?? this.cupertinoPreset,
@@ -267,6 +279,7 @@ class BottomBarMotion {
         transitionBuilder: transitionBuilder,
         slideStart: slideStart,
         slideEnd: slideEnd,
+        directionalSlide: directionalSlide,
       ),
       BottomBarMotionMode.curved => BottomBarMotion.curved(
         duration: duration,
@@ -275,6 +288,7 @@ class BottomBarMotion {
         transitionBuilder: transitionBuilder,
         slideStart: slideStart,
         slideEnd: slideEnd,
+        directionalSlide: directionalSlide,
       ),
       BottomBarMotionMode.motor => BottomBarMotion.motor(
         motorMotion ?? this.motorMotion ?? motor.Motion.curved(duration, curve),
@@ -284,6 +298,7 @@ class BottomBarMotion {
         transitionBuilder: transitionBuilder,
         slideStart: slideStart,
         slideEnd: slideEnd,
+        directionalSlide: directionalSlide,
       ),
     };
   }
@@ -337,7 +352,8 @@ class BottomBarMotion {
         other.transition == transition &&
         other.transitionBuilder == transitionBuilder &&
         other.slideStart == slideStart &&
-        other.slideEnd == slideEnd;
+        other.slideEnd == slideEnd &&
+        other.directionalSlide == directionalSlide;
   }
 
   @override
@@ -353,5 +369,6 @@ class BottomBarMotion {
     transitionBuilder,
     slideStart,
     slideEnd,
+    directionalSlide,
   );
 }

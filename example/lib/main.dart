@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'demos/ai_prompt_dock_demo.dart';
@@ -6,6 +7,7 @@ import 'demos/basic_demo.dart';
 import 'demos/basic_tab_bar_demo.dart';
 import 'demos/center_action_demo.dart';
 import 'demos/custom_transition_demo.dart';
+import 'demos/docked_demo.dart';
 import 'demos/glass_surface_demo.dart';
 import 'demos/go_router_shell_demo.dart';
 import 'demos/groups_demo.dart';
@@ -15,7 +17,19 @@ import 'demos/item_theme_demo.dart';
 import 'demos/nested_scroll_demo.dart';
 import 'demos/tabs_demo.dart';
 
-void main() => runApp(const ExampleApp());
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      systemNavigationBarColor: Color(0x00000000),
+      systemNavigationBarDividerColor: Color(0x00000000),
+      systemNavigationBarContrastEnforced: false,
+      statusBarColor: Color(0x00000000),
+    ),
+  );
+  runApp(const ExampleApp());
+}
 
 /// Every demo, keyed by the slug used in its deep link (`/#/<slug>` on web).
 final demos = <({String slug, String title, WidgetBuilder builder})>[
@@ -80,6 +94,7 @@ final demos = <({String slug, String title, WidgetBuilder builder})>[
     builder: (_) => const GlassSurfaceDemoPage(),
   ),
   (slug: 'groups', title: 'Groups', builder: (_) => const GroupsDemoPage()),
+  (slug: 'docked', title: 'Docked', builder: (_) => const DockedDemoPage()),
   (slug: 'tabs', title: 'Tabs and pages', builder: (_) => const TabsDemoPage()),
 ];
 
