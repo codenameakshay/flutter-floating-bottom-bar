@@ -172,11 +172,13 @@ class _Stripes extends StatelessWidget {
   }
 }
 
-/// Accepts antialiasing drift between machines, as the other goldens do.
+/// Accepts antialiasing drift between machines: the GitHub macOS runner draws
+/// the blurred notch edge about 10 pixels differently from a local Mac. A
+/// misplaced notch or a lost blur changes thousands of pixels.
 class _TolerantComparator extends LocalFileComparator {
   _TolerantComparator(super.testFile);
 
-  static const _maxDiff = 0.0001;
+  static const _maxDiff = 0.0005;
 
   @override
   Future<bool> compare(Uint8List imageBytes, Uri golden) async {
