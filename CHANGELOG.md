@@ -1,30 +1,44 @@
 ## Unreleased
 
-- Add `BottomBarThemeData.scrollEdgeSurface`, like UIKit's
-  `scrollEdgeAppearance`. The bar paints `surface` while content scrolls under
-  it and this surface at the edge: the end of the visible list, the start of a
-  `reverse: true` list, or a list shorter than the viewport. It blends with
-  `BottomBarSurface.lerp` on the bar's spring. Reduced motion snaps, high
-  contrast paints the opaque fallback, and bars without it paint as before.
-- Add `BottomBarSurface` and `BottomBarThemeData.surface`.
-  `BottomBarSurface.glass()` blurs and tints what scrolls under the bar, with an
-  edge highlight and shadows. `.solid()` is an opaque fill, and both lerp. The
-  glass clips to the bar's outline, notch included, and hides with the bar.
-  Shadows never darken a translucent fill. High contrast swaps the glass for an
-  opaque `fallbackColor`. Bars without a surface paint as before.
-- Add a go_router `StatefulShellRoute` recipe to `EXAMPLES.md` and a
-  `go-router-shell` demo. Only the example app depends on go_router.
-- Add `BottomBarItems.centerAction`, a `BottomBarCenterAction` button for the
-  middle of a row. Its styles are `inline` (the default), `raised`, which sits
-  partly above the bar's top edge, and `notched`, which also cuts a smooth
-  circular notch in the bar. The notch follows the action, and the bar's fill,
-  border and shadow follow the notch. The action takes the middle slot and is
-  not a tab. The raised part is tappable, counts in `BottomBarScope.barHeight`
-  and `BottomBarBodyPadding`, and hides with the bar. A row too narrow for its
-  items falls back to inline, and so does an action outside a `BottomBar`. It
-  works in RTL, and reduced motion snaps the press. Set
-  `BottomBarItemThemeData.centerAction` to style it. Rows without a centre
-  action are unchanged.
+## 3.1.0
+
+### Selection and indicator
+
+- Add a selection indicator to `BottomBarItems`. Set `selectedIndex` and
+  `onSelected` and pick `BottomBarIndicator.pill()`, `.tint()`,
+  `.underline()`, `.dot()` or `.builder()`. It slides between items on a
+  spring, carries its momentum when retargeted, follows resizes and label
+  changes in the same frame, scrolls a narrow row to the selected item, and
+  jumps under reduced motion. The pill, tint and underline show the selected
+  colour only where they cover an item, so labels change colour as the
+  indicator passes. `BottomBarItem` takes its selection from the row when one
+  is set.
+
+### Item theme
+
+- Add `BottomBarItemThemeData`, set as `BottomBarThemeData.items`, to style
+  and animate `BottomBarItem` without forking it: colours, icon sizes, label
+  styles, padding, icon-label gap, ink radius, overlay, splash and a
+  `pressedScale` press effect. It also sets the default indicator and
+  indicator motion for `BottomBarItems`, and `BottomBarIndicator.none()` opts
+  a row out. `BottomBar` now passes its resolved theme to its child. Selection
+  changes animate colour, icon and label style on a spring, `onlySelected`
+  labels grow in with the indicator following, and reduced motion skips it
+  all.
+
+### Badges
+
+- Add `BottomBarBadge.dot()`, `.count()` and `.label()` for
+  `BottomBarItem.badge`. Badges scale in from the top-end corner with a slight
+  overshoot and scale out before they go. Counts roll their digits, the width
+  follows the text, a change mid-flight retargets smoothly, and reduced motion
+  snaps. The Material 3 placement mirrors in RTL. Set
+  `BottomBarItemThemeData.badge` to a `BottomBarBadgeThemeData` to style every
+  badge. The item's accessible name now includes its badge, such as "Inbox, 3
+  new". Raw widgets in `badge:` keep working as before.
+
+### Gestures
+
 - Add `BottomBarItems.onReselected`, called when the selected item is tapped
   again or picked again by a drag. `onSelected` still fires after it. Add
   `scrollToStartOnReselect` to scroll the visible list back to its start on a
@@ -37,32 +51,43 @@
   narrow rows and in rows without an indicator. It works in RTL, and reduced
   motion keeps the indicator still during the drag. There is no double-tap
   callback on purpose. All defaults keep today's behaviour.
-- Add `BottomBarBadge.dot()`, `.count()` and `.label()` for
-  `BottomBarItem.badge`. Badges scale in from the top-end corner with a slight
-  overshoot and scale out before they go. Counts roll their digits, the width
-  follows the text, a change mid-flight retargets smoothly, and reduced motion
-  snaps. The Material 3 placement mirrors in RTL. Set
-  `BottomBarItemThemeData.badge` to a `BottomBarBadgeThemeData` to style every
-  badge. The item's accessible name now includes its badge, such as "Inbox, 3
-  new". Raw widgets in `badge:` keep working as before.
-- Add `BottomBarItemThemeData`, set as `BottomBarThemeData.items`, to style
-  and animate `BottomBarItem` without forking it: colours, icon sizes, label
-  styles, padding, icon-label gap, ink radius, overlay, splash and a
-  `pressedScale` press effect. It also sets the default indicator and
-  indicator motion for `BottomBarItems`, and `BottomBarIndicator.none()` opts
-  a row out. `BottomBar` now passes its resolved theme to its child. Selection
-  changes animate colour, icon and label style on a spring, `onlySelected`
-  labels grow in with the indicator following, and reduced motion skips it
-  all.
-- Add a selection indicator to `BottomBarItems`. Set `selectedIndex` and
-  `onSelected` and pick `BottomBarIndicator.pill()`, `.tint()`,
-  `.underline()`, `.dot()` or `.builder()`. It slides between items on a
-  spring, carries its momentum when retargeted, follows resizes and label
-  changes in the same frame, scrolls a narrow row to the selected item, and
-  jumps under reduced motion. The pill, tint and underline show the selected
-  colour only where they cover an item, so labels change colour as the
-  indicator passes. `BottomBarItem` takes its selection from the row when one
-  is set.
+
+### Centre action
+
+- Add `BottomBarItems.centerAction`, a `BottomBarCenterAction` button for the
+  middle of a row. Its styles are `inline` (the default), `raised`, which sits
+  partly above the bar's top edge, and `notched`, which also cuts a smooth
+  circular notch in the bar. The notch follows the action, and the bar's fill,
+  border and shadow follow the notch. The action takes the middle slot and is
+  not a tab. The raised part is tappable, counts in `BottomBarScope.barHeight`
+  and `BottomBarBodyPadding`, and hides with the bar. A row too narrow for its
+  items falls back to inline, and so does an action outside a `BottomBar`. It
+  works in RTL, and reduced motion snaps the press. Set
+  `BottomBarItemThemeData.centerAction` to style it. Rows without a centre
+  action are unchanged.
+
+### Surface
+
+- Add `BottomBarSurface` and `BottomBarThemeData.surface`.
+  `BottomBarSurface.glass()` blurs and tints what scrolls under the bar, with an
+  edge highlight and shadows. `.solid()` is an opaque fill, and both lerp. The
+  glass clips to the bar's outline, notch included, and hides with the bar.
+  Shadows never darken a translucent fill. High contrast swaps the glass for an
+  opaque `fallbackColor`. Bars without a surface paint as before.
+- Add `BottomBarThemeData.scrollEdgeSurface`, like UIKit's
+  `scrollEdgeAppearance`. The bar paints `surface` while content scrolls under
+  it and this surface at the edge: the end of the visible list, the start of a
+  `reverse: true` list, or a list shorter than the viewport. It blends with
+  `BottomBarSurface.lerp` on the bar's spring. Reduced motion snaps, high
+  contrast paints the opaque fallback, and bars without it paint as before.
+
+### Recipes
+
+- Add a go_router `StatefulShellRoute` recipe to `EXAMPLES.md` and a
+  `go-router-shell` demo. Only the example app depends on go_router.
+
+### Fixes
+
 - Fix the hidden action doing nothing when the body has no scrollable to
   scroll, such as a WebView driven by `reportScroll`, or after the scrolled
   list was disposed by a body swap. Tapping it now always shows the bar.

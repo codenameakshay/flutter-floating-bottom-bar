@@ -52,8 +52,13 @@ surface, or any custom child.
   velocity-preserving redirects when scroll direction changes mid-animation.
 - Custom transitions are supported, but they must stay paint-only and preserve
   the child's layout footprint.
-- `BottomBarThemeData.surface` paints the bar as frosted glass or a solid fill.
-  High contrast swaps the glass for an opaque fill.
+- [Indicators](#indicators): a pill, tint, underline, dot or custom indicator springs between `BottomBarItems`. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/indicators).
+- [Item theme](#item-theme): `BottomBarItemThemeData` styles and animates every `BottomBarItem` without a fork. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/item-theme).
+- [Badges](#badges): `BottomBarBadge.dot()`, `.count()` and `.label()` scale in and roll their digits. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/badged-nav).
+- [Reselect and gestures](#reselect-and-gestures): reselect to scroll to top, long-press, haptics and drag-to-select. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/indicators).
+- [Centre action](#centre-action): an inline, raised or notched button in the middle of the row. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/center-action).
+- [Glass surface](#glass-surface): `BottomBarThemeData.surface` paints the bar as frosted glass or a solid fill, and [`scrollEdgeSurface`](#scroll-edge-surface) changes it when nothing scrolls under the bar. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/glass-surface).
+- [Works with go_router](#works-with-go_router): a `StatefulShellRoute` recipe, with no go_router dependency in the package. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/go-router-shell).
 - The hidden action is accessibility-safe by default: it is non-interactive and
   excluded from semantics while the bar is visible, keeps at least a 48x48 hit
   target when active, uses direction-aware icon/tooltip text, and defaults its
@@ -69,11 +74,11 @@ surface, or any custom child.
 
 Requires Dart `>=3.12.0` and Flutter `>=3.44.0`.
 
-See the [3.0.0 release notes](./CHANGELOG.md#300) for the complete list of new
-layout, scrolling, accessibility, and reliability improvements.
+See the [3.1.0 release notes](./CHANGELOG.md#310) for the complete list of new
+indicator, item theme, badge, gesture, centre action and surface features.
 
 ```bash
-flutter pub add flutter_floating_bottom_bar
+flutter pub add flutter_floating_bottom_bar:^3.1.0
 ```
 
 ```dart
