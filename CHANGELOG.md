@@ -11,6 +11,24 @@
   and `animated_bottom_navigation_bar`. Each has before and after code, a
   property mapping and the behaviour differences. The after code lives in
   `example/lib/migrate/`, and a test keeps the guides in sync with it.
+- Add directional layout fields for right to left: `directionalAlignment`,
+  `directionalBorderRadius` and `directionalIconOffset` follow the reading
+  direction and replace their physical field when set. Add
+  `BottomBarMotion.directionalSlide` to mirror the slide offsets too. The
+  physical fields are unchanged, so existing code does not move. Items,
+  the indicator, badges, the centre action and groups already mirror.
+- Add `BottomBarLayout.docked()`, a full-width bar on the bottom edge like the
+  Material 3 docked toolbar. Its surface runs under the bottom inset while its
+  items stay above it. It hides by sliding fully off screen. Corners are
+  square unless `borderRadius` is set. A docked bar ignores `leading` and
+  `trailing`, so put those widgets in the child.
+- Fix safe-area padding. A bottom-aligned bar ignores the top inset.
+  `BottomBarBodyPadding` counts the bottom inset once, even when a `ListView`
+  or `SafeArea` sits inside it. Add `BottomBarScope.bottomInset`, the part of
+  `barHeight` that is the bottom inset.
+- Add a docked demo in `example/lib/demos/docked_demo.dart`, with switches
+  for floating or docked, glass and right to left. The example app now runs
+  edge to edge on Android with a transparent navigation bar.
 
 ## 3.1.0
 
