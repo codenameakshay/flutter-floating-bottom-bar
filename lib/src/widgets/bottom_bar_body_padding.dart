@@ -42,8 +42,10 @@ class BottomBarBodyPadding extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scope = BottomBarScope.of(context);
-    final remainingInset = MediaQuery.maybePaddingOf(context)?.bottom ?? 0;
-    final consumedAbove = math.max(0.0, scope.bottomInset - remainingInset);
+    final remainingInset = MediaQuery.maybePaddingOf(context)?.bottom;
+    final consumedAbove = remainingInset == null
+        ? 0.0
+        : math.max(0.0, scope.bottomInset - remainingInset);
 
     return ValueListenableBuilder<double>(
       valueListenable: scope.barHeight,
@@ -54,7 +56,11 @@ class BottomBarBodyPadding extends StatelessWidget {
             resolved.left,
             resolved.top,
             resolved.right,
-            resolved.bottom + math.max(0.0, value - consumedAbove),
+            resolved.bottom +
+                math.max(
+                  0.0,
+                  math.max(value, scope.bottomInset) - consumedAbove,
+                ),
           ),
           child: child,
         );

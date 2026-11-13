@@ -505,7 +505,7 @@ class _BottomBarState extends State<BottomBar>
     }
 
     final bottomInset = _avoidsBottomInset(l)
-        ? MediaQuery.paddingOf(context).bottom
+        ? (MediaQuery.maybePaddingOf(context)?.bottom ?? 0)
         : 0.0;
 
     return Stack(
@@ -560,9 +560,16 @@ class _BottomBarState extends State<BottomBar>
     bool insetInside = false,
   }) {
     Widget content = Padding(padding: EdgeInsets.all(l.offset), child: child);
-    if (l.respectSafeArea && !insetInside) {
+    if (MediaQuery.maybeOf(context) != null) {
       final y = _alignmentY(l);
-      content = SafeArea(top: y <= 0, bottom: y >= 0, child: content);
+      final outside = l.respectSafeArea && !insetInside;
+      content = SafeArea(
+        top: outside && y <= 0,
+        bottom: outside && y >= 0,
+        left: outside,
+        right: outside,
+        child: content,
+      );
     }
     if (onSizeChanged != null) {
       content = SizeObserver(onSizeChanged: onSizeChanged, child: content);
@@ -580,7 +587,10 @@ class _BottomBarState extends State<BottomBar>
       // Always wrap, even at zero inset: inserting the Transform only when the
       // keyboard opens would remount the bar and drop a focused text field.
       content = Transform.translate(
-        offset: Offset(0, -MediaQuery.viewInsetsOf(context).bottom),
+        offset: Offset(
+          0,
+          -(MediaQuery.maybeViewInsetsOf(context)?.bottom ?? 0),
+        ),
         child: content,
       );
     }
@@ -798,8 +808,14 @@ class _BottomBarState extends State<BottomBar>
                       piece('leading', _GroupPiece(child: leading)),
                     piece(
                       'pill',
-                      l.docked && l.respectSafeArea
-                          ? SafeArea(top: false, child: widget.child)
+                      MediaQuery.maybeOf(context) != null
+                          ? SafeArea(
+                              top: false,
+                              bottom: l.docked && l.respectSafeArea,
+                              left: l.docked && l.respectSafeArea,
+                              right: l.docked && l.respectSafeArea,
+                              child: widget.child,
+                            )
                           : widget.child,
                     ),
                     if (trailing != null)
@@ -828,7 +844,7 @@ class _BottomBarState extends State<BottomBar>
   BottomBarSurface? _effectiveSurface(BottomBarSurface? surface) {
     if (surface == null) return null;
     final fill = Theme.of(context).colorScheme.surfaceContainer;
-    if (MediaQuery.highContrastOf(context)) {
+    if (MediaQuery.maybeHighContrastOf(context) == true) {
       final fallback = surface.fallbackColor ?? fill;
       return BottomBarSurface(
         tint: fallback.a == 1 ? fallback : fallback.withValues(alpha: 1),
