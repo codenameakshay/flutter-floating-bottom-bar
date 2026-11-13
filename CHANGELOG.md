@@ -2,6 +2,17 @@
 
 - Add a go_router `StatefulShellRoute` recipe to `EXAMPLES.md` and a
   `go-router-shell` demo. Only the example app depends on go_router.
+- Add `BottomBarItems.centerAction`, a `BottomBarCenterAction` button for the
+  middle of a row. Its styles are `inline` (the default), `raised`, which sits
+  partly above the bar's top edge, and `notched`, which also cuts a smooth
+  circular notch in the bar. The notch follows the action, and the bar's fill,
+  border and shadow follow the notch. The action takes the middle slot and is
+  not a tab. The raised part is tappable, counts in `BottomBarScope.barHeight`
+  and `BottomBarBodyPadding`, and hides with the bar. A row too narrow for its
+  items falls back to inline, and so does an action outside a `BottomBar`. It
+  works in RTL, and reduced motion snaps the press. Set
+  `BottomBarItemThemeData.centerAction` to style it. Rows without a centre
+  action are unchanged.
 - Add `BottomBarItems.onReselected`, called when the selected item is tapped
   again or picked again by a drag. `onSelected` still fires after it. Add
   `scrollToStartOnReselect` to scroll the visible list back to its start on a

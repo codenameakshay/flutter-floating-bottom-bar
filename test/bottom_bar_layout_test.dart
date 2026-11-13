@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+import 'package:flutter_floating_bottom_bar/src/internal/bar_surface.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers/tooltip_finder.dart';
@@ -109,12 +110,10 @@ void main() {
 
     final containers = find.ancestor(
       of: find.byKey(const Key('bar-child')),
-      matching: find.byWidgetPredicate(
-        (widget) => widget is Container && widget.decoration is BoxDecoration,
-      ),
+      matching: find.byWidgetPredicate((widget) => widget is BarSurface),
     );
-    final container = containers.evaluate().single.widget as Container;
-    final decoration = container.decoration! as BoxDecoration;
+    final surface = containers.evaluate().single.widget as BarSurface;
+    final decoration = surface.decoration!;
 
     expect(decoration.borderRadius, radius);
   });
@@ -597,8 +596,7 @@ Future<void> _pumpBottomBar(
 }
 
 BoxDecoration _barDecoration(WidgetTester tester) {
-  final container = tester.widget<Container>(_barContainerFinder());
-  return container.decoration! as BoxDecoration;
+  return tester.widget<BarSurface>(_barContainerFinder()).decoration!;
 }
 
 Material _barMaterial(WidgetTester tester) {
@@ -619,8 +617,6 @@ Size _barSize(WidgetTester tester) {
 Finder _barContainerFinder() {
   return find.ancestor(
     of: find.byKey(const Key('bar-child')),
-    matching: find.byWidgetPredicate(
-      (widget) => widget is Container && widget.decoration is BoxDecoration,
-    ),
+    matching: find.byWidgetPredicate((widget) => widget is BarSurface),
   );
 }

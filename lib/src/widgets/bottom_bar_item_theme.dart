@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:motor/motor.dart';
 
 import 'bottom_bar_badge.dart';
+import 'bottom_bar_center_action_theme.dart';
 import 'bottom_bar_indicator.dart';
 
 /// The haptic a [BottomBarItems] row plays when the user picks an item.
@@ -66,6 +67,7 @@ class BottomBarItemThemeData {
     this.indicatorMotion,
     this.badge,
     this.haptics,
+    this.centerAction,
   });
 
   /// Icon and label colour of an unselected item.
@@ -149,6 +151,9 @@ class BottomBarItemThemeData {
   /// [BottomBarHaptics.none].
   final BottomBarHaptics? haptics;
 
+  /// Defaults for the [BottomBarItems.centerAction] button.
+  final BottomBarCenterActionThemeData? centerAction;
+
   /// Returns a theme where the non-null fields of [other] override this one.
   BottomBarItemThemeData merge(BottomBarItemThemeData? other) {
     if (other == null) return this;
@@ -170,6 +175,8 @@ class BottomBarItemThemeData {
       indicatorMotion: other.indicatorMotion,
       badge: badge?.merge(other.badge) ?? other.badge,
       haptics: other.haptics,
+      centerAction:
+          centerAction?.merge(other.centerAction) ?? other.centerAction,
     );
   }
 
@@ -192,6 +199,7 @@ class BottomBarItemThemeData {
     Motion? indicatorMotion,
     BottomBarBadgeThemeData? badge,
     BottomBarHaptics? haptics,
+    BottomBarCenterActionThemeData? centerAction,
   }) {
     return BottomBarItemThemeData(
       color: color ?? this.color,
@@ -211,13 +219,14 @@ class BottomBarItemThemeData {
       indicatorMotion: indicatorMotion ?? this.indicatorMotion,
       badge: badge ?? this.badge,
       haptics: haptics ?? this.haptics,
+      centerAction: centerAction ?? this.centerAction,
     );
   }
 
   /// Linearly interpolates between [a] and [b].
   ///
-  /// Colours, sizes, styles, padding and radii interpolate, and [badge] uses
-  /// [BottomBarBadgeThemeData.lerp]. [splashFactory],
+  /// Colours, sizes, styles, padding and radii interpolate. [badge] and
+  /// [centerAction] use their own `lerp` methods. [splashFactory],
   /// [motion], [indicator], [indicatorMotion] and [haptics] switch at
   /// `t == 0.5`.
   static BottomBarItemThemeData? lerp(
@@ -260,6 +269,11 @@ class BottomBarItemThemeData {
       indicatorMotion: first ? a.indicatorMotion : b.indicatorMotion,
       badge: BottomBarBadgeThemeData.lerp(a.badge, b.badge, t),
       haptics: first ? a.haptics : b.haptics,
+      centerAction: BottomBarCenterActionThemeData.lerp(
+        a.centerAction,
+        b.centerAction,
+        t,
+      ),
     );
   }
 
@@ -283,7 +297,8 @@ class BottomBarItemThemeData {
         other.indicator == indicator &&
         other.indicatorMotion == indicatorMotion &&
         other.badge == badge &&
-        other.haptics == haptics;
+        other.haptics == haptics &&
+        other.centerAction == centerAction;
   }
 
   @override
@@ -305,6 +320,7 @@ class BottomBarItemThemeData {
     indicatorMotion,
     badge,
     haptics,
+    centerAction,
   );
 }
 

@@ -1,12 +1,13 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:motor/motor.dart';
 
 import '../internal/bottom_bar_item_height.dart';
+import '../internal/haptics.dart';
 import '../internal/item_theme_scope.dart';
 import '../internal/reduce_motion.dart';
+import 'bottom_bar_center_action.dart';
 import 'bottom_bar_indicator.dart';
 import 'bottom_bar_item_theme.dart';
 
@@ -64,6 +65,9 @@ enum BottomBarLabelBehavior {
 /// [dragToSelect] lets the user slide a finger along the row to pick an item.
 /// There is no double-tap callback: a double-tap recognizer would delay every
 /// single tap.
+///
+/// Add a [centerAction] for a primary action in the middle of the row,
+/// inline, raised above the bar, or raised with a notch cut into the bar.
 class BottomBarItems extends StatelessWidget {
   /// Creates a [BottomBarItems] row.
   const BottomBarItems({
@@ -79,6 +83,7 @@ class BottomBarItems extends StatelessWidget {
     this.scrollToStartOnReselect = false,
     this.onLongPressed,
     this.dragToSelect = false,
+    this.centerAction,
   });
 
   /// The widgets to display in the row — typically [BottomBarItem] instances.
@@ -160,6 +165,16 @@ class BottomBarItems extends StatelessWidget {
   /// Cupertino spring. Reduced motion skips the animation.
   final Motion? indicatorMotion;
 
+  /// A primary action placed in the middle of the row.
+  ///
+  /// It is inserted at `children.length ~/ 2`, so with an even number of
+  /// children it sits in the exact centre, and in RTL it mirrors with the
+  /// row. It is not a tab: [selectedIndex], [onSelected], [onReselected],
+  /// [onLongPressed], [dragToSelect] and the [indicator] count and see only
+  /// [children]. In a row too narrow for its items, which scrolls, it sits
+  /// inline whatever its [BottomBarCenterAction.style].
+  final BottomBarCenterAction? centerAction;
+
   @override
   Widget build(BuildContext context) {
     final index = selectedIndex;
@@ -195,27 +210,44 @@ class BottomBarItems extends StatelessWidget {
             child: child,
           );
 
-          if (!constraints.hasBoundedWidth) {
-            return withItemHeight(row(children));
+          List<Widget> withAction(List<Widget> items, {bool inline = false}) {
+            final action = centerAction;
+            if (action == null) return items;
+            final at = children.length ~/ 2;
+            return [
+              ...items.take(at),
+              CenterActionInline(inline: inline, child: action),
+              ...items.skip(at),
+            ];
           }
-          if (constraints.maxWidth < children.length * 48) {
+
+          if (!constraints.hasBoundedWidth) {
+            return withItemHeight(row(withAction(children)));
+          }
+          final action = centerAction;
+          final actionWidth = action == null
+              ? 0.0
+              : centerActionGeometry(context, action).slotWidth;
+          if (constraints.maxWidth < children.length * 48 + actionWidth) {
             return withItemHeight(
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                child: row(children, reveal: true),
+                child: row(withAction(children, inline: true), reveal: true),
               ),
             );
           }
           return withItemHeight(
-            row([
-              for (final child in children)
-                Expanded(
-                  key: selectedIndex != null && child.key != null
-                      ? ValueKey<Key>(child.key!)
-                      : null,
-                  child: child,
-                ),
-            ]),
+            row(
+              withAction([
+                for (final child in children)
+                  Expanded(
+                    key: selectedIndex != null && child.key != null
+                        ? ValueKey<Key>(child.key!)
+                        : null,
+                    child: child,
+                  ),
+              ]),
+            ),
           );
         },
       ),
@@ -329,20 +361,9 @@ class _SelectableItemsState extends State<_SelectableItems>
     super.dispose();
   }
 
-  void _haptic(BottomBarHaptics haptics) {
-    switch (haptics) {
-      case BottomBarHaptics.none:
-        break;
-      case BottomBarHaptics.selectionClick:
-        HapticFeedback.selectionClick();
-      case BottomBarHaptics.lightImpact:
-        HapticFeedback.lightImpact();
-    }
-  }
-
   void _select(int index) {
     final items = widget.items;
-    _haptic(_haptics);
+    playHaptics(_haptics);
     if (index == items.selectedIndex) {
       if (items.scrollToStartOnReselect) barScrollToStart(context);
       items.onReselected?.call(index);
@@ -369,7 +390,7 @@ class _SelectableItemsState extends State<_SelectableItems>
     if (index != null && index != _dragIndex) {
       setState(() => _dragIndex = index);
       if (_haptics != BottomBarHaptics.none) {
-        _haptic(BottomBarHaptics.selectionClick);
+        playHaptics(BottomBarHaptics.selectionClick);
       }
     }
   }

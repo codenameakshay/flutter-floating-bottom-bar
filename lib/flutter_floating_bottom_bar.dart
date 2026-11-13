@@ -14,6 +14,10 @@ export 'src/config/bottom_bar_layout.dart';
 export 'src/config/bottom_bar_motion.dart';
 export 'src/config/bottom_bar_scroll_behavior.dart';
 export 'src/bottom_bar_theme.dart';
+export 'src/widgets/bottom_bar_center_action.dart'
+    show BottomBarCenterAction, BottomBarCenterActionStyle;
+export 'src/widgets/bottom_bar_center_action_theme.dart'
+    show BottomBarCenterActionThemeData;
 export 'src/widgets/bottom_bar_badge.dart'
     show BottomBarBadge, BottomBarBadgeThemeData;
 export 'src/widgets/bottom_bar_item.dart';
