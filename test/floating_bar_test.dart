@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_floating_bottom_bar/src/internal/visibility_animator.dart';
-import 'package:flutter_floating_bottom_bar/src/internal/bar_surface.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers/semantics.dart';
@@ -384,7 +383,7 @@ void main() {
         .evaluate()
         .map((e) => e.widget)
         .cast<FadeTransition>()
-        .firstWhere((widget) => widget.child is BarSurface);
+        .firstWhere((widget) => widget.child is Semantics);
     expect(fade.opacity.value, greaterThan(0.1));
   });
 

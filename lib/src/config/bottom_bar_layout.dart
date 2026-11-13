@@ -1,3 +1,5 @@
+import 'dart:ui' show lerpDouble;
+
 import 'package:flutter/widgets.dart';
 
 /// Layout configuration for [BottomBar].
@@ -21,9 +23,11 @@ class BottomBarLayout {
     this.clip = Clip.hardEdge,
     this.respectSafeArea = true,
     this.avoidKeyboard = true,
+    this.groupSpacing = 8,
   }) : assert(
          maxWidth == null || (maxWidth >= 0 && maxWidth < double.infinity),
-       );
+       ),
+       assert(groupSpacing >= 0);
 
   /// Creates a layout that fills the available host width up to [maxWidth].
   ///
@@ -40,7 +44,9 @@ class BottomBarLayout {
     this.clip = Clip.hardEdge,
     this.respectSafeArea = true,
     this.avoidKeyboard = true,
+    this.groupSpacing = 8,
   }) : assert(maxWidth >= 0 && maxWidth < double.infinity),
+       assert(groupSpacing >= 0),
        maxWidth = maxWidth,
        width = double.infinity;
 
@@ -93,6 +99,10 @@ class BottomBarLayout {
   /// its body to avoid the keyboard. Does not change [BottomBarScope.barHeight].
   final bool avoidKeyboard;
 
+  /// The clear gap between the pill and each of `BottomBar.leading` and
+  /// `BottomBar.trailing`. Defaults to 8. Unused when the bar has neither.
+  final double groupSpacing;
+
   /// Returns a copy of this layout with the given fields replaced by non-null
   /// values.
   ///
@@ -110,6 +120,7 @@ class BottomBarLayout {
     Clip? clip,
     bool? respectSafeArea,
     bool? avoidKeyboard,
+    double? groupSpacing,
   }) {
     assert(
       !clearMaxWidth || maxWidth == null,
@@ -126,6 +137,40 @@ class BottomBarLayout {
       clip: clip ?? this.clip,
       respectSafeArea: respectSafeArea ?? this.respectSafeArea,
       avoidKeyboard: avoidKeyboard ?? this.avoidKeyboard,
+      groupSpacing: groupSpacing ?? this.groupSpacing,
+    );
+  }
+
+  /// Linearly interpolates between [a] and [b] at fraction [t].
+  ///
+  /// [offset], [borderRadius], [iconOffset], [alignment] and [groupSpacing]
+  /// interpolate. [width] and [maxWidth] interpolate when both are finite and
+  /// step otherwise, so an adaptive layout never turns into a NaN width. The
+  /// other fields step at `t == 0.5`.
+  static BottomBarLayout? lerp(
+    BottomBarLayout? a,
+    BottomBarLayout? b,
+    double t,
+  ) {
+    if (identical(a, b)) return a;
+    if (a == null || b == null) return t < 0.5 ? a : b;
+    final near = t < 0.5 ? a : b;
+    double? size(double? x, double? y) =>
+        x != null && y != null && x.isFinite && y.isFinite
+        ? lerpDouble(x, y, t)
+        : (t < 0.5 ? x : y);
+    return BottomBarLayout(
+      width: size(a.width, b.width)!,
+      maxWidth: size(a.maxWidth, b.maxWidth),
+      offset: lerpDouble(a.offset, b.offset, t)!,
+      borderRadius: BorderRadius.lerp(a.borderRadius, b.borderRadius, t)!,
+      iconOffset: Offset.lerp(a.iconOffset, b.iconOffset, t)!,
+      alignment: Alignment.lerp(a.alignment, b.alignment, t)!,
+      fit: near.fit,
+      clip: near.clip,
+      respectSafeArea: near.respectSafeArea,
+      avoidKeyboard: near.avoidKeyboard,
+      groupSpacing: lerpDouble(a.groupSpacing, b.groupSpacing, t)!,
     );
   }
 
@@ -142,7 +187,8 @@ class BottomBarLayout {
         other.fit == fit &&
         other.clip == clip &&
         other.respectSafeArea == respectSafeArea &&
-        other.avoidKeyboard == avoidKeyboard;
+        other.avoidKeyboard == avoidKeyboard &&
+        other.groupSpacing == groupSpacing;
   }
 
   @override
@@ -157,5 +203,6 @@ class BottomBarLayout {
     clip,
     respectSafeArea,
     avoidKeyboard,
+    groupSpacing,
   );
 }

@@ -7,6 +7,7 @@ import 'package:motor/motor.dart';
 import 'bottom_bar_controller.dart';
 import 'bottom_bar_scope.dart';
 import 'bottom_bar_theme.dart';
+import 'internal/bar_group.dart';
 import 'internal/bar_surface.dart';
 import 'internal/item_theme_scope.dart';
 import 'config/bottom_bar_layout.dart';
@@ -69,6 +70,8 @@ class BottomBar extends StatefulWidget {
   const BottomBar({
     required this.child,
     required this.body,
+    this.leading,
+    this.trailing,
     this.controller,
     this.layout,
     this.motion,
@@ -95,6 +98,25 @@ class BottomBar extends StatefulWidget {
   /// This subtree also receives [BottomBarScope], so descendants can read the
   /// live bar footprint and visibility.
   final Widget body;
+
+  /// A detached piece before the bar, in reading order, like the profile
+  /// button beside an iOS 26 tab bar.
+  ///
+  /// It paints with the bar's surface and outline radius, is exactly as tall
+  /// as the bar and at least as wide, and hides and shows with it. The bar
+  /// itself takes the width left after [leading], [trailing] and
+  /// [BottomBarLayout.groupSpacing]. A piece never shrinks: in a row too
+  /// narrow for it, the bar narrows first, and [BottomBarItems] scroll.
+  ///
+  /// [child] fills the piece's height and is at least as wide, so an
+  /// [IconButton] becomes a round button the size of the piece. Icons take
+  /// [BottomBarItemThemeData.color] and [BottomBarItemThemeData.iconSize].
+  /// Wrap [child] in a [Center] to keep its own size.
+  final Widget? leading;
+
+  /// A detached piece after the bar, in reading order, like the search
+  /// button beside an iOS 26 tab bar. Laid out and painted like [leading].
+  final Widget? trailing;
 
   /// Optional imperative controller for the bar.
   ///
@@ -184,6 +206,9 @@ class _BottomBarState extends State<BottomBar>
     canRequestFocus: false,
   );
   final GlobalKey _barRenderKey = GlobalKey();
+
+  /// Every piece of the bar reads the backdrop under it once, together.
+  final BackdropKey _backdropKey = BackdropKey();
 
   bool _targetVisible = true;
   BottomBarLayout _effectiveLayout(BottomBarThemeData theme) {
@@ -714,29 +739,48 @@ class _BottomBarState extends State<BottomBar>
             _motion.transitionBuilder == null &&
             (_motion.transition == BottomBarTransition.fade ||
                 _motion.transition == BottomBarTransition.slideAndFade);
-        final bar = BarSurface(
-          key: _barRenderKey,
+        final radius = _effectiveBarBorderRadius(theme, l);
+        Widget piece(String slot, Widget child) => BarSurface(
+          key: ValueKey(slot),
           decoration: surface == null
               ? _effectiveBarDecoration(theme, l)
-              : BoxDecoration(
-                  borderRadius: _effectiveBarBorderRadius(theme, l),
-                ),
+              : BoxDecoration(borderRadius: radius),
           surface: surface,
           edgeSurface: edgeSurface,
           edge: _edgeController,
           visibility: _motionController,
           fades: fadesItself,
-          child: SizedBox(
-            width: _effectiveBarWidth(constraints, l),
-            child: Material(
-              color: Colors.transparent,
-              borderRadius: _effectiveBarBorderRadius(theme, l),
-              child: Focus(
-                focusNode: _barFocusNode,
-                child: ItemThemeScope(
-                  items: theme.items,
-                  scrollToStart: _scrollToStartOnReselect,
-                  child: widget.child,
+          backdropKey: _backdropKey,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: radius,
+            child: child,
+          ),
+        );
+        final leading = widget.leading;
+        final trailing = widget.trailing;
+        // Semantics sort the pieces by the nearest text direction above
+        // them, which the bar would otherwise not set.
+        final bar = Semantics(
+          textDirection: Directionality.of(context),
+          child: Focus(
+            focusNode: _barFocusNode,
+            child: ItemThemeScope(
+              items: theme.items,
+              scrollToStart: _scrollToStartOnReselect,
+              child: SizedBox(
+                width: _effectiveBarWidth(constraints, l),
+                child: BarGroup(
+                  key: _barRenderKey,
+                  pillIndex: leading == null ? 0 : 1,
+                  spacing: l.groupSpacing,
+                  children: [
+                    if (leading != null)
+                      piece('leading', _GroupPiece(child: leading)),
+                    piece('pill', widget.child),
+                    if (trailing != null)
+                      piece('trailing', _GroupPiece(child: trailing)),
+                  ],
                 ),
               ),
             ),
@@ -826,5 +870,24 @@ class _BottomBarState extends State<BottomBar>
         widget.layout != null || theme.layout != null;
     if (hasExplicitLayoutOverride) return layout.borderRadius;
     return decoration?.borderRadius;
+  }
+}
+
+/// Colours and sizes a side piece's icons like the bar's unselected items.
+class _GroupPiece extends StatelessWidget {
+  const _GroupPiece({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = itemThemeOf(context);
+    return IconTheme.merge(
+      data: IconThemeData(
+        color: items.color ?? Theme.of(context).colorScheme.onSurfaceVariant,
+        size: items.iconSize,
+      ),
+      child: child,
+    );
   }
 }

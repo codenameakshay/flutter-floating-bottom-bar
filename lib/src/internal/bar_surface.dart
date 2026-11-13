@@ -235,6 +235,19 @@ class RenderBarSurface extends RenderShiftedBox {
     return action == null || !action._lifted ? 0 : action._raise;
   }
 
+  double get layoutRaise => _raise;
+
+  /// The bar's own height, without the raise of a raised centre action.
+  /// Read by the parent after layout.
+  double get barHeight {
+    final child = this.child;
+    if (child == null) return size.height;
+    return math.max(
+      0,
+      size.height - (child.parentData! as BoxParentData).offset.dy,
+    );
+  }
+
   Rect get _barRect {
     final child = this.child!;
     return (child.parentData! as BoxParentData).offset & child.size;

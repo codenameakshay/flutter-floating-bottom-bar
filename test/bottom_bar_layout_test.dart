@@ -523,6 +523,117 @@ void main() {
       expect(tester.getRect(find.byKey(barKey)).bottom, closeTo(-54, 0.5));
     });
   });
+
+  group('BottomBarLayout.groupSpacing', () {
+    test('defaults to 8 on both constructors', () {
+      expect(const BottomBarLayout().groupSpacing, 8);
+      expect(const BottomBarLayout.adaptive(maxWidth: 360).groupSpacing, 8);
+    });
+
+    test('copyWith replaces only groupSpacing', () {
+      const layout = BottomBarLayout(width: 280, maxWidth: 320, offset: 20);
+
+      final updated = layout.copyWith(groupSpacing: 12);
+
+      expect(
+        updated,
+        const BottomBarLayout(
+          width: 280,
+          maxWidth: 320,
+          offset: 20,
+          groupSpacing: 12,
+        ),
+      );
+    });
+
+    test('copyWith keeps groupSpacing when not provided', () {
+      const layout = BottomBarLayout(groupSpacing: 12);
+
+      expect(layout.copyWith().groupSpacing, 12);
+    });
+
+    test('equality and hashCode distinguish groupSpacing', () {
+      const a = BottomBarLayout(groupSpacing: 8);
+      const b = BottomBarLayout(groupSpacing: 12);
+
+      expect(a, isNot(b));
+      expect(a.hashCode, isNot(b.hashCode));
+    });
+
+    test('negative groupSpacing is rejected', () {
+      expect(
+        () => BottomBarLayout(groupSpacing: -1),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => BottomBarLayout.adaptive(maxWidth: 360, groupSpacing: -1),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+
+    test('lerp interpolates width, groupSpacing and offset', () {
+      final result = BottomBarLayout.lerp(
+        const BottomBarLayout(width: 100, groupSpacing: 0, offset: 0),
+        const BottomBarLayout(width: 300, groupSpacing: 20, offset: 10),
+        0.5,
+      );
+
+      expect(result!.width, 200);
+      expect(result.groupSpacing, 10);
+      expect(result.offset, 5);
+    });
+
+    test('lerp keeps an adaptive width infinite instead of NaN', () {
+      const adaptive = BottomBarLayout.adaptive(maxWidth: 400);
+      const fixed = BottomBarLayout(width: 300);
+
+      expect(
+        BottomBarLayout.lerp(adaptive, fixed, 0.25)!.width,
+        double.infinity,
+      );
+      expect(BottomBarLayout.lerp(adaptive, fixed, 0.75)!.width, 300);
+    });
+
+    test('lerp with a null side steps at 0.5', () {
+      const layout = BottomBarLayout(width: 300);
+
+      expect(BottomBarLayout.lerp(null, layout, 0.25), isNull);
+      expect(BottomBarLayout.lerp(null, layout, 0.75), layout);
+    });
+
+    test('lerp returns the same instance for identical inputs', () {
+      const layout = BottomBarLayout(width: 300, groupSpacing: 12);
+
+      expect(BottomBarLayout.lerp(layout, layout, 0.3), same(layout));
+    });
+
+    test('lerp steps non-numeric fields at 0.5', () {
+      const a = BottomBarLayout(
+        fit: StackFit.loose,
+        clip: Clip.hardEdge,
+        respectSafeArea: true,
+        avoidKeyboard: true,
+      );
+      const b = BottomBarLayout(
+        fit: StackFit.expand,
+        clip: Clip.none,
+        respectSafeArea: false,
+        avoidKeyboard: false,
+      );
+
+      final early = BottomBarLayout.lerp(a, b, 0.25)!;
+      final late = BottomBarLayout.lerp(a, b, 0.75)!;
+
+      expect(early.fit, StackFit.loose);
+      expect(early.clip, Clip.hardEdge);
+      expect(early.respectSafeArea, isTrue);
+      expect(early.avoidKeyboard, isTrue);
+      expect(late.fit, StackFit.expand);
+      expect(late.clip, Clip.none);
+      expect(late.respectSafeArea, isFalse);
+      expect(late.avoidKeyboard, isFalse);
+    });
+  });
 }
 
 Future<void> _pumpBottomBarWithViewInsets(

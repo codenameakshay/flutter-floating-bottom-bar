@@ -1,6 +1,5 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
-import 'package:flutter_floating_bottom_bar/src/internal/bar_surface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:motor/motor.dart' as motor;
 
@@ -101,7 +100,7 @@ void main() {
     bool hasBarFade = false;
     for (final element in fades.evaluate()) {
       final fade = element.widget as FadeTransition;
-      if (fade.child is BarSurface) {
+      if (fade.child is Semantics) {
         hasBarFade = true;
         break;
       }
@@ -109,7 +108,7 @@ void main() {
     expect(
       hasBarFade,
       isTrue,
-      reason: 'expected a FadeTransition wrapping the bar BarSurface',
+      reason: 'expected a FadeTransition wrapping the bar',
     );
   });
 
@@ -269,5 +268,5 @@ FadeTransition _barFade(WidgetTester tester) {
       .evaluate()
       .map((element) => element.widget)
       .cast<FadeTransition>()
-      .firstWhere((widget) => widget.child is BarSurface);
+      .firstWhere((widget) => widget.child is Semantics);
 }
