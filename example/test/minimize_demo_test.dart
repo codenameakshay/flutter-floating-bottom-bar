@@ -15,7 +15,7 @@ Future<void> _openMinimize(WidgetTester tester) async {
 
 void main() {
   testWidgets('minimize page minimizes on scroll down', (tester) async {
-    expect(demos.last.slug, 'minimize');
+    expect(demos.map((d) => d.slug), contains('minimize'));
 
     await _openMinimize(tester);
     expect(find.text('State: shown'), findsOneWidget);

@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'demos/adaptive_rail_demo.dart';
 import 'demos/ai_prompt_dock_demo.dart';
 import 'demos/badges_demo.dart';
 import 'demos/basic_demo.dart';
@@ -104,7 +105,29 @@ final demos = <({String slug, String title, WidgetBuilder builder})>[
     title: 'Minimize on scroll',
     builder: (_) => const MinimizeDemoPage(),
   ),
+  (
+    slug: 'adaptive-rail',
+    title: 'Adaptive rail',
+    builder: (_) => const AdaptiveRailDemoPage(),
+  ),
 ];
+
+final _currentRoute = ValueNotifier<String?>(null);
+
+class _RouteTracker extends NavigatorObserver {
+  @override
+  void didChangeTop(Route<dynamic> topRoute, Route<dynamic>? previousTopRoute) {
+    _setRoute(topRoute.settings.name);
+  }
+
+  /// Routes are reported while the Navigator builds, so the notifier is set
+  /// after the frame to avoid marking listeners dirty mid-build.
+  void _setRoute(String? name) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _currentRoute.value = name;
+    });
+  }
+}
 
 class ExampleApp extends StatelessWidget {
   const ExampleApp({super.key});
@@ -119,6 +142,7 @@ class ExampleApp extends StatelessWidget {
         useMaterial3: true,
       ),
       debugShowCheckedModeBanner: false,
+      navigatorObservers: [_RouteTracker()],
       routes: {
         '/': (_) => const _DemoPicker(),
         for (final demo in demos) '/${demo.slug}': demo.builder,
@@ -134,10 +158,13 @@ class ExampleApp extends StatelessWidget {
 
 /// Shows the app inside a phone-sized frame when the window is wider than a
 /// phone, so desktop visitors see the demos at the size they were designed for.
+/// Routes in [_framelessRoutes] fill the window, so they can show their wide
+/// layouts.
 class _DeviceFrame extends StatelessWidget {
   const _DeviceFrame({required this.child});
 
   static const _phoneBreakpoint = 600.0;
+  static const _framelessRoutes = {'/adaptive-rail'};
   static const _frameSize = Size(430, 932);
   static const _radius = BorderRadius.all(Radius.circular(44));
 
@@ -145,10 +172,16 @@ class _DeviceFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) => constraints.maxWidth < _phoneBreakpoint
+    return ValueListenableBuilder<String?>(
+      valueListenable: _currentRoute,
+      builder: (context, route, _) => _framelessRoutes.contains(route)
           ? child
-          : _framed(context, constraints.biggest),
+          : LayoutBuilder(
+              builder: (context, constraints) =>
+                  constraints.maxWidth < _phoneBreakpoint
+                  ? child
+                  : _framed(context, constraints.biggest),
+            ),
     );
   }
 
