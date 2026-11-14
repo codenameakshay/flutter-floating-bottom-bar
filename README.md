@@ -153,11 +153,16 @@ BottomBar(theme: BottomBarThemeData.minimal(), body: body, child: items)    // f
 ```
 
 - `glass()` is the iOS 26 tab bar. It is a floating glass capsule that clears at the scroll edge. A tinted capsule sits behind the selected item, with springs and a selection haptic. The glass is 98% opaque, so labels keep 4.5:1 contrast over a white or a black backdrop. `accent` colours the selected item and its tint. `indicator` replaces the tint.
-- `material3()` matches Flutter's Material 3 `NavigationBar`. The bar is docked, full width, on a solid `surfaceContainer`, and 80 px tall. Its 64 x 32 indicator matches too. The selected icon and label use `primary`. `backgroundColor` and `indicatorColor` replace the two fills.
+- `material3()` matches the size and indicator of Flutter's Material 3 `NavigationBar`. The bar is docked, full width, on a solid `surfaceContainer`, and 80 px tall, with a 64 x 32 stadium. The selected icon and label use `primary`, where `NavigationBar` uses `onSecondaryContainer` and `onSurface`. `backgroundColor` and `indicatorColor` replace the two fills.
 - `pill()` is a floating, fully rounded, solid bar with a soft shadow. A sliding pill sits behind the selected item, with a small press scale and a selection haptic. The content under the pill takes black or white for contrast. `accent` fills the pill. `indicator` replaces it.
 - `minimal()` is a flat floating bar with no shadow. A dot sits under the selected item, with no ink and short, quiet motion. The bar fades instead of sliding. `accent` colours the selected item and the dot. `indicator` replaces the dot, for example with `BottomBarIndicator.underline()`. Pair it with `labelBehavior: BottomBarLabelBehavior.onlySelected` on `BottomBarItems`. Label behaviour is a row argument, so a theme cannot set it.
 
 To change a preset, use `copyWith` or `merge`.
+
+The `material3()`, `pill()` and `minimal()` presets keep their surface at the
+scroll edge. Merging one over `glass()` resets the glass edge surface. If you
+replace a preset's `surface` with `copyWith` and want the same surface at the
+edge, set `scrollEdgeSurface` to that surface too.
 
 ```dart
 // Change one field.

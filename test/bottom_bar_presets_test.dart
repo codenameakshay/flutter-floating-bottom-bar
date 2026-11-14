@@ -140,6 +140,17 @@ void main() {
       },
     );
 
+    test(
+      '${entry.key} copyWith changing surface preserves the edge surface',
+      () {
+        final base = entry.value();
+        final surface = const BottomBarSurface.solid(color: Colors.orange);
+        final copy = base.copyWith(surface: surface);
+        expect(copy.surface, surface);
+        expect(copy.scrollEdgeSurface, base.scrollEdgeSurface);
+      },
+    );
+
     test('${entry.key} merge keeps the fields the override leaves null', () {
       final base = entry.value();
       final merged = base.merge(
@@ -183,8 +194,56 @@ void main() {
     expect(BottomBarThemeData.minimal().layout!.docked, isFalse);
   });
 
+  for (final entry in presets.entries) {
+    testWidgets('${entry.key} extension styles a standalone item', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+            colorSchemeSeed: Colors.teal,
+            extensions: [entry.value()],
+          ),
+          home: const Scaffold(
+            body: BottomBarItem(
+              icon: Icon(Icons.home),
+              label: Text('Standalone'),
+              selected: true,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final primary = Theme.of(
+        tester.element(find.byType(BottomBarItem)),
+      ).colorScheme.primary;
+      expect(
+        tester
+            .widgetList<IconTheme>(
+              find.descendant(
+                of: find.byType(BottomBarItem),
+                matching: find.byType(IconTheme),
+              ),
+            )
+            .any((theme) => theme.data.color == primary),
+        isTrue,
+      );
+      expect(find.text('Standalone'), findsOneWidget);
+      final labelStyle = tester.widget<DefaultTextStyle>(
+        find
+            .ancestor(
+              of: find.text('Standalone'),
+              matching: find.byType(DefaultTextStyle),
+            )
+            .first,
+      );
+      expect(labelStyle.style.color, primary);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   test(
-    'material3 merged over glass takes glass surface, layout and indicator',
+    'merging glass onto material3 takes glass surface, layout and indicator',
     () {
       final merged = BottomBarThemeData.material3().merge(
         BottomBarThemeData.glass(),
@@ -198,15 +257,37 @@ void main() {
     },
   );
 
-  test('glass merged over pill keeps glass scrollEdgeSurface', () {
-    final merged = BottomBarThemeData.glass().merge(BottomBarThemeData.pill());
-    expect(merged.surface, BottomBarThemeData.pill().surface);
-    expect(merged.layout, BottomBarThemeData.pill().layout);
-    expect(
-      merged.scrollEdgeSurface,
-      BottomBarThemeData.glass().scrollEdgeSurface,
-    );
-  });
+  final nonGlassPresets = {
+    'material3': BottomBarThemeData.material3,
+    'pill': BottomBarThemeData.pill,
+    'minimal': BottomBarThemeData.minimal,
+  };
+  for (final entry in nonGlassPresets.entries) {
+    test('merging ${entry.key} onto glass uses its scrollEdgeSurface', () {
+      final preset = entry.value();
+      final merged = BottomBarThemeData.glass().merge(preset);
+      expect(merged.surface, preset.surface);
+      expect(merged.layout, preset.layout);
+      expect(merged.scrollEdgeSurface, preset.scrollEdgeSurface);
+    });
+
+    testWidgets('${entry.key} stays solid at the real scroll edge', (
+      tester,
+    ) async {
+      final theme = BottomBarThemeData.glass().merge(entry.value());
+      final surface = (await _pump(tester, theme: theme)).single;
+      expect(surface.surface!.fillOpacity, 1);
+      expect(surface.edgeSurface!.fillOpacity, 1);
+
+      final position = tester
+          .state<ScrollableState>(find.byType(Scrollable))
+          .position;
+      position.jumpTo(position.maxScrollExtent);
+      await tester.pump();
+      await tester.pumpAndSettle();
+      expect(surface.edge!.value, 1);
+    });
+  }
 
   test('accent colours the selected item in glass and minimal', () {
     expect(

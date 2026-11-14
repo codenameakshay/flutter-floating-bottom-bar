@@ -209,6 +209,9 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
   /// When [surface] is null, the bar blends from the fill, gradient, border
   /// and shadows of [barDecoration] instead, and drops its image. Null always
   /// paints [surface].
+  ///
+  /// [copyWith] and [merge] keep this field when the new value is null. To
+  /// change [surface] and keep the edge the same, set both.
   final BottomBarSurface? scrollEdgeSurface;
 
   /// Returns a new theme where non-null fields of [other] override fields of

@@ -67,6 +67,10 @@ void main() {
         tester.element(find.byType(NavigationBar)),
       ).colorScheme;
 
+      expect(navBar.height, 80);
+      expect(navStyle.text.style!.fontSize, 12);
+      expect(navStyle.text.style!.fontWeight, FontWeight.w500);
+      expect(navStyle.text.style!.letterSpacing, 0.5);
       await tester.pumpWidget(_app(brightness, _presetBar()));
       await tester.pumpAndSettle();
       final bar = tester.getRect(find.byType(BottomBarItems));
@@ -74,6 +78,7 @@ void main() {
       final label = tester.getRect(find.text('Search'));
 
       expect(bar.height, navBar.height);
+      expect(bar.height, 80);
       expect(tester.getSize(find.byType(BarSurface)).height, navBar.height);
       expect(icon.size, navIcon.size);
       expect(icon.top - bar.top, navIcon.top - navBar.top);
@@ -91,6 +96,14 @@ void main() {
           .style!;
       expect(itemStyle.fontSize, navStyle.text.style!.fontSize);
       expect(itemStyle.fontWeight, navStyle.text.style!.fontWeight);
+      expect(itemStyle.letterSpacing, navStyle.text.style!.letterSpacing);
+      // Selected foregrounds intentionally use primary rather than the
+      // NavigationBar defaults of onSecondaryContainer/onSurface.
+      expect(itemStyle.color, cs.primary);
+      expect(
+        IconTheme.of(tester.element(find.byIcon(Icons.search))).color,
+        cs.primary,
+      );
 
       final indicator = tester.getRect(
         find.byWidgetPredicate(
@@ -118,4 +131,68 @@ void main() {
       expect((fill.decoration as ShapeDecoration).color, cs.secondaryContainer);
     });
   }
+
+  testWidgets('docked preset keeps an 80px item row above the safe inset', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(
+            padding: EdgeInsets.only(bottom: 24),
+            viewPadding: EdgeInsets.only(bottom: 24),
+          ),
+          child: Scaffold(
+            body: BottomBar(
+              theme: BottomBarThemeData.material3(),
+              showIcon: false,
+              body: const SizedBox.expand(),
+              child: BottomBarItems(
+                selectedIndex: 0,
+                children: const [
+                  BottomBarItem(icon: Icon(Icons.home), label: Text('Home')),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final row = tester.getRect(find.byType(BottomBarItems));
+    final surface = tester.getRect(find.byType(BarSurface));
+    expect(row.height, 80);
+    expect(surface.height, 104);
+    expect(surface.bottom, 844);
+    expect(row.bottom, 820);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('empty preset row and grouped actions build without exceptions', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        Brightness.light,
+        BottomBar(
+          theme: BottomBarThemeData.glass(),
+          leading: const Icon(Icons.menu),
+          trailing: const Icon(Icons.more_vert),
+          body: const SizedBox.expand(),
+          child: const BottomBarItems(children: []),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BottomBarItems), findsOneWidget);
+    expect(find.byIcon(Icons.menu), findsOneWidget);
+    expect(find.byIcon(Icons.more_vert), findsOneWidget);
+    expect(find.byType(BarSurface), findsNWidgets(3));
+    expect(tester.takeException(), isNull);
+  });
 }

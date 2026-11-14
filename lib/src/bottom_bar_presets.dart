@@ -67,6 +67,7 @@ BottomBarThemeData material3Preset({
   layout: const BottomBarLayout.docked(),
   motion: const BottomBarMotion.curved(curve: Curves.easeInOutCubicEmphasized),
   surface: BottomBarSurface.solid(color: backgroundColor),
+  scrollEdgeSurface: BottomBarSurface.solid(color: backgroundColor),
   items: BottomBarItemThemeData(
     iconSize: _m3IconSize,
     labelStyle: const TextStyle(
@@ -120,45 +121,48 @@ class _M3Indicator extends StatelessWidget {
   );
 }
 
-BottomBarThemeData pillPreset({Color? accent, BottomBarIndicator? indicator}) =>
-    BottomBarThemeData(
-      layout: const BottomBarLayout.adaptive(
-        maxWidth: 420,
-        offset: 16,
-        borderRadius: _capsule,
-      ),
-      motion: const BottomBarMotion.cupertino(),
-      surface: const BottomBarSurface.solid(
-        shadows: [
-          BoxShadow(
-            color: Color(0x24000000),
-            blurRadius: 20,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
-      items: BottomBarItemThemeData(
-        iconSize: 22,
-        labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        inkBorderRadius: _capsule,
-        pressedScale: 0.92,
-        indicator:
-            indicator ??
-            (accent == null
-                ? const BottomBarIndicator.pill(
-                    inset: EdgeInsets.all(6),
-                    stretch: true,
-                  )
-                : BottomBarIndicator.pill(
-                    color: accent,
-                    inset: const EdgeInsets.all(6),
-                    stretch: true,
-                  )),
-        indicatorMotion: const CupertinoMotion.snappy(),
-        haptics: BottomBarHaptics.selectionClick,
-      ),
-    );
+BottomBarThemeData pillPreset({
+  Color? accent,
+  BottomBarIndicator? indicator,
+}) => BottomBarThemeData(
+  layout: const BottomBarLayout.adaptive(
+    maxWidth: 420,
+    offset: 16,
+    borderRadius: _capsule,
+  ),
+  motion: const BottomBarMotion.cupertino(),
+  surface: const BottomBarSurface.solid(
+    shadows: [
+      BoxShadow(color: Color(0x24000000), blurRadius: 20, offset: Offset(0, 6)),
+    ],
+  ),
+  scrollEdgeSurface: const BottomBarSurface.solid(
+    shadows: [
+      BoxShadow(color: Color(0x24000000), blurRadius: 20, offset: Offset(0, 6)),
+    ],
+  ),
+  items: BottomBarItemThemeData(
+    iconSize: 22,
+    labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    inkBorderRadius: _capsule,
+    pressedScale: 0.92,
+    indicator:
+        indicator ??
+        (accent == null
+            ? const BottomBarIndicator.pill(
+                inset: EdgeInsets.all(6),
+                stretch: true,
+              )
+            : BottomBarIndicator.pill(
+                color: accent,
+                inset: const EdgeInsets.all(6),
+                stretch: true,
+              )),
+    indicatorMotion: const CupertinoMotion.snappy(),
+    haptics: BottomBarHaptics.selectionClick,
+  ),
+);
 
 BottomBarThemeData minimalPreset({
   Color? accent,
@@ -174,6 +178,7 @@ BottomBarThemeData minimalPreset({
     transition: BottomBarTransition.fade,
   ),
   surface: const BottomBarSurface.solid(),
+  scrollEdgeSurface: const BottomBarSurface.solid(),
   items: BottomBarItemThemeData(
     selectedColor: accent,
     iconSize: 24,

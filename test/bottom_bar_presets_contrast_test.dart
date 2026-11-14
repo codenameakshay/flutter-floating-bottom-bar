@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_floating_bottom_bar/src/internal/bar_surface.dart';
+import 'package:flutter_floating_bottom_bar/src/widgets/bottom_bar_indicator.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -38,7 +39,7 @@ final _presets =
       ),
       'material3': (
         theme: BottomBarThemeData.material3,
-        selectedFill: (cs, bar) => bar,
+        selectedFill: (cs, bar) => cs.secondaryContainer,
       ),
       'pill': (
         theme: BottomBarThemeData.pill,
@@ -77,77 +78,178 @@ Set<Color> _colors(WidgetTester tester, Finder finder) => {
 };
 
 void main() {
+  testWidgets('Material 3 contrast uses the rendered indicator fill', (
+    tester,
+  ) async {
+    late ColorScheme colors;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(colorSchemeSeed: Colors.indigo),
+        builder: (context, child) {
+          colors = Theme.of(context).colorScheme;
+          return child!;
+        },
+        home: Scaffold(
+          body: BottomBar(
+            theme: BottomBarThemeData.material3(indicatorColor: Colors.indigo),
+            body: const SizedBox.expand(),
+            child: BottomBarItems(
+              selectedIndex: 0,
+              children: const [
+                BottomBarItem(icon: Icon(Icons.home), label: Text('On')),
+                BottomBarItem(icon: Icon(Icons.search), label: Text('Off')),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final indicator = tester
+        .widgetList<DecoratedBox>(
+          find.descendant(
+            of: find.byType(IndicatorTrack),
+            matching: find.byType(DecoratedBox),
+          ),
+        )
+        .firstWhere((box) => box.decoration is ShapeDecoration);
+    final paintedFill = (indicator.decoration as ShapeDecoration).color!;
+    final foreground = _textColor(tester, find.byIcon(Icons.home));
+    final actualRatio = _ratio(foreground, paintedFill);
+    final oldBarOnlyRatio = _ratio(foreground, colors.surfaceContainer);
+
+    expect(paintedFill, Colors.indigo);
+    expect(actualRatio, lessThan(_iconMin));
+    expect(oldBarOnlyRatio, greaterThan(_iconMin));
+  });
   for (final MapEntry(key: name, value: preset) in _presets.entries) {
     for (final brightness in Brightness.values) {
-      testWidgets('$name keeps contrast in $brightness', (tester) async {
-        final failures = <String>[];
-        for (final seed in _seeds) {
-          await tester.pumpWidget(
-            MaterialApp(
-              theme: ThemeData(colorSchemeSeed: seed, brightness: brightness),
-              home: Scaffold(
-                body: BottomBar(
-                  theme: preset.theme(),
-                  showIcon: false,
-                  body: const SizedBox.expand(),
-                  child: BottomBarItems(
-                    selectedIndex: 0,
-                    children: const [
-                      BottomBarItem(icon: Icon(Icons.home), label: Text('On')),
-                      BottomBarItem(
-                        icon: Icon(Icons.search),
-                        label: Text('Off'),
+      for (final highContrast in [false, true]) {
+        testWidgets(
+          '$name keeps contrast in $brightness (highContrast: $highContrast)',
+          (tester) async {
+            final failures = <String>[];
+            for (final seed in _seeds) {
+              await tester.pumpWidget(
+                MaterialApp(
+                  theme: ThemeData(
+                    colorSchemeSeed: seed,
+                    brightness: brightness,
+                  ),
+                  builder: (context, child) => MediaQuery(
+                    data: MediaQuery.of(
+                      context,
+                    ).copyWith(highContrast: highContrast),
+                    child: child!,
+                  ),
+                  home: Scaffold(
+                    body: BottomBar(
+                      theme: preset.theme(),
+                      showIcon: false,
+                      body: const SizedBox.expand(),
+                      child: BottomBarItems(
+                        selectedIndex: 0,
+                        children: const [
+                          BottomBarItem(
+                            icon: Icon(Icons.home),
+                            label: Text('On'),
+                          ),
+                          BottomBarItem(
+                            icon: Icon(Icons.search),
+                            label: Text('Off'),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ),
-          );
-          await tester.pumpAndSettle();
-          final cs = Theme.of(
-            tester.element(find.byType(BottomBar)),
-          ).colorScheme;
-          final surface = tester
-              .widget<BarSurface>(find.byType(BarSurface))
-              .surface!;
-          final tint = surface.tint!;
-          final layer = tint.withValues(alpha: tint.a * surface.fillOpacity);
-          final backdrops = layer.a == 1 ? [_white] : [_white, _black];
-
-          final offText = _textColor(tester, find.text('Off'));
-          final offIcon = _textColor(tester, find.byIcon(Icons.search));
-          final onText = _colors(tester, find.text('On'))..remove(offText);
-          final onIcon = _colors(tester, find.byIcon(Icons.home))
-            ..remove(offIcon);
-          expect(onText, isNotEmpty, reason: '$name selected label colour');
-          expect(onIcon, isNotEmpty, reason: '$name selected icon colour');
-
-          for (final backdrop in backdrops) {
-            final bar = Color.alphaBlend(layer, backdrop);
-            final selected = preset.selectedFill(cs, bar);
-            void check(String what, Color fg, Color bg, double min) {
-              final r = _ratio(fg, bg);
-              if (r < min) {
-                failures.add(
-                  '$what ${r.toStringAsFixed(2)} < $min '
-                  '(seed $seed, backdrop $backdrop)',
+              );
+              await tester.pumpAndSettle();
+              final cs = Theme.of(
+                tester.element(find.byType(BottomBar)),
+              ).colorScheme;
+              final surface = tester
+                  .widget<BarSurface>(find.byType(BarSurface))
+                  .surface!;
+              final tint = surface.tint!;
+              if (name == 'material3') {
+                final indicator = tester
+                    .widgetList<DecoratedBox>(
+                      find.descendant(
+                        of: find.byType(IndicatorTrack),
+                        matching: find.byType(DecoratedBox),
+                      ),
+                    )
+                    .firstWhere((box) => box.decoration is ShapeDecoration);
+                final decoration = indicator.decoration as ShapeDecoration;
+                expect(
+                  decoration.color,
+                  cs.secondaryContainer,
+                  reason: 'Material 3 rendered indicator fill',
+                );
+              } else {
+                final fill = switch (name) {
+                  'glass' => cs.primary.withValues(alpha: 0.12),
+                  'pill' => cs.primary,
+                  'minimal' => cs.primary,
+                  _ => throw StateError('Unexpected preset $name'),
+                };
+                expect(
+                  tester.renderObject(find.byType(IndicatorTrack)),
+                  paints..rrect(color: fill),
+                  reason: '$name rendered indicator fill',
                 );
               }
-            }
+              final layer = tint.withValues(
+                alpha: tint.a * surface.fillOpacity,
+              );
+              final backdrops = layer.a == 1 ? [_white] : [_white, _black];
 
-            check('unselected label', offText, bar, _textMin);
-            check('unselected icon', offIcon, bar, _iconMin);
-            for (final c in onText) {
-              check('selected label', c, selected, _textMin);
+              final offText = _textColor(tester, find.text('Off'));
+              final offIcon = _textColor(tester, find.byIcon(Icons.search));
+              final onText = _colors(tester, find.text('On'))..remove(offText);
+              final onIcon = _colors(tester, find.byIcon(Icons.home))
+                ..remove(offIcon);
+              expect(onText, isNotEmpty, reason: '$name selected label colour');
+              expect(onIcon, isNotEmpty, reason: '$name selected icon colour');
+
+              for (final backdrop in backdrops) {
+                final bar = Color.alphaBlend(layer, backdrop);
+                final selected = preset.selectedFill(cs, bar);
+
+                void check(String what, Color fg, Color bg, double min) {
+                  final r = _ratio(fg, bg);
+                  if (r < min) {
+                    failures.add(
+                      '$what ${r.toStringAsFixed(2)} < $min '
+                      '(seed $seed, backdrop $backdrop)',
+                    );
+                  }
+                }
+
+                check('unselected label', offText, bar, _textMin);
+                check('unselected icon', offIcon, bar, _iconMin);
+                if (name == 'minimal') {
+                  check('selection dot', cs.primary, bar, _iconMin);
+                }
+                for (final c in onText) {
+                  check(
+                    'selected label',
+                    c,
+                    name == 'material3' ? bar : selected,
+                    _textMin,
+                  );
+                }
+                for (final c in onIcon) {
+                  check('selected icon', c, selected, _iconMin);
+                }
+              }
             }
-            for (final c in onIcon) {
-              check('selected icon', c, selected, _iconMin);
-            }
-          }
-        }
-        expect(failures, isEmpty, reason: failures.join('\n'));
-      });
+            expect(failures, isEmpty, reason: failures.join('\n'));
+          },
+        );
+      }
     }
   }
 }

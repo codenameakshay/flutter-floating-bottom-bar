@@ -27,9 +27,20 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('BottomBarThemeData.material3()'), findsOneWidget);
 
+    await tester.tap(find.text('Explore'));
+    await tester.pumpAndSettle();
+    final selectedColor = Theme.of(
+      tester.element(find.byType(BottomBar)),
+    ).colorScheme.primary;
+    expect(
+      IconTheme.of(tester.element(find.byIcon(Icons.explore_rounded))).color,
+      selectedColor,
+    );
+
     await tester.tap(find.text('Pill'));
     await tester.pumpAndSettle();
     expect(find.text('BottomBarThemeData.pill()'), findsOneWidget);
+    expect(find.byIcon(Icons.explore_rounded), findsOneWidget);
 
     await tester.tap(find.text('Minimal'));
     await tester.pumpAndSettle();

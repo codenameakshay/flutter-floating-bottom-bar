@@ -7,7 +7,11 @@
   preset is a plain theme. Pass it as `theme:`, add it to
   `ThemeData.extensions`, or change it with `copyWith` and `merge`.
   `material3()` matches `NavigationBar`'s height, type and 64 x 32
-  indicator. Add a presets demo in `example/lib/demos/presets_demo.dart`.
+  indicator. `material3()`, `pill()` and `minimal()` keep their surface at
+  the scroll edge, so merging one over `glass()` replaces the clear glass
+  edge too. To change a preset's surface everywhere, set both `surface` and
+  `scrollEdgeSurface`. Add a presets demo in
+  `example/lib/demos/presets_demo.dart`.
 
 - The bar and `BottomBarController` follow the active tab in an
   `IndexedStack`, `PageView` or `TabBarView`. Only the list on the page in
