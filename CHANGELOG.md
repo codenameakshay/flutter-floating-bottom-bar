@@ -12,6 +12,13 @@
   edge too. To change a preset's surface everywhere, set both `surface` and
   `scrollEdgeSurface`. Add a presets demo in
   `example/lib/demos/presets_demo.dart`.
+- Add `BottomBarIndicator.container()`, the Material 3 `NavigationBar`
+  indicator: a 64 x 32 capsule behind the icon in `secondaryContainer`, with
+  the selected icon in `onSecondaryContainer` and the selected label in
+  `onSurface`. `material3()` uses it.
+- Add `BottomBarItemThemeData.labelBehavior`, so a theme can set when labels
+  show. `BottomBarItems.labelBehavior` is now nullable and still wins when
+  set. `minimal()` shows only the selected label.
 
 - The bar and `BottomBarController` follow the active tab in an
   `IndexedStack`, `PageView` or `TabBarView`. Only the list on the page in

@@ -130,9 +130,6 @@ class _PresetsDemoPageState extends State<PresetsDemoPage> {
               child: BottomBarItems(
                 selectedIndex: _index,
                 onSelected: (i) => setState(() => _index = i),
-                labelBehavior: _preset == _Preset.minimal
-                    ? BottomBarLabelBehavior.onlySelected
-                    : BottomBarLabelBehavior.alwaysShow,
                 children: [
                   const BottomBarItem(
                     icon: Icon(Icons.home_outlined),

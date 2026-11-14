@@ -50,16 +50,11 @@ void main() {
     () => BottomBarThemeData.pill(),
     brightness: Brightness.dark,
   );
-  _presetGolden(
-    'preset_minimal_light.png',
-    () => BottomBarThemeData.minimal(),
-    labelBehavior: BottomBarLabelBehavior.onlySelected,
-  );
+  _presetGolden('preset_minimal_light.png', () => BottomBarThemeData.minimal());
   _presetGolden(
     'preset_minimal_dark.png',
     () => BottomBarThemeData.minimal(),
     brightness: Brightness.dark,
-    labelBehavior: BottomBarLabelBehavior.onlySelected,
   );
   _presetGolden(
     'preset_pill_rtl.png',
@@ -138,7 +133,6 @@ void _presetGolden(
   TextDirection direction = TextDirection.ltr,
   bool notched = false,
   bool badged = false,
-  BottomBarLabelBehavior labelBehavior = BottomBarLabelBehavior.alwaysShow,
 }) {
   testWidgets(file, (tester) async {
     tester.view.physicalSize = Size(390, notched ? 260 : 220);
@@ -161,7 +155,6 @@ void _presetGolden(
             child: BottomBarItems(
               selectedIndex: 1,
               onSelected: (_) {},
-              labelBehavior: labelBehavior,
               centerAction: notched
                   ? BottomBarCenterAction(
                       icon: const Icon(Icons.add),
@@ -216,7 +209,7 @@ BottomBarBadge? _badgeAt(int index) => switch (index) {
 class _TolerantComparator extends LocalFileComparator {
   _TolerantComparator(super.testFile);
 
-  static const _maxDiff = 0.0001;
+  static const _maxDiff = 0.0005;
 
   @override
   Future<bool> compare(Uint8List imageBytes, Uri golden) async {

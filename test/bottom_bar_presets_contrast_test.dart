@@ -78,7 +78,7 @@ Set<Color> _colors(WidgetTester tester, Finder finder) => {
 };
 
 void main() {
-  testWidgets('Material 3 contrast uses the rendered indicator fill', (
+  testWidgets('material3 indicatorColor picks a contrasting icon colour', (
     tester,
   ) async {
     late ColorScheme colors;
@@ -106,22 +106,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final indicator = tester
-        .widgetList<DecoratedBox>(
-          find.descendant(
-            of: find.byType(IndicatorTrack),
-            matching: find.byType(DecoratedBox),
-          ),
-        )
-        .firstWhere((box) => box.decoration is ShapeDecoration);
-    final paintedFill = (indicator.decoration as ShapeDecoration).color!;
+    expect(
+      tester.renderObject(find.byType(IndicatorTrack)),
+      paints..rrect(color: Colors.indigo),
+    );
     final foreground = _textColor(tester, find.byIcon(Icons.home));
-    final actualRatio = _ratio(foreground, paintedFill);
-    final oldBarOnlyRatio = _ratio(foreground, colors.surfaceContainer);
-
-    expect(paintedFill, Colors.indigo);
-    expect(actualRatio, lessThan(_iconMin));
-    expect(oldBarOnlyRatio, greaterThan(_iconMin));
+    expect(foreground, Colors.white);
+    expect(_ratio(foreground, Colors.indigo), greaterThanOrEqualTo(_iconMin));
+    expect(_textColor(tester, find.text('On')), colors.onSurface);
   });
   for (final MapEntry(key: name, value: preset) in _presets.entries) {
     for (final brightness in Brightness.values) {
@@ -173,40 +165,27 @@ void main() {
                   .widget<BarSurface>(find.byType(BarSurface))
                   .surface!;
               final tint = surface.tint!;
-              if (name == 'material3') {
-                final indicator = tester
-                    .widgetList<DecoratedBox>(
-                      find.descendant(
-                        of: find.byType(IndicatorTrack),
-                        matching: find.byType(DecoratedBox),
-                      ),
-                    )
-                    .firstWhere((box) => box.decoration is ShapeDecoration);
-                final decoration = indicator.decoration as ShapeDecoration;
-                expect(
-                  decoration.color,
-                  cs.secondaryContainer,
-                  reason: 'Material 3 rendered indicator fill',
-                );
-              } else {
-                final fill = switch (name) {
-                  'glass' => cs.primary.withValues(alpha: 0.12),
-                  'pill' => cs.primary,
-                  'minimal' => cs.primary,
-                  _ => throw StateError('Unexpected preset $name'),
-                };
-                expect(
-                  tester.renderObject(find.byType(IndicatorTrack)),
-                  paints..rrect(color: fill),
-                  reason: '$name rendered indicator fill',
-                );
-              }
+              final fill = switch (name) {
+                'glass' => cs.primary.withValues(alpha: 0.12),
+                'material3' => cs.secondaryContainer,
+                'pill' => cs.primary,
+                'minimal' => cs.primary,
+                _ => throw StateError('Unexpected preset $name'),
+              };
+              expect(
+                tester.renderObject(find.byType(IndicatorTrack)),
+                paints..rrect(color: fill),
+                reason: '$name rendered indicator fill',
+              );
               final layer = tint.withValues(
                 alpha: tint.a * surface.fillOpacity,
               );
               final backdrops = layer.a == 1 ? [_white] : [_white, _black];
 
-              final offText = _textColor(tester, find.text('Off'));
+              final hasOff = tester.any(find.text('Off'));
+              final offText = hasOff
+                  ? _textColor(tester, find.text('Off'))
+                  : null;
               final offIcon = _textColor(tester, find.byIcon(Icons.search));
               final onText = _colors(tester, find.text('On'))..remove(offText);
               final onIcon = _colors(tester, find.byIcon(Icons.home))
@@ -228,7 +207,9 @@ void main() {
                   }
                 }
 
-                check('unselected label', offText, bar, _textMin);
+                if (offText != null) {
+                  check('unselected label', offText, bar, _textMin);
+                }
                 check('unselected icon', offIcon, bar, _iconMin);
                 if (name == 'minimal') {
                   check('selection dot', cs.primary, bar, _iconMin);

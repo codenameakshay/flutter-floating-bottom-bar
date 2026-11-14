@@ -92,6 +92,77 @@ Future<List<BarSurface>> _pump(
 ColorScheme _scheme(WidgetTester tester) =>
     Theme.of(tester.element(find.byType(BottomBar))).colorScheme;
 
+Future<void> _pumpLabels(
+  WidgetTester tester, {
+  required BottomBarThemeData theme,
+  BottomBarLabelBehavior? labelBehavior,
+}) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      home: Scaffold(
+        body: BottomBar(
+          theme: theme,
+          body: const SizedBox.expand(),
+          child: BottomBarItems(
+            selectedIndex: 0,
+            labelBehavior: labelBehavior,
+            children: const [
+              BottomBarItem(icon: Icon(Icons.home), label: Text('A')),
+              BottomBarItem(icon: Icon(Icons.search), label: Text('B')),
+              BottomBarItem(icon: Icon(Icons.person), label: Text('C')),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _pumpTwoTabs(
+  WidgetTester tester,
+  BottomBarThemeData theme, {
+  Color? homeSelectedColor,
+}) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: ThemeData(colorSchemeSeed: Colors.indigo),
+      home: Scaffold(
+        body: BottomBar(
+          theme: theme,
+          showIcon: false,
+          body: const SizedBox.expand(),
+          child: BottomBarItems(
+            selectedIndex: 0,
+            children: [
+              BottomBarItem(
+                icon: const Icon(Icons.home),
+                label: const Text('Home'),
+                selectedColor: homeSelectedColor,
+              ),
+              const BottomBarItem(
+                icon: Icon(Icons.search),
+                label: Text('Search'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+Color _labelColor(WidgetTester tester, String label) => tester
+    .widget<RichText>(
+      find
+          .descendant(of: find.text(label), matching: find.byType(RichText))
+          .first,
+    )
+    .text
+    .style!
+    .color!;
+
 void main() {
   for (final entry in presets.entries) {
     testWidgets(
@@ -355,4 +426,130 @@ void main() {
       },
     );
   }
+
+  testWidgets('minimal shows only the selected label', (tester) async {
+    await _pumpLabels(tester, theme: BottomBarThemeData.minimal());
+
+    expect(find.text('A'), findsOneWidget);
+    expect(find.text('B'), findsNothing);
+    expect(find.text('C'), findsNothing);
+  });
+
+  testWidgets('a row labelBehavior beats the theme', (tester) async {
+    await _pumpLabels(
+      tester,
+      theme: BottomBarThemeData.minimal(),
+      labelBehavior: BottomBarLabelBehavior.alwaysShow,
+    );
+
+    expect(find.text('A'), findsOneWidget);
+    expect(find.text('B'), findsOneWidget);
+    expect(find.text('C'), findsOneWidget);
+  });
+
+  test('theme labelBehavior survives copyWith and merge', () {
+    expect(
+      BottomBarThemeData.minimal()
+          .copyWith(motion: const BottomBarMotion.curved())
+          .items!
+          .labelBehavior,
+      BottomBarLabelBehavior.onlySelected,
+    );
+    expect(
+      BottomBarThemeData.minimal()
+          .merge(BottomBarThemeData.pill())
+          .items!
+          .labelBehavior,
+      BottomBarLabelBehavior.onlySelected,
+    );
+    expect(
+      BottomBarThemeData.pill()
+          .merge(
+            const BottomBarThemeData(
+              items: BottomBarItemThemeData(
+                labelBehavior: BottomBarLabelBehavior.alwaysHide,
+              ),
+            ),
+          )
+          .items!
+          .labelBehavior,
+      BottomBarLabelBehavior.alwaysHide,
+    );
+    expect(
+      const BottomBarItemThemeData(
+        labelBehavior: BottomBarLabelBehavior.alwaysHide,
+      ),
+      isNot(const BottomBarItemThemeData()),
+    );
+    expect(
+      BottomBarItemThemeData.lerp(
+        const BottomBarItemThemeData(
+          labelBehavior: BottomBarLabelBehavior.onlySelected,
+        ),
+        const BottomBarItemThemeData(
+          labelBehavior: BottomBarLabelBehavior.alwaysHide,
+        ),
+        0.4,
+      )!.labelBehavior,
+      BottomBarLabelBehavior.onlySelected,
+    );
+    expect(
+      BottomBarItemThemeData.lerp(
+        const BottomBarItemThemeData(
+          labelBehavior: BottomBarLabelBehavior.onlySelected,
+        ),
+        const BottomBarItemThemeData(
+          labelBehavior: BottomBarLabelBehavior.alwaysHide,
+        ),
+        0.6,
+      )!.labelBehavior,
+      BottomBarLabelBehavior.alwaysHide,
+    );
+  });
+
+  testWidgets('material3 selected colours follow NavigationBar', (
+    tester,
+  ) async {
+    await _pumpTwoTabs(tester, BottomBarThemeData.material3());
+    final cs = _scheme(tester);
+
+    expect(
+      IconTheme.of(tester.element(find.byIcon(Icons.home))).color,
+      cs.onSecondaryContainer,
+    );
+    expect(_labelColor(tester, 'Home'), cs.onSurface);
+    expect(_labelColor(tester, 'Search'), cs.onSurfaceVariant);
+  });
+
+  testWidgets('item selectedColor beats the container indicator', (
+    tester,
+  ) async {
+    await _pumpTwoTabs(
+      tester,
+      BottomBarThemeData.material3(),
+      homeSelectedColor: Colors.red,
+    );
+
+    expect(
+      IconTheme.of(tester.element(find.byIcon(Icons.home))).color,
+      isSameColorAs(Colors.red),
+    );
+    expect(_labelColor(tester, 'Home'), isSameColorAs(Colors.red));
+  });
+
+  testWidgets('indicator foreground beats theme selectedColor', (tester) async {
+    await _pumpTwoTabs(
+      tester,
+      BottomBarThemeData.material3().merge(
+        const BottomBarThemeData(
+          items: BottomBarItemThemeData(selectedColor: Colors.red),
+        ),
+      ),
+    );
+
+    expect(
+      IconTheme.of(tester.element(find.byIcon(Icons.home))).color,
+      _scheme(tester).onSecondaryContainer,
+    );
+  });
 }

@@ -153,9 +153,9 @@ BottomBar(theme: BottomBarThemeData.minimal(), body: body, child: items)    // f
 ```
 
 - `glass()` is the iOS 26 tab bar. It is a floating glass capsule that clears at the scroll edge. A tinted capsule sits behind the selected item, with springs and a selection haptic. The glass is 98% opaque, so labels keep 4.5:1 contrast over a white or a black backdrop. `accent` colours the selected item and its tint. `indicator` replaces the tint.
-- `material3()` matches the size and indicator of Flutter's Material 3 `NavigationBar`. The bar is docked, full width, on a solid `surfaceContainer`, and 80 px tall, with a 64 x 32 stadium. The selected icon and label use `primary`, where `NavigationBar` uses `onSecondaryContainer` and `onSurface`. `backgroundColor` and `indicatorColor` replace the two fills.
+- `material3()` matches the size and indicator of Flutter's Material 3 `NavigationBar`. The bar is docked, full width, on a solid `surfaceContainer`, and 80 px tall, with a 64 x 32 stadium. Its `BottomBarIndicator.container()` gives the selected icon `onSecondaryContainer` and the selected label `onSurface`, as `NavigationBar` does. `backgroundColor` and `indicatorColor` replace the two fills.
 - `pill()` is a floating, fully rounded, solid bar with a soft shadow. A sliding pill sits behind the selected item, with a small press scale and a selection haptic. The content under the pill takes black or white for contrast. `accent` fills the pill. `indicator` replaces it.
-- `minimal()` is a flat floating bar with no shadow. A dot sits under the selected item, with no ink and short, quiet motion. The bar fades instead of sliding. `accent` colours the selected item and the dot. `indicator` replaces the dot, for example with `BottomBarIndicator.underline()`. Pair it with `labelBehavior: BottomBarLabelBehavior.onlySelected` on `BottomBarItems`. Label behaviour is a row argument, so a theme cannot set it.
+- `minimal()` is a flat floating bar with no shadow. A dot sits under the selected item, with no ink and short, quiet motion. The bar fades instead of sliding. `accent` colours the selected item and the dot. `indicator` replaces the dot, for example with `BottomBarIndicator.underline()`. Only the selected item shows its label. Set `labelBehavior` on `BottomBarItems` or on the item theme to change that.
 
 To change a preset, use `copyWith` or `merge`.
 
@@ -335,10 +335,10 @@ with built-in accessibility and RTL-aware badge placement.
 - A `BottomBarItem`'s `Text` label (with non-null `data`) is truncated to a
   single line with an ellipsis. `Text.rich` and other label widgets are left
   untouched.
-- `BottomBarItems.labelBehavior` (`BottomBarLabelBehavior.alwaysShow` by
-  default) controls when descendant labels render: `alwaysShow`,
-  `onlySelected`, or `alwaysHide`. An item used outside a `BottomBarItems`
-  row always shows its label.
+- `BottomBarItems.labelBehavior` controls when descendant labels render:
+  `alwaysShow`, `onlySelected`, or `alwaysHide`. A row with no argument uses
+  `BottomBarItemThemeData.labelBehavior`, then `alwaysShow`. An item used
+  outside a `BottomBarItems` row always shows its label.
 
 ### Indicators
 
@@ -366,6 +366,9 @@ BottomBarItems(
 - `BottomBarIndicator.underline()` is a bar under the content that stretches
   like a worm as it moves.
 - `BottomBarIndicator.dot()` is a dot that stretches into a capsule as it moves.
+- `BottomBarIndicator.container()` is Material 3's 64 x 32 capsule behind the
+  icon, in `secondaryContainer`. The selected icon takes
+  `onSecondaryContainer` and the selected label `onSurface`.
 - `BottomBarIndicator.builder((context, rect, settled) => ...)` draws your own
   indicator at the animated rect. The example app's `indicators` demo builds a
   "tubelight" with it.

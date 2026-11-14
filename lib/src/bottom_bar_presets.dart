@@ -6,6 +6,7 @@ import 'config/bottom_bar_layout.dart';
 import 'config/bottom_bar_motion.dart';
 import 'widgets/bottom_bar_indicator.dart';
 import 'widgets/bottom_bar_item_theme.dart';
+import 'widgets/bottom_bar_items.dart' show BottomBarLabelBehavior;
 import 'widgets/bottom_bar_surface.dart';
 
 const _capsule = BorderRadius.all(Radius.circular(100));
@@ -54,10 +55,10 @@ BottomBarThemeData glassPreset({
   ),
 );
 
-/// Icon size, indicator size and label gap of Flutter's Material 3
+/// Icon size, indicator height and label gap of Flutter's Material 3
 /// [NavigationBar].
 const _m3IconSize = 24.0;
-const _m3IndicatorSize = Size(64, 32);
+const _m3IndicatorHeight = 32.0;
 const _m3LabelGap = 4.0;
 
 BottomBarThemeData material3Preset({
@@ -79,47 +80,13 @@ BottomBarThemeData material3Preset({
     // An 80 tall row: the indicator band and label sit centred, as in
     // NavigationBar, with the label 4 below the indicator.
     padding: const EdgeInsets.only(top: 18, bottom: 14),
-    iconLabelGap: (_m3IndicatorSize.height - _m3IconSize) / 2 + _m3LabelGap,
+    iconLabelGap: (_m3IndicatorHeight - _m3IconSize) / 2 + _m3LabelGap,
     inkBorderRadius: const BorderRadius.all(Radius.circular(16)),
     indicator: indicatorColor == null
-        ? const BottomBarIndicator.builder(_m3Indicator)
-        : BottomBarIndicator.builder(
-            (context, rect, settled) =>
-                _M3Indicator(color: indicatorColor, content: rect),
-          ),
+        ? const BottomBarIndicator.container()
+        : BottomBarIndicator.container(color: indicatorColor),
   ),
 );
-
-Widget _m3Indicator(BuildContext context, Rect rect, bool settled) =>
-    _M3Indicator(color: null, content: rect);
-
-/// NavigationBar's 64 x 32 stadium, centred on the icon at the top of the
-/// item's content and filled with `colorScheme.secondaryContainer`.
-class _M3Indicator extends StatelessWidget {
-  const _M3Indicator({required this.color, required this.content});
-
-  final Color? color;
-  final Rect content;
-
-  @override
-  Widget build(BuildContext context) => Stack(
-    clipBehavior: Clip.none,
-    children: [
-      Positioned(
-        left: (content.width - _m3IndicatorSize.width) / 2,
-        top: (_m3IconSize - _m3IndicatorSize.height) / 2,
-        width: _m3IndicatorSize.width,
-        height: _m3IndicatorSize.height,
-        child: DecoratedBox(
-          decoration: ShapeDecoration(
-            color: color ?? Theme.of(context).colorScheme.secondaryContainer,
-            shape: const StadiumBorder(),
-          ),
-        ),
-      ),
-    ],
-  );
-}
 
 BottomBarThemeData pillPreset({
   Color? accent,
@@ -181,6 +148,7 @@ BottomBarThemeData minimalPreset({
   scrollEdgeSurface: const BottomBarSurface.solid(),
   items: BottomBarItemThemeData(
     selectedColor: accent,
+    labelBehavior: BottomBarLabelBehavior.onlySelected,
     iconSize: 24,
     labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
     padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),

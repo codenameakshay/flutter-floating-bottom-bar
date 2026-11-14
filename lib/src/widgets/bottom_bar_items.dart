@@ -74,7 +74,7 @@ class BottomBarItems extends StatelessWidget {
     super.key,
     required this.children,
     this.spacing = MainAxisAlignment.spaceAround,
-    this.labelBehavior = BottomBarLabelBehavior.alwaysShow,
+    this.labelBehavior,
     this.selectedIndex,
     this.onSelected,
     this.indicator,
@@ -99,8 +99,9 @@ class BottomBarItems extends StatelessWidget {
   /// Controls when descendant [BottomBarItem] labels are visible.
   ///
   /// Exposed to descendants via [BottomBarItemsScope]. Defaults to
+  /// [BottomBarItemThemeData.labelBehavior], then to
   /// [BottomBarLabelBehavior.alwaysShow].
-  final BottomBarLabelBehavior labelBehavior;
+  final BottomBarLabelBehavior? labelBehavior;
 
   /// The index of the selected child, or null to leave selection to each
   /// child (for example [BottomBarItem.selected]).
@@ -183,10 +184,11 @@ class BottomBarItems extends StatelessWidget {
       'selectedIndex $index is out of range for ${children.length} children',
     );
     if (index != null) return _SelectableItems(items: this);
-    return _layout(children, null);
+    return _layout(context, children, null);
   }
 
   Widget _layout(
+    BuildContext context,
     List<Widget> children,
     Widget Function(Widget row, {required bool reveal})? track,
   ) {
@@ -200,7 +202,10 @@ class BottomBarItems extends StatelessWidget {
     }
 
     return BottomBarItemsScope(
-      labelBehavior: labelBehavior,
+      labelBehavior:
+          labelBehavior ??
+          itemThemeOf(context).labelBehavior ??
+          BottomBarLabelBehavior.alwaysShow,
       child: LayoutBuilder(
         builder: (context, constraints) {
           Widget withItemHeight(Widget child) => BottomBarItemHeightScope(
@@ -455,6 +460,10 @@ class _SelectableItemsState extends State<_SelectableItems>
       indicator,
       Theme.of(context).colorScheme,
     );
+    final labelForeground = indicatorLabelForeground(
+      indicator,
+      Theme.of(context).colorScheme,
+    );
     final ink = indicatorInks(indicator);
     final children = [
       for (var i = 0; i < items.children.length; i++)
@@ -469,12 +478,14 @@ class _SelectableItemsState extends State<_SelectableItems>
             onSelect: selectable ? () => _select(i) : null,
             onLongPress: onLongPressed == null ? null : () => onLongPressed(i),
             selectedForegroundColor: foreground,
+            selectedLabelColor: labelForeground,
             ink: ink,
             child: items.children[i],
           ),
         ),
     ];
     return items._layout(
+      context,
       children,
       indicator == null
           ? null
@@ -517,6 +528,7 @@ class BottomBarItemSelectionScope extends InheritedWidget {
     this.onSelect,
     this.onLongPress,
     this.selectedForegroundColor,
+    this.selectedLabelColor,
     this.ink = false,
     required super.child,
   });
@@ -540,6 +552,11 @@ class BottomBarItemSelectionScope extends InheritedWidget {
   /// the row's [BottomBarItems.indicator], or null to keep its own default.
   final Color? selectedForegroundColor;
 
+  /// The label colour a selected child should use, or null to use
+  /// [selectedForegroundColor]. [BottomBarIndicator.container] sets it
+  /// because its capsule covers only the icon.
+  final Color? selectedLabelColor;
+
   /// Whether the indicator reveals the selected look only where it covers
   /// this child. When true, [BottomBarItem] paints its plain look and lays
   /// its selected look over it, clipped to the indicator.
@@ -558,6 +575,7 @@ class BottomBarItemSelectionScope extends InheritedWidget {
         onSelect != oldWidget.onSelect ||
         onLongPress != oldWidget.onLongPress ||
         selectedForegroundColor != oldWidget.selectedForegroundColor ||
+        selectedLabelColor != oldWidget.selectedLabelColor ||
         ink != oldWidget.ink;
   }
 }

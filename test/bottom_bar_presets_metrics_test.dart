@@ -1,5 +1,6 @@
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_floating_bottom_bar/src/internal/bar_surface.dart';
+import 'package:flutter_floating_bottom_bar/src/widgets/bottom_bar_indicator.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -66,6 +67,9 @@ void main() {
       final cs = Theme.of(
         tester.element(find.byType(NavigationBar)),
       ).colorScheme;
+      final navIconColor = IconTheme.of(
+        tester.element(find.byIcon(Icons.search)),
+      ).color;
 
       expect(navBar.height, 80);
       expect(navStyle.text.style!.fontSize, 12);
@@ -97,38 +101,36 @@ void main() {
       expect(itemStyle.fontSize, navStyle.text.style!.fontSize);
       expect(itemStyle.fontWeight, navStyle.text.style!.fontWeight);
       expect(itemStyle.letterSpacing, navStyle.text.style!.letterSpacing);
-      // Selected foregrounds intentionally use primary rather than the
-      // NavigationBar defaults of onSecondaryContainer/onSurface.
-      expect(itemStyle.color, cs.primary);
+      expect(itemStyle.color, cs.onSurface);
+      expect(itemStyle.color, navStyle.text.style!.color);
       expect(
         IconTheme.of(tester.element(find.byIcon(Icons.search))).color,
-        cs.primary,
+        cs.onSecondaryContainer,
+      );
+      expect(
+        IconTheme.of(tester.element(find.byIcon(Icons.search))).color,
+        navIconColor,
       );
 
-      final indicator = tester.getRect(
-        find.byWidgetPredicate(
-          (w) =>
-              w is DecoratedBox &&
-              w.decoration is ShapeDecoration &&
-              (w.decoration as ShapeDecoration).shape is StadiumBorder,
-        ),
+      expect(navIndicator.size, const Size(64, 32));
+      final trackOrigin = tester.getTopLeft(find.byType(IndicatorTrack));
+      final expected = Rect.fromCenter(
+        center:
+            Offset(
+              icon.center.dx,
+              bar.top + (navIndicator.center.dy - navBar.top),
+            ) -
+            trackOrigin,
+        width: navIndicator.width,
+        height: navIndicator.height,
       );
-      expect(indicator.size, navIndicator.size);
-      expect(indicator.size, const Size(64, 32));
       expect(
-        indicator.center.dy - bar.top,
-        navIndicator.center.dy - navBar.top,
-      );
-      expect(indicator.center.dx, icon.center.dx);
-      final fill = tester.widget<DecoratedBox>(
-        find.byWidgetPredicate(
-          (w) =>
-              w is DecoratedBox &&
-              w.decoration is ShapeDecoration &&
-              (w.decoration as ShapeDecoration).shape is StadiumBorder,
+        tester.renderObject(find.byType(IndicatorTrack)),
+        paints..rrect(
+          rrect: RRect.fromRectAndRadius(expected, const Radius.circular(16)),
+          color: cs.secondaryContainer,
         ),
       );
-      expect((fill.decoration as ShapeDecoration).color, cs.secondaryContainer);
     });
   }
 

@@ -79,10 +79,10 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
   /// `surfaceContainer`, an 80 tall row, the 64 x 32 stadium indicator in
   /// `secondaryContainer` behind the icon, and 12 sp medium labels.
   ///
-  /// The selected icon and label take `colorScheme.primary`, where
-  /// [NavigationBar] uses `onSecondaryContainer` and `onSurface`. Set
-  /// [BottomBarItemThemeData.selectedColor] with [copyWith] to change it.
-  /// Labels always show unless [BottomBarItems.labelBehavior] says otherwise.
+  /// As in [NavigationBar], the selected icon takes `onSecondaryContainer`
+  /// and the selected label `onSurface`, from
+  /// [BottomBarIndicator.container]. Labels always show unless
+  /// [BottomBarItems.labelBehavior] says otherwise.
   ///
   /// [backgroundColor] and [indicatorColor] replace the two fills. Null
   /// colours fill from the [ColorScheme] when the bar builds. Pass the preset
@@ -128,9 +128,9 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
   /// A flat floating bar with no shadow, a dot under the selected item,
   /// no ink and short, quiet motion. The bar fades instead of sliding.
   ///
-  /// Pair it with `labelBehavior: BottomBarLabelBehavior.onlySelected` or
-  /// `alwaysHide` on [BottomBarItems]. The label behaviour is a row argument,
-  /// so a theme cannot set it.
+  /// Only the selected item shows its label. Set
+  /// [BottomBarItemThemeData.labelBehavior] or [BottomBarItems.labelBehavior]
+  /// to change that, for example to [BottomBarLabelBehavior.alwaysHide].
   ///
   /// [accent] colours the selected item and the dot, default
   /// `colorScheme.primary`. [indicator] replaces the dot, for example with

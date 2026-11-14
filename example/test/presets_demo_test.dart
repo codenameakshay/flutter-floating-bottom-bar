@@ -31,7 +31,7 @@ void main() {
     await tester.pumpAndSettle();
     final selectedColor = Theme.of(
       tester.element(find.byType(BottomBar)),
-    ).colorScheme.primary;
+    ).colorScheme.onSecondaryContainer;
     expect(
       IconTheme.of(tester.element(find.byIcon(Icons.explore_rounded))).color,
       selectedColor,
