@@ -837,7 +837,21 @@ class RenderCenterActionSlot extends RenderShiftedBox {
   Offset get _childOffset {
     final host = _host;
     if (!_lifted || host == null) return _inlineOffset;
-    final top = MatrixUtils.transformPoint(getTransformTo(host), Offset.zero);
+    var top = Offset.zero;
+    RenderObject descendant = this;
+    while (!identical(descendant, host)) {
+      final ancestor = descendant.parent!;
+      final transform = Matrix4.identity();
+      if (ancestor is RenderMinimizeHost) {
+        // The raise is a layout offset; the morph scales it with the content.
+        final offset = (descendant.parentData! as BoxParentData).offset;
+        transform.translateByDouble(offset.dx, offset.dy, 0, 1);
+      } else {
+        ancestor.applyPaintTransform(descendant, transform);
+      }
+      top = MatrixUtils.transformPoint(transform, top);
+      descendant = ancestor;
+    }
     return Offset(_inlineOffset.dx, -top.dy);
   }
 

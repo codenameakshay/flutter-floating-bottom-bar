@@ -291,14 +291,10 @@ class RenderMinimizeHost extends RenderBox
   static bool _partial(double opacity) => opacity > 0 && opacity < 1;
 
   bool _composited = false;
-  bool _settled = true;
   void _progressChanged() {
     markNeedsPaint();
     _host?.markNeedsPaint();
-    // Semantics rects follow the paint transform; refresh them once it rests.
-    final settled = _t == 0 || _t == 1;
-    if (settled && !_settled) markNeedsSemanticsUpdate();
-    _settled = settled;
+    markNeedsSemanticsUpdate();
     if (alwaysNeedsCompositing == _composited) return;
     _composited = alwaysNeedsCompositing;
     markNeedsCompositingBitsUpdate();

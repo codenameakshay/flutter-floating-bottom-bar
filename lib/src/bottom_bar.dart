@@ -343,9 +343,12 @@ class _BottomBarState extends State<BottomBar>
     if (_visibility == BottomBarVisibility.minimized && !_hasPill) {
       // The pill is gone, so the bar hides. Not during build: _go notifies
       // listeners outside this widget.
-      SchedulerBinding.instance.addPostFrameCallback(
-        (_) => _go(BottomBarVisibility.minimized),
-      );
+      final transition = _visibilityTransition;
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (mounted && transition == _visibilityTransition) {
+          _go(BottomBarVisibility.minimized);
+        }
+      });
     }
 
     _syncMotionAndScroll(_resolvedTheme(context));
