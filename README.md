@@ -992,6 +992,64 @@ BottomBar(
 
 Try the [docked demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/docked) live.
 
+### Minimize on scroll
+
+On iOS 26 a tab bar can shrink into a small pill when you scroll, instead of
+leaving the screen (`tabBarMinimizeBehavior`). The bar has a third state
+between shown and hidden: minimized.
+
+```dart
+BottomBar(
+  scrollBehavior: const BottomBarScrollBehavior(
+    minimizeBehavior: BottomBarMinimizeBehavior.onScrollDown,
+  ),
+  body: const BottomBarBodyPadding(child: Feed()),
+  child: BottomBarItems(
+    selectedIndex: index,
+    onSelected: (i) => setState(() => index = i),
+    children: items,
+  ),
+)
+```
+
+- `onScrollDown` minimizes the bar when the content scrolls toward its end
+  and expands it when the content scrolls back. `onScrollUp` does the
+  opposite. `never` is the default and keeps the hide behaviour.
+- A minimize mode takes precedence over `hideOnScroll` and `reverse`. A
+  scroll then minimizes the bar and never hides it. `showAtStart`,
+  `showOnScrollEnd`, `keepVisibleOnFocus` and `deltaThreshold` apply as they
+  do to hiding, with "show" meaning "expand".
+- The pill shows the selected `BottomBarItem`'s icon and badge. Set
+  `BottomBar.compactChild` to show your own widget, like a now-playing pill.
+  The default pill needs `child` itself to be a `BottomBarItems` with a
+  `selectedIndex`, not one wrapped in a `Padding` or another widget. With no
+  such selection and no `compactChild`, the bar has no pill and hides
+  instead.
+- The pill sits at the bar's leading edge, on the right in RTL, as on iOS.
+  It is centred vertically and inset from the leading edge as far as from
+  the top. This is the same whatever the bar's alignment.
+- The bar's outline shrinks onto the pill on the bar's own spring. Width,
+  height and corner radius move together, and the glass, fill, border and
+  shadows follow it. A notch closes as the centre action fades. The move can
+  be interrupted both ways, and reduced motion snaps.
+- Tap the pill to expand the bar. To a screen reader the pill is one button
+  with the selected item's label and an "Expand" hint. While minimized the
+  full bar's items take no pointer, focus or semantics.
+- `BottomBarController` has `minimize()`, `expand()` and a `visibility`
+  listenable (`shown`, `minimized`, `hidden`). `isVisible` stays true while
+  minimized. `minimize()` works in every mode.
+
+**Padding rule.** `BottomBarBodyPadding` and `BottomBarScope.barHeight` keep
+the full bar's height while the bar is minimized or hidden, so content never
+jumps. `BottomBarScope.visibleHeight` is what the bar covers now: the full
+footprint when shown, the pill's footprint when minimized, and 0 when hidden.
+Use it for things that float above the bar, like a button.
+
+The detached `leading` and `trailing` pieces stay where they are while the
+bar is minimized.
+
+Try the [minimize demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/minimize) live.
+
 ## Migrating from another bar
 
 The [migration guides](./docs/migrate/README.md) move an existing bottom bar
@@ -1091,14 +1149,17 @@ animating.
 | `keepVisibleOnFocus` | `bool` | `true` | Skip scroll-hide while the floating child has focus. `BottomBarController.hide()` still hides it. |
 | `predicate` | `bool Function(ScrollNotification)?` | `null` | Skip notifications entirely when it returns false. |
 | `visibilityOnTabChange` | `BottomBarTabVisibility` | `show` | On a tab change, `show` shows the bar and `restore` gives the tab back the visibility it had when the user left it. See [Tabs and pages](#tabs-and-pages). |
+| `minimizeBehavior` | `BottomBarMinimizeBehavior` | `never` | `onScrollDown` or `onScrollUp` shrinks the bar into a pill instead of hiding it. Takes precedence over `hideOnScroll` and `reverse`. See [Minimize on scroll](#minimize-on-scroll). |
 
 ### `BottomBarController`
 
 | Member | Notes |
 | --- | --- |
-| `isVisible` | Tracks the currently attached bar's visibility. |
+| `isVisible` | Tracks the currently attached bar's visibility. True while minimized. |
+| `visibility` | `ValueListenable<BottomBarVisibility>`: `shown`, `minimized` or `hidden`. |
 | `isAttached` | Whether the controller is attached to a live bar. |
-| `show()` / `hide()` / `toggle()` | Imperative visibility controls. |
+| `show()` / `hide()` / `toggle()` | Imperative visibility controls. `show()` also expands a minimized bar. |
+| `minimize()` / `expand()` | Shrink the bar into its pill, or expand it again. A bar with no pill hides instead. |
 | `scrollToStart()` | Scrolls the newest eligible scrollable to its minimum extent, then shows the bar. |
 | `scrollToEnd()` | Scrolls the newest eligible scrollable to its maximum extent, then shows the bar. |
 | `reportScroll(delta: ...)` | Drives visibility from a source that doesn't emit `ScrollNotification`s (e.g. WebView). Visibility only; doesn't affect `scrollToStart`/`scrollToEnd`. |
@@ -1120,11 +1181,15 @@ binding.
 
 ### `BottomBarScope`
 
-`BottomBarScope` exposes two listenables inside `BottomBar.body`:
+`BottomBarScope` exposes these listenables inside `BottomBar.body`:
 
 - `barHeight`: the live measured bar footprint, including offset and bottom
-  safe-area when enabled.
-- `isVisible`: the current shown/hidden target state.
+  safe-area when enabled. It keeps the full bar's height while the bar is
+  minimized or hidden.
+- `isVisible`: the current shown/hidden target state. True while minimized.
+- `visibility`: `shown`, `minimized` or `hidden`.
+- `visibleHeight`: what the bar covers in its current state: `barHeight`
+  when shown, the pill's footprint when minimized, 0 when hidden.
 
 Use `BottomBarBodyPadding` when you want the common "reserve the bottom
 footprint for me" behavior without wiring your own `ValueListenableBuilder`.

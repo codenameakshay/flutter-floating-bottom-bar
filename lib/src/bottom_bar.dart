@@ -124,8 +124,10 @@ class BottomBar extends StatefulWidget {
   /// now-playing pill.
   ///
   /// When null, the pill shows the selected [BottomBarItem]'s icon and badge,
-  /// if [child] is a [BottomBarItems] with a [BottomBarItems.selectedIndex].
-  /// With neither, the bar has no pill, and minimizing hides it instead.
+  /// if [child] itself is a [BottomBarItems] with a
+  /// [BottomBarItems.selectedIndex]. A [BottomBarItems] wrapped in another
+  /// widget, such as a [Padding], does not count. With neither, the bar has
+  /// no pill, and minimizing hides it instead.
   ///
   /// The pill sits at the bar's leading edge (the right edge in RTL),
   /// vertically centred and inset from that edge as far as from the bar's

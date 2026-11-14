@@ -165,6 +165,7 @@ const BottomBarScrollBehavior({
   bool showAtStart = false,
   bool showOnScrollEnd = false,
   bool Function(ScrollNotification)? predicate,
+  BottomBarMinimizeBehavior minimizeBehavior = BottomBarMinimizeBehavior.never,
 });
 ```
 
@@ -177,6 +178,7 @@ const BottomBarScrollBehavior({
 | `showAtStart` | `false` | When `true`, reaching `minScrollExtent` forces the bar visible (after `predicate` filtering). |
 | `showOnScrollEnd` | `false` | When `true`, a `ScrollEndNotification` forces the bar visible (after `predicate` filtering). |
 | `predicate` | `null` | Filter for `ScrollNotification`s. Return `false` to ignore. **Use this for `NestedScrollView`** to disambiguate inner vs outer scroll. |
+| `minimizeBehavior` | `never` | `onScrollDown` / `onScrollUp` shrink the bar into a compact pill (iOS 26 `tabBarMinimizeBehavior`) instead of hiding it. Takes precedence over `hideOnScroll` and `reverse`. The pill shows `BottomBar.compactChild`, or the selected `BottomBarItem`'s icon when `child` is a `BottomBarItems` with `selectedIndex` (not wrapped in another widget). With neither, the bar hides instead. |
 
 ## `BottomBarThemeData`
 
@@ -216,8 +218,10 @@ Extends `ChangeNotifier`.
 
 | Member | Description |
 |---|---|
-| `bool isVisible` | Current visibility. |
+| `bool isVisible` | Current visibility. True while minimized. |
+| `ValueListenable<BottomBarVisibility> visibility` | `shown`, `minimized` or `hidden`. |
 | `bool isAttached` | Whether attached to a live `BottomBar`. |
+| `void minimize()` / `void expand()` | Shrink into the compact pill / expand back. A bar with no pill hides instead. `show()` also expands. |
 | `void show()` | Show. Fires `onBottomBarShown`. |
 | `void hide()` | Hide. Fires `onBottomBarHidden`. Bypasses `hideOnScroll: false`. |
 | `void toggle()` | Toggle. |
@@ -239,7 +243,9 @@ eligible target, the controller methods leave visibility unchanged and report a
 | Member | Type | Notes |
 |---|---|---|
 | `barHeight` | `ValueListenable<double>` | Rendered height in logical px. `0` before first frame; updates post-layout. |
-| `isVisible` | `ValueListenable<bool>` | Current visibility. |
+| `isVisible` | `ValueListenable<bool>` | Current visibility. True while minimized. |
+| `visibility` | `ValueListenable<BottomBarVisibility>` | `shown`, `minimized` or `hidden`. |
+| `visibleHeight` | `ValueListenable<double>` | What the bar covers now: `barHeight` shown, the pill's footprint minimized, `0` hidden. `barHeight` itself never shrinks, so padding never jumps. |
 | `BottomBarScope.of(context)` | `BottomBarScope` | Throws if absent. |
 | `BottomBarScope.maybeOf(context)` | `BottomBarScope?` | Returns `null` if absent. |
 
