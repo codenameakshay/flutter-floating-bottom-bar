@@ -413,9 +413,9 @@ class _BottomBarState extends State<BottomBar>
   /// Moves the bar to [next]. A bar with no pill hides instead of
   /// minimizing. Hiding keeps the bar's shape, so a minimized bar slides out
   /// as a pill. Focus follows: into the pill when the full bar minimizes
-  /// around it, and to the selected item when the pill expands [fromPill] or
-  /// while focused.
-  void _go(BottomBarVisibility next, {bool fromPill = false}) {
+  /// around it, and to the selected item when the pill expands while
+  /// focused or with [focusSelected].
+  void _go(BottomBarVisibility next, {bool focusSelected = false}) {
     if (!mounted) return;
     if (next == BottomBarVisibility.minimized && !_hasPill) {
       next = BottomBarVisibility.hidden;
@@ -428,7 +428,7 @@ class _BottomBarState extends State<BottomBar>
           when _fullFocusNode.hasFocus =>
         () => _pillFocusNode,
       (BottomBarVisibility.minimized, BottomBarVisibility.shown)
-          when fromPill || _pillFocusNode.hasFocus =>
+          when focusSelected || _pillFocusNode.hasFocus =>
         _selectedItemFocusNode,
       _ => null,
     };
@@ -497,7 +497,14 @@ class _BottomBarState extends State<BottomBar>
     final custom = widget.compactChild;
     return CompactPillButton(
       focusNode: _pillFocusNode,
-      onTap: () => _go(BottomBarVisibility.shown, fromPill: true),
+      // A touch takes no focus, or keepVisibleOnFocus would stop the next
+      // scroll from minimizing the bar.
+      onTap: () => _go(
+        BottomBarVisibility.shown,
+        focusSelected:
+            FocusManager.instance.highlightMode ==
+            FocusHighlightMode.traditional,
+      ),
       label: custom == null && item != null ? itemSemanticsLabel(item) : null,
       child:
           custom ??

@@ -1046,8 +1046,10 @@ BottomBar(
   button. Minimizing and expanding announce nothing, as on iOS.
 - **Focus.** While minimized the full bar's items take no pointer, focus or
   semantics. When the bar minimizes with focus on one of its items, focus
-  moves to the pill. When the pill expands by tap, Enter or Space, focus
-  moves to the selected item.
+  moves to the pill. When the pill expands by Enter, Space or a mouse
+  click, or while it has focus, focus moves to the selected item. A touch
+  moves no focus, so `keepVisibleOnFocus` doesn't stop the next scroll
+  from minimizing the bar.
 - `BottomBarController` has `minimize()`, `expand()` and a `visibility`
   listenable (`shown`, `minimized`, `hidden`). `isVisible` stays true while
   minimized. `minimize()` works in every mode.

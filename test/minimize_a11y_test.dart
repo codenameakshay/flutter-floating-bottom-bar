@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
@@ -275,7 +276,7 @@ void main() {
     });
   }
 
-  testWidgets('a tap on the pill expands and focuses the selected item', (
+  testWidgets('a mouse click on the pill focuses the selected item', (
     tester,
   ) async {
     final controller = BottomBarController();
@@ -285,10 +286,42 @@ void main() {
     controller.minimize();
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(CompactPillButton));
+    await tester.tap(
+      find.byType(CompactPillButton),
+      kind: PointerDeviceKind.mouse,
+    );
     await tester.pumpAndSettle();
     expect(controller.visibility.value, BottomBarVisibility.shown);
     expect(_focusedItemLabel(), 'Inbox');
+  });
+
+  testWidgets('a touch on the pill expands without taking focus', (
+    tester,
+  ) async {
+    final controller = BottomBarController();
+    addTearDown(controller.dispose);
+    await _pumpBar(
+      tester,
+      controller: controller,
+      scrollBehavior: const BottomBarScrollBehavior(
+        minimizeBehavior: BottomBarMinimizeBehavior.onScrollDown,
+      ),
+      body: ListView.builder(
+        itemCount: 100,
+        itemBuilder: (_, i) => SizedBox(height: 60, child: Text('Row $i')),
+      ),
+    );
+
+    controller.minimize();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(CompactPillButton));
+    await tester.pumpAndSettle();
+    expect(controller.visibility.value, BottomBarVisibility.shown);
+    expect(_focusedItemLabel(), isNull);
+
+    await tester.drag(find.byType(ListView), const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(controller.visibility.value, BottomBarVisibility.minimized);
   });
 
   testWidgets('expanding by controller moves focus off the unmounted pill', (
