@@ -81,6 +81,16 @@ class RenderBarGroup extends RenderBox
   /// against it first, so a stable row lays the pill out once.
   double _piecesWidth = 0;
 
+  /// The top of the highest side piece, or null without one.
+  double? get piecesTop {
+    final children = getChildrenAsList();
+    if (children.length < 2) return null;
+    return [
+      for (final (i, child) in children.indexed)
+        if (i != _pillIndex) (child.parentData! as _GroupParentData).offset.dy,
+    ].reduce(math.min);
+  }
+
   @override
   void setupParentData(RenderBox child) {
     if (child.parentData is! _GroupParentData) {

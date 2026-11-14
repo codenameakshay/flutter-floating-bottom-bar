@@ -19,6 +19,8 @@ import 'internal/scroll_notification_dispatcher.dart';
 import 'internal/size_observer.dart';
 import 'internal/bottom_bar_action.dart';
 import 'internal/visibility_animator.dart';
+import 'widgets/bottom_bar_item.dart';
+import 'widgets/bottom_bar_items.dart';
 import 'widgets/bottom_bar_surface.dart';
 
 /// Builds the back-to-top icon child.
@@ -246,7 +248,15 @@ class _BottomBarState extends State<BottomBar>
 
   /// 0 is the full bar, 1 the compact pill.
   late BoundedSingleMotionController _minimizeController;
-  final GlobalKey _compactKey = GlobalKey();
+  final GlobalKey _minimizeHostKey = GlobalKey();
+
+  /// Holds no focus itself; tells whether focus is inside the full bar.
+  final FocusNode _fullFocusNode = FocusNode(
+    debugLabel: 'BottomBar full',
+    canRequestFocus: false,
+    skipTraversal: true,
+  );
+  final FocusNode _pillFocusNode = FocusNode(debugLabel: 'BottomBar pill');
 
   BottomBarLayout _effectiveLayout(BottomBarThemeData theme) {
     return widget.layout ?? theme.layout ?? const BottomBarLayout();
@@ -396,8 +406,10 @@ class _BottomBarState extends State<BottomBar>
 
   /// Moves the bar to [next]. A bar with no pill hides instead of
   /// minimizing. Hiding keeps the bar's shape, so a minimized bar slides out
-  /// as a pill.
-  void _go(BottomBarVisibility next) {
+  /// as a pill. Focus follows: into the pill when the full bar minimizes
+  /// around it, and to the selected item when the pill expands [fromPill] or
+  /// while focused.
+  void _go(BottomBarVisibility next, {bool fromPill = false}) {
     if (!mounted) return;
     if (next == BottomBarVisibility.minimized && !_hasPill) {
       next = BottomBarVisibility.hidden;
@@ -405,6 +417,23 @@ class _BottomBarState extends State<BottomBar>
     if (next == _visibility) return;
     final transition = ++_visibilityTransition;
     final wasVisible = _targetVisible;
+    final focusTarget = switch ((_visibility, next)) {
+      (BottomBarVisibility.shown, BottomBarVisibility.minimized)
+          when _fullFocusNode.hasFocus =>
+        () => _pillFocusNode,
+      (BottomBarVisibility.minimized, BottomBarVisibility.shown)
+          when fromPill || _pillFocusNode.hasFocus =>
+        _selectedItemFocusNode,
+      _ => null,
+    };
+    if (focusTarget != null) {
+      // The side gaining focus can take it only after this rebuild.
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (mounted && transition == _visibilityTransition) {
+          focusTarget()?.requestFocus();
+        }
+      });
+    }
     setState(() {
       _visibility = next;
       if (next != BottomBarVisibility.hidden) {
@@ -433,12 +462,36 @@ class _BottomBarState extends State<BottomBar>
     }
   }
 
+  /// The selected item's focus node in the full bar, or its first one when
+  /// no [BottomBarItem] is selected.
+  FocusNode? _selectedItemFocusNode() {
+    final child = widget.child;
+    final index = child is BottomBarItems ? child.selectedIndex : null;
+    final selected = child is BottomBarItems && index != null && index >= 0
+        ? child.children.elementAtOrNull(index)
+        : null;
+    final nodes = _fullFocusNode.traversalDescendants;
+    return nodes
+            .where(
+              (node) =>
+                  selected != null &&
+                  identical(
+                    node.context
+                        ?.findAncestorWidgetOfExactType<BottomBarItem>(),
+                    selected,
+                  ),
+            )
+            .firstOrNull ??
+        nodes.firstOrNull;
+  }
+
   /// The pill: [BottomBar.compactChild], or the selected item's icon.
   Widget _buildCompact() {
     final item = selectedItemOf(widget.child);
     final custom = widget.compactChild;
     return CompactPillButton(
-      onTap: () => _go(BottomBarVisibility.shown),
+      focusNode: _pillFocusNode,
+      onTap: () => _go(BottomBarVisibility.shown, fromPill: true),
       label: custom == null && item != null ? itemSemanticsLabel(item) : null,
       child:
           custom ??
@@ -461,19 +514,20 @@ class _BottomBarState extends State<BottomBar>
     };
   }
 
-  /// The footprint from the pill's top edge down, with the same margin above
-  /// it as the full bar has.
+  /// The footprint from the top of the pill or the side pieces down, with
+  /// the same margin above it as the full bar has.
   double _minimizedHeight() {
     final group = _resolveBarRenderBox();
-    final pill = _compactKey.currentContext?.findRenderObject();
-    if (group == null || pill is! RenderBox || !pill.attached) {
-      return _barHeight.value;
-    }
-    final top = MatrixUtils.transformPoint(
-      pill.getTransformTo(group),
-      Offset.zero,
-    ).dy;
-    return math.max(0, _barHeight.value - top);
+    final host = _minimizeHostKey.currentContext?.findRenderObject();
+    final pill = host is RenderMinimizeHost && group != null
+        ? host.compactRectIn(group)
+        : null;
+    if (pill == null) return _barHeight.value;
+    final pieces = group is RenderBarGroup ? group.piecesTop : null;
+    return math.max(
+      0,
+      _barHeight.value - math.min(pill.top, pieces ?? double.infinity),
+    );
   }
 
   // -- BottomBarBindingForController -----------------------------------------
@@ -606,6 +660,8 @@ class _BottomBarState extends State<BottomBar>
     _visibilityNotifier.dispose();
     _visibleHeight.dispose();
     _barFocusNode.dispose();
+    _fullFocusNode.dispose();
+    _pillFocusNode.dispose();
     super.dispose();
   }
 
@@ -941,11 +997,13 @@ class _BottomBarState extends State<BottomBar>
         final leading = l.docked ? null : widget.leading;
         final trailing = l.docked ? null : widget.trailing;
         final content = MinimizeHost(
+          key: _minimizeHostKey,
           progress: _minimizeController,
           minimized: _pill,
-          full: widget.child,
+          flushStart: leading != null,
+          full: Focus(focusNode: _fullFocusNode, child: widget.child),
           compact: _pill || _minimizeController.value != 0
-              ? KeyedSubtree(key: _compactKey, child: _buildCompact())
+              ? _buildCompact()
               : null,
         );
         // Semantics sort the pieces by the nearest text direction above
