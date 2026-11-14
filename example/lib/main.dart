@@ -14,6 +14,7 @@ import 'demos/groups_demo.dart';
 import 'demos/indicators_demo.dart';
 import 'demos/issues_dock_demo.dart';
 import 'demos/item_theme_demo.dart';
+import 'demos/minimize_demo.dart';
 import 'demos/nested_scroll_demo.dart';
 import 'demos/presets_demo.dart';
 import 'demos/tabs_demo.dart';
@@ -98,6 +99,11 @@ final demos = <({String slug, String title, WidgetBuilder builder})>[
   (slug: 'docked', title: 'Docked', builder: (_) => const DockedDemoPage()),
   (slug: 'tabs', title: 'Tabs and pages', builder: (_) => const TabsDemoPage()),
   (slug: 'presets', title: 'Presets', builder: (_) => const PresetsDemoPage()),
+  (
+    slug: 'minimize',
+    title: 'Minimize on scroll',
+    builder: (_) => const MinimizeDemoPage(),
+  ),
 ];
 
 class ExampleApp extends StatelessWidget {

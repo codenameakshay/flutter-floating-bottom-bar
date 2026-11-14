@@ -2,6 +2,22 @@ import 'package:flutter/foundation.dart';
 
 import 'bottom_bar.dart';
 
+/// Where a [BottomBar] is: full size, shrunk into its compact pill, or
+/// hidden.
+///
+/// See [BottomBarController.visibility] and [BottomBarScope.visibility].
+enum BottomBarVisibility {
+  /// The full bar is on screen.
+  shown,
+
+  /// The bar is shrunk into its compact pill, like an iOS 26 tab bar that
+  /// minimized on scroll. See [BottomBarScrollBehavior.minimizeBehavior].
+  minimized,
+
+  /// The bar is off screen.
+  hidden,
+}
+
 /// Imperative controller for [BottomBar].
 ///
 /// Lets you show, hide, or toggle the bar programmatically, or scroll the
@@ -27,14 +43,23 @@ import 'bottom_bar.dart';
 /// ```
 class BottomBarController extends ChangeNotifier {
   BottomBarBindingForController? _binding;
-  bool _isVisible = true;
+  final ValueNotifier<BottomBarVisibility> _visibility = ValueNotifier(
+    BottomBarVisibility.shown,
+  );
 
-  /// The current visibility of the attached bar.
+  /// Whether the attached bar is not [BottomBarVisibility.hidden]. A
+  /// minimized bar counts as visible.
   ///
   /// Reflects the last value set by [show], [hide], or [toggle]. Also updated
   /// automatically when scroll-based hide/show changes the bar state. Updates
   /// are accepted only from the currently attached bar.
-  bool get isVisible => _isVisible;
+  bool get isVisible => _visibility.value != BottomBarVisibility.hidden;
+
+  /// The attached bar's state: shown, minimized or hidden.
+  ///
+  /// Updates with the bar, from scrolling and from this controller. This
+  /// controller also notifies its own listeners on every change.
+  ValueListenable<BottomBarVisibility> get visibility => _visibility;
 
   /// Whether this controller is currently attached to a live [BottomBar].
   ///
@@ -42,9 +67,10 @@ class BottomBarController extends ChangeNotifier {
   /// [scrollToEnd] are no-ops when [isAttached] is `false`.
   bool get isAttached => _binding != null;
 
-  /// Shows the bar, animating it into view if it is currently hidden.
+  /// Shows the full bar, animating it into view if it is hidden and
+  /// expanding it if it is minimized.
   ///
-  /// No-op if the bar is already visible or the controller is not attached.
+  /// No-op if the bar is already shown or the controller is not attached.
   void show() => _binding?.requestVisible(true);
 
   /// Hides the bar, animating it out of view.
@@ -52,9 +78,30 @@ class BottomBarController extends ChangeNotifier {
   /// No-op if the bar is already hidden or the controller is not attached.
   void hide() => _binding?.requestVisible(false);
 
-  /// Toggles bar visibility — shows if hidden, hides if visible.
+  /// Shrinks the bar into its compact pill, from shown or hidden, whatever
+  /// [BottomBarScrollBehavior.minimizeBehavior] says.
+  ///
+  /// A bar with no pill hides instead: see
+  /// [BottomBarScrollBehavior.minimizeBehavior]. No-op if the bar is already
+  /// minimized or the controller is not attached.
+  void minimize() {
+    if (_binding case final BottomBarVisibilityBinding binding) {
+      binding.requestVisibility(BottomBarVisibility.minimized);
+    }
+  }
+
+  /// Expands a minimized bar back to full size.
+  ///
+  /// No-op unless the bar is minimized. Use [show] to bring back a hidden
+  /// bar.
+  void expand() {
+    if (_visibility.value == BottomBarVisibility.minimized) show();
+  }
+
+  /// Toggles bar visibility — shows if hidden, hides if visible. A minimized
+  /// bar counts as visible.
   void toggle() {
-    if (_isVisible) {
+    if (isVisible) {
       hide();
     } else {
       show();
@@ -119,7 +166,11 @@ class BottomBarController extends ChangeNotifier {
       );
     }
     _binding = binding;
-    updateVisibility(binding, binding.isVisible, shouldNotify: false);
+    _update(binding, switch (binding) {
+      final BottomBarVisibilityBinding binding => binding.visibility,
+      _ when binding.isVisible => BottomBarVisibility.shown,
+      _ => BottomBarVisibility.hidden,
+    }, shouldNotify: false);
   }
 
   /// @nodoc — called by [BottomBar] when it unmounts or the controller changes.
@@ -129,18 +180,44 @@ class BottomBarController extends ChangeNotifier {
     }
   }
 
-  /// @nodoc — called by [BottomBar] to keep [isVisible] in sync with actual
-  /// bar state; notifies listeners so external [AnimatedBuilder]s / [ListenableBuilder]s
-  /// react automatically.
+  /// @nodoc — kept for compatibility. [BottomBar] calls
+  /// [updateVisibilityState].
   void updateVisibility(
     BottomBarBindingForController binding,
     bool value, {
     bool shouldNotify = true,
   }) {
+    if (value == isVisible) return;
+    _update(
+      binding,
+      value ? BottomBarVisibility.shown : BottomBarVisibility.hidden,
+      shouldNotify: shouldNotify,
+    );
+  }
+
+  /// @nodoc — called by [BottomBar] to keep [visibility] in sync with actual
+  /// bar state; notifies listeners so external [AnimatedBuilder]s / [ListenableBuilder]s
+  /// react automatically.
+  void updateVisibilityState(
+    BottomBarBindingForController binding,
+    BottomBarVisibility value,
+  ) => _update(binding, value, shouldNotify: true);
+
+  void _update(
+    BottomBarBindingForController binding,
+    BottomBarVisibility value, {
+    required bool shouldNotify,
+  }) {
     if (_binding != binding) return;
-    if (_isVisible == value) return;
-    _isVisible = value;
+    if (_visibility.value == value) return;
+    _visibility.value = value;
     if (shouldNotify) notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _visibility.dispose();
+    super.dispose();
   }
 }
 
@@ -148,7 +225,17 @@ class BottomBarController extends ChangeNotifier {
 /// Not part of the public API.
 abstract class BottomBarBindingForController {
   bool get isVisible;
+
+  /// Shows the full bar, or hides it.
   void requestVisible(bool visible);
   Future<void> scrollToBoundary({required bool toEnd});
   void reportScroll({required double delta});
+}
+
+/// The three-state half of the binding, apart from
+/// [BottomBarBindingForController] so that interface stays as shipped.
+/// Not part of the public API.
+abstract class BottomBarVisibilityBinding {
+  BottomBarVisibility get visibility;
+  void requestVisibility(BottomBarVisibility visibility);
 }

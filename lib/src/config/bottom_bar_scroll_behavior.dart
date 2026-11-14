@@ -12,6 +12,24 @@ enum BottomBarTabVisibility {
   restore,
 }
 
+/// When scrolling shrinks [BottomBar] into a compact pill instead of hiding
+/// it, like iOS 26 `tabBarMinimizeBehavior`.
+///
+/// See [BottomBarScrollBehavior.minimizeBehavior].
+enum BottomBarMinimizeBehavior {
+  /// Scrolling never minimizes the bar. It hides it as [BottomBarScrollBehavior]
+  /// says.
+  never,
+
+  /// Scrolling toward the end of the content minimizes the bar. Scrolling
+  /// back toward the start expands it.
+  onScrollDown,
+
+  /// Scrolling toward the start of the content minimizes the bar. Scrolling
+  /// toward the end expands it.
+  onScrollUp,
+}
+
 /// Configuration for how [BottomBar] reacts to scrolling in its body subtree.
 @immutable
 class BottomBarScrollBehavior {
@@ -25,14 +43,21 @@ class BottomBarScrollBehavior {
     this.keepVisibleOnFocus = true,
     this.predicate,
     this.visibilityOnTabChange = BottomBarTabVisibility.show,
+    this.minimizeBehavior = BottomBarMinimizeBehavior.never,
   }) : assert(deltaThreshold >= 0, 'deltaThreshold must be >= 0');
 
   /// When false, scroll events never hide the bar (the [BottomBarController]
   /// can still hide it imperatively).
+  ///
+  /// Ignored while [minimizeBehavior] is not [BottomBarMinimizeBehavior.never]:
+  /// scrolling then minimizes the bar and never hides it.
   final bool hideOnScroll;
 
   /// When true, the relationship between scroll direction and visibility is
   /// inverted: scrolling down shows the bar, scrolling up hides it.
+  ///
+  /// Ignored while [minimizeBehavior] is not [BottomBarMinimizeBehavior.never],
+  /// which sets the direction itself.
   final bool reverse;
 
   /// When true, the built-in hidden action scrolls toward
@@ -88,6 +113,23 @@ class BottomBarScrollBehavior {
   /// had when the user left it.
   final BottomBarTabVisibility visibilityOnTabChange;
 
+  /// Whether scrolling shrinks the bar into a compact pill instead of hiding
+  /// it, like iOS 26 `tabBarMinimizeBehavior`.
+  ///
+  /// [BottomBarMinimizeBehavior.never] (the default) keeps the hide
+  /// behaviour. Any other value takes precedence over [hideOnScroll] and
+  /// [reverse]: scrolling in the named direction minimizes the bar, and
+  /// scrolling the other way expands it. A scroll never minimizes a hidden
+  /// bar. [showAtStart], [showOnScrollEnd], [keepVisibleOnFocus],
+  /// [deltaThreshold] and [predicate] apply as they do to hiding, with
+  /// "show" meaning "expand".
+  ///
+  /// The pill shows [BottomBar.compactChild], or the selected
+  /// [BottomBarItem]'s icon when [BottomBar.child] is a [BottomBarItems] with
+  /// a [BottomBarItems.selectedIndex]. With neither, the bar has no pill and
+  /// hides instead.
+  final BottomBarMinimizeBehavior minimizeBehavior;
+
   /// Returns a copy of this scroll behaviour with the given fields replaced by
   /// non-null values. Null arguments leave the corresponding field unchanged.
   BottomBarScrollBehavior copyWith({
@@ -100,6 +142,7 @@ class BottomBarScrollBehavior {
     bool? keepVisibleOnFocus,
     bool Function(ScrollNotification notification)? predicate,
     BottomBarTabVisibility? visibilityOnTabChange,
+    BottomBarMinimizeBehavior? minimizeBehavior,
   }) {
     return BottomBarScrollBehavior(
       hideOnScroll: hideOnScroll ?? this.hideOnScroll,
@@ -112,6 +155,7 @@ class BottomBarScrollBehavior {
       predicate: predicate ?? this.predicate,
       visibilityOnTabChange:
           visibilityOnTabChange ?? this.visibilityOnTabChange,
+      minimizeBehavior: minimizeBehavior ?? this.minimizeBehavior,
     );
   }
 
@@ -127,7 +171,8 @@ class BottomBarScrollBehavior {
         other.showOnScrollEnd == showOnScrollEnd &&
         other.keepVisibleOnFocus == keepVisibleOnFocus &&
         other.predicate == predicate &&
-        other.visibilityOnTabChange == visibilityOnTabChange;
+        other.visibilityOnTabChange == visibilityOnTabChange &&
+        other.minimizeBehavior == minimizeBehavior;
   }
 
   @override
@@ -141,5 +186,6 @@ class BottomBarScrollBehavior {
     keepVisibleOnFocus,
     predicate,
     visibilityOnTabChange,
+    minimizeBehavior,
   );
 }

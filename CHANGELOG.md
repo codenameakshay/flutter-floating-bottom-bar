@@ -1,5 +1,17 @@
 ## Unreleased
 
+- Add minimize on scroll, like the iOS 26 tab bar.
+  `BottomBarScrollBehavior.minimizeBehavior` (`never`, `onScrollDown`,
+  `onScrollUp`) makes scrolling shrink the bar into a compact pill at its
+  leading edge instead of hiding it, and takes precedence over
+  `hideOnScroll`. The outline morphs onto the pill on the bar's spring, with
+  the glass and shadows following it. Tap the pill to expand. The pill shows
+  the selected item's icon and badge, or `BottomBar.compactChild`. A bar
+  with neither hides instead. `BottomBarController` gains `minimize()`,
+  `expand()` and a `visibility` listenable. `BottomBarScope` gains
+  `visibility` and `visibleHeight`. `barHeight` and `BottomBarBodyPadding`
+  keep the full height while minimized. With the default `never`, nothing
+  changes. Add a minimize demo in `example/lib/demos/minimize_demo.dart`.
 - Add four presets on `BottomBarThemeData`: `glass()`, `material3()`,
   `pill()` and `minimal()`. Each is one line to a finished bar, built from
   the existing layout, surface, indicator, motion and item theme. Colours

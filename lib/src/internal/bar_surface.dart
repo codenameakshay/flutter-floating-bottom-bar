@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 
 import '../widgets/bottom_bar_surface.dart';
 import 'bar_outline.dart';
+import 'minimize.dart';
 
 /// Paints the bar's decoration through its [BarOutline] and hosts a raised
 /// centre action.
@@ -23,6 +24,7 @@ class BarSurface extends SingleChildRenderObjectWidget {
     this.visibility,
     this.fades = false,
     this.backdropKey,
+    this.minimize,
     super.child,
   });
 
@@ -52,6 +54,12 @@ class BarSurface extends SingleChildRenderObjectWidget {
   /// does not overlap the bar.
   final BackdropKey? backdropKey;
 
+  /// How far the bar has shrunk onto the compact pill of the [MinimizeHost]
+  /// inside it, from 0 (full) to 1 (pill). The outline, and with it the fill,
+  /// glass, border and shadows, follows every frame. Without a pill the bar
+  /// keeps its full outline.
+  final Animation<double>? minimize;
+
   @override
   RenderBarSurface createRenderObject(BuildContext context) => RenderBarSurface(
     decoration: decoration,
@@ -61,6 +69,7 @@ class BarSurface extends SingleChildRenderObjectWidget {
     visibility: visibility,
     fades: fades,
     backdropKey: backdropKey,
+    minimize: minimize,
     configuration: createLocalImageConfiguration(context),
   );
 
@@ -74,6 +83,7 @@ class BarSurface extends SingleChildRenderObjectWidget {
       ..visibility = visibility
       ..fades = fades
       ..backdropKey = backdropKey
+      ..minimize = minimize
       ..configuration = createLocalImageConfiguration(context);
   }
 }
@@ -87,6 +97,7 @@ class RenderBarSurface extends RenderShiftedBox {
     this._visibility,
     this._fades = false,
     this._backdropKey,
+    this._minimize,
     required this._configuration,
   }) : super(null);
 
@@ -185,6 +196,43 @@ class RenderBarSurface extends RenderShiftedBox {
     markNeedsPaint();
   }
 
+  Animation<double>? _minimize;
+  set minimize(Animation<double>? value) {
+    if (identical(value, _minimize)) return;
+    if (attached) _minimize?.removeListener(markNeedsPaint);
+    _minimize = value;
+    if (attached) value?.addListener(markNeedsPaint);
+    markNeedsPaint();
+  }
+
+  /// Set by the [RenderMinimizeHost] inside this bar when it attaches.
+  RenderMinimizeHost? _minimizeHost;
+  RenderMinimizeHost? get minimizeHost => _minimizeHost;
+  set minimizeHost(RenderMinimizeHost? value) {
+    if (identical(value, _minimizeHost)) return;
+    _minimizeHost = value;
+    markNeedsPaint();
+  }
+
+  /// The pill the bar shrinks onto, in this box's coordinates.
+  Rect? get _compactRect => _minimizeHost?.compactRectIn(this);
+
+  /// How far the outline has moved onto the pill, or 0 without a pill.
+  @visibleForTesting
+  double get morph => _morph;
+  double get _morph {
+    final t = (_minimize?.value ?? 0).clamp(0.0, 1.0);
+    return t == 0 || _compactRect == null ? 0 : t;
+  }
+
+  /// The rect the outline is drawn in: the bar, shrinking onto the pill.
+  @visibleForTesting
+  Rect get outlineRect => _outlineRect;
+  Rect get _outlineRect {
+    final t = _morph;
+    return t == 0 ? _barRect : Rect.lerp(_barRect, _compactRect, t)!;
+  }
+
   bool get _blurs =>
       child != null &&
       (_painted?.blur ?? 0) > 0 &&
@@ -253,10 +301,13 @@ class RenderBarSurface extends RenderShiftedBox {
     return (child.parentData! as BoxParentData).offset & child.size;
   }
 
-  /// The bar's current outline, in this box's coordinates once shifted by
-  /// the bar's top-left. The notch follows the action as laid out.
+  /// The bar's current outline, to draw in the bar's rect, or while it
+  /// minimizes in the rect shrinking onto the pill. The notch follows the
+  /// action as laid out, and closes as the action fades out.
   BarOutline get outline {
     final decoration = _decoration;
+    final morph = _morph;
+    final outlineRect = _outlineRect;
     final action = _action;
     final button = action?.child;
     Rect? notch;
@@ -271,15 +322,25 @@ class RenderBarSurface extends RenderShiftedBox {
         Offset.zero & button.size,
       );
       final diameter =
-          math.max(rect.width, rect.height) + 2 * action._notchMargin;
-      notch = Rect.fromCircle(
-        center: rect.center - _barRect.center,
-        radius: diameter / 2,
-      );
+          (math.max(rect.width, rect.height) + 2 * action._notchMargin) *
+          fullOpacity(morph);
+      notch = diameter <= 0
+          ? null
+          : Rect.fromCircle(
+              center: rect.center - outlineRect.center,
+              radius: diameter / 2,
+            );
     }
     final surface = _painted;
+    final radius = decoration?.borderRadius ?? BorderRadius.zero;
     return BarOutline(
-      borderRadius: decoration?.borderRadius ?? BorderRadius.zero,
+      borderRadius: morph == 0
+          ? radius
+          : BorderRadiusGeometry.lerp(
+              radius,
+              BorderRadius.circular(_compactRect!.shortestSide / 2),
+              morph,
+            )!,
       notch: notch,
       border: surface != null ? surface.border : decoration?.border,
     );
@@ -306,6 +367,7 @@ class RenderBarSurface extends RenderShiftedBox {
     super.attach(owner);
     _visibility?.addListener(_visibilityChanged);
     _edge?.addListener(_edgeChanged);
+    _minimize?.addListener(markNeedsPaint);
     _edgeChanged();
   }
 
@@ -313,6 +375,7 @@ class RenderBarSurface extends RenderShiftedBox {
   void detach() {
     _visibility?.removeListener(_visibilityChanged);
     _edge?.removeListener(_edgeChanged);
+    _minimize?.removeListener(markNeedsPaint);
     _clipLayer.layer = null;
     _backdropLayer.layer = null;
     _opacityLayer.layer = null;
@@ -420,7 +483,7 @@ class RenderBarSurface extends RenderShiftedBox {
         _painter = paintable.createBoxPainter(markNeedsPaint);
         _paintedDecoration = paintable;
       }
-      final bar = _barRect;
+      final bar = _outlineRect;
       _painter!.paint(
         context.canvas,
         offset + bar.topLeft,
@@ -441,7 +504,7 @@ class RenderBarSurface extends RenderShiftedBox {
     double opacity,
   ) {
     final outline = this.outline;
-    final rect = _barRect;
+    final rect = _outlineRect;
     final textDirection = _configuration.textDirection;
     final path = outline.getOuterPath(rect, textDirection: textDirection);
     void faded(Canvas canvas, Rect bounds, VoidCallback paint) {
@@ -592,7 +655,8 @@ class RenderBarSurface extends RenderShiftedBox {
     while (ancestor != null && !identical(ancestor, this)) {
       if (ancestor is RenderIgnorePointer && ancestor.ignoring ||
           ancestor is RenderAbsorbPointer && ancestor.absorbing ||
-          ancestor is RenderOffstage && ancestor.offstage) {
+          ancestor is RenderOffstage && ancestor.offstage ||
+          ancestor is RenderMinimizeHost && ancestor.minimized) {
         return false;
       }
       if (ancestor is RenderBox && child != null) {
@@ -640,6 +704,8 @@ class RenderBarSurface extends RenderShiftedBox {
         return true;
       }
     }
+    // A minimizing bar takes pointers only inside its shrinking outline.
+    if (_morph > 0 && !_outlineRect.contains(position)) return false;
     return super.hitTest(result, position: position);
   }
 }

@@ -10,6 +10,7 @@ import 'bottom_bar_theme.dart';
 import 'internal/bar_group.dart';
 import 'internal/bar_surface.dart';
 import 'internal/item_theme_scope.dart';
+import 'internal/minimize.dart';
 import 'config/bottom_bar_layout.dart';
 import 'config/bottom_bar_motion.dart';
 import 'internal/reduce_motion.dart';
@@ -72,6 +73,7 @@ class BottomBar extends StatefulWidget {
     required this.body,
     this.leading,
     this.trailing,
+    this.compactChild,
     this.controller,
     this.layout,
     this.motion,
@@ -117,6 +119,28 @@ class BottomBar extends StatefulWidget {
   /// A detached piece after the bar, in reading order, like the search
   /// button beside an iOS 26 tab bar. Laid out and painted like [leading].
   final Widget? trailing;
+
+  /// What the bar shows when it minimizes into a compact pill, like a
+  /// now-playing pill.
+  ///
+  /// When null, the pill shows the selected [BottomBarItem]'s icon and badge,
+  /// if [child] itself is a [BottomBarItems] with a
+  /// [BottomBarItems.selectedIndex]. A [BottomBarItems] wrapped in another
+  /// widget, such as a [Padding], does not count, and neither does an item
+  /// whose icon or badge has a [GlobalKey], since the pill would mount it a
+  /// second time. With neither, the bar has no pill, and minimizing hides it
+  /// instead.
+  ///
+  /// The pill sits at the bar's leading edge (the right edge in RTL),
+  /// vertically centred and inset from that edge as far as from the bar's
+  /// top, whatever [BottomBarLayout.alignment] says. [compactChild] takes its
+  /// own size, up to the bar's. Tapping the pill anywhere [compactChild] does
+  /// not handle itself expands the bar. To a screen reader the pill is one
+  /// button with an "Expand" hint, holding [compactChild]'s semantics.
+  ///
+  /// See [BottomBarScrollBehavior.minimizeBehavior] and
+  /// [BottomBarController.minimize].
+  final Widget? compactChild;
 
   /// Optional imperative controller for the bar.
   ///
@@ -192,7 +216,7 @@ class BottomBar extends StatefulWidget {
 
 class _BottomBarState extends State<BottomBar>
     with TickerProviderStateMixin
-    implements BottomBarBindingForController {
+    implements BottomBarBindingForController, BottomBarVisibilityBinding {
   late BoundedSingleMotionController _motionController;
 
   /// 0 paints [BottomBarThemeData.surface], 1 paints
@@ -210,7 +234,20 @@ class _BottomBarState extends State<BottomBar>
   /// Every piece of the bar reads the backdrop under it once, together.
   final BackdropKey _backdropKey = BackdropKey();
 
-  bool _targetVisible = true;
+  /// The one source of truth for where the bar is. Every transition goes
+  /// through [_go].
+  BottomBarVisibility _visibility = BottomBarVisibility.shown;
+  bool get _targetVisible => _visibility != BottomBarVisibility.hidden;
+
+  /// Whether the bar's shape is the pill: true while minimized, and kept
+  /// while hidden so a minimized bar hides and comes back as a pill.
+  bool _pill = false;
+  int _visibilityTransition = 0;
+
+  /// 0 is the full bar, 1 the compact pill.
+  late BoundedSingleMotionController _minimizeController;
+  final GlobalKey _compactKey = GlobalKey();
+
   BottomBarLayout _effectiveLayout(BottomBarThemeData theme) {
     return widget.layout ?? theme.layout ?? const BottomBarLayout();
   }
@@ -227,6 +264,10 @@ class _BottomBarState extends State<BottomBar>
 
   final ValueNotifier<double> _barHeight = ValueNotifier<double>(0);
   final ValueNotifier<bool> _isVisibleNotifier = ValueNotifier<bool>(true);
+  final ValueNotifier<BottomBarVisibility> _visibilityNotifier = ValueNotifier(
+    BottomBarVisibility.shown,
+  );
+  final ValueNotifier<double> _visibleHeight = ValueNotifier<double>(0);
 
   @override
   void initState() {
@@ -247,15 +288,20 @@ class _BottomBarState extends State<BottomBar>
       motion: _motion.resolveMotion(),
       vsync: this,
     );
+    _minimizeController = BoundedSingleMotionController(
+      motion: _motion.resolveMotion(),
+      vsync: this,
+    )..addStatusListener(_handleMinimizeStatus);
 
     _dispatcher = ScrollNotificationDispatcher(
       deltaThreshold: _scrollBehavior.deltaThreshold,
-      reverse: _scrollBehavior.reverse,
+      reverse: _scrollReverse(_scrollBehavior),
       showAtStart: _scrollBehavior.showAtStart,
       showOnScrollEnd: _scrollBehavior.showOnScrollEnd,
       predicate: _scrollBehavior.predicate,
       restoreTabVisibility: _restoresTabs(_scrollBehavior),
-      onShouldHide: (hide) => _setBarVisible(!hide, notifyCallbacks: true),
+      onShouldHide: (away) =>
+          away ? _scrollAway() : _go(BottomBarVisibility.shown),
     );
 
     widget.controller?.attach(this);
@@ -265,6 +311,11 @@ class _BottomBarState extends State<BottomBar>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _syncMotionAndScroll(_resolvedTheme(context));
+    if (_disableAnimations) {
+      _animate(_motionController, _targetVisible ? 1 : 0);
+      _animate(_minimizeController, _pill ? 1 : 0);
+      _animate(_edgeController, _atEdge ? 1 : 0);
+    }
   }
 
   @override
@@ -274,6 +325,14 @@ class _BottomBarState extends State<BottomBar>
     if (oldWidget.controller != widget.controller) {
       widget.controller?.attach(this);
       oldWidget.controller?.detach(this);
+    }
+
+    if (_visibility == BottomBarVisibility.minimized && !_hasPill) {
+      // The pill is gone, so the bar hides. Not during build: _go notifies
+      // listeners outside this widget.
+      SchedulerBinding.instance.addPostFrameCallback(
+        (_) => _go(BottomBarVisibility.minimized),
+      );
     }
 
     _syncMotionAndScroll(_resolvedTheme(context));
@@ -286,11 +345,12 @@ class _BottomBarState extends State<BottomBar>
     if (_motion != newMotion) {
       _motionController.motion = newMotion.resolveMotion();
       _edgeController.motion = newMotion.resolveMotion();
+      _minimizeController.motion = newMotion.resolveMotion();
     }
 
     if (_scrollBehavior != newScroll) {
       _dispatcher.deltaThreshold = newScroll.deltaThreshold;
-      _dispatcher.reverse = newScroll.reverse;
+      _dispatcher.reverse = _scrollReverse(newScroll);
       _dispatcher.showAtStart = newScroll.showAtStart;
       _dispatcher.showOnScrollEnd = newScroll.showOnScrollEnd;
       _dispatcher.predicate = newScroll.predicate;
@@ -304,43 +364,116 @@ class _BottomBarState extends State<BottomBar>
   static bool _restoresTabs(BottomBarScrollBehavior behavior) =>
       behavior.visibilityOnTabChange == BottomBarTabVisibility.restore;
 
-  // -- visibility plumbing ---------------------------------------------------
+  /// The dispatcher's "away" direction: the minimize mode's when minimizing,
+  /// [BottomBarScrollBehavior.reverse] otherwise.
+  static bool _scrollReverse(BottomBarScrollBehavior behavior) =>
+      switch (behavior.minimizeBehavior) {
+        BottomBarMinimizeBehavior.never => behavior.reverse,
+        BottomBarMinimizeBehavior.onScrollDown => false,
+        BottomBarMinimizeBehavior.onScrollUp => true,
+      };
 
-  void _setBarVisible(
-    bool visible, {
-    required bool notifyCallbacks,
-    bool fromController = false,
-  }) {
+  // -- visibility state machine ----------------------------------------------
+
+  /// Whether the bar has a compact pill to minimize into.
+  bool get _hasPill =>
+      widget.compactChild != null || selectedItemOf(widget.child) != null;
+
+  /// A scroll moved in the direction that gets the bar out of the way. With a
+  /// minimize mode it minimizes a shown bar; otherwise it hides a visible
+  /// bar, if [BottomBarScrollBehavior.hideOnScroll] allows.
+  void _scrollAway() {
+    final minimizes =
+        _scrollBehavior.minimizeBehavior != BottomBarMinimizeBehavior.never;
+    if (minimizes
+        ? _visibility != BottomBarVisibility.shown
+        : !_scrollBehavior.hideOnScroll) {
+      return;
+    }
+    if (_scrollBehavior.keepVisibleOnFocus && _barFocusNode.hasFocus) return;
+    _go(minimizes ? BottomBarVisibility.minimized : BottomBarVisibility.hidden);
+  }
+
+  /// Moves the bar to [next]. A bar with no pill hides instead of
+  /// minimizing. Hiding keeps the bar's shape, so a minimized bar slides out
+  /// as a pill.
+  void _go(BottomBarVisibility next) {
     if (!mounted) return;
-    if (!visible && !_scrollBehavior.hideOnScroll && !fromController) {
-      return;
+    if (next == BottomBarVisibility.minimized && !_hasPill) {
+      next = BottomBarVisibility.hidden;
     }
-    if (!visible &&
-        !fromController &&
-        _scrollBehavior.keepVisibleOnFocus &&
-        _barFocusNode.hasFocus) {
-      return;
-    }
-    if (_targetVisible == visible) return;
-
+    if (next == _visibility) return;
+    final transition = ++_visibilityTransition;
+    final wasVisible = _targetVisible;
     setState(() {
-      _targetVisible = visible;
-    });
-
-    _isVisibleNotifier.value = visible;
-
-    _animateBarTo(visible);
-
-    widget.controller?.updateVisibility(this, visible);
-
-    if (notifyCallbacks) {
-      widget.onVisibilityChanged?.call(visible);
-      if (visible) {
-        widget.onBottomBarShown?.call();
-      } else {
-        widget.onBottomBarHidden?.call();
+      _visibility = next;
+      if (next != BottomBarVisibility.hidden) {
+        _pill = next == BottomBarVisibility.minimized;
       }
+    });
+    _visibilityNotifier.value = next;
+    if (transition != _visibilityTransition) return;
+    _isVisibleNotifier.value = _targetVisible;
+    if (transition != _visibilityTransition) return;
+    _animate(_motionController, _targetVisible ? 1 : 0);
+    _animate(_minimizeController, _pill ? 1 : 0);
+    _syncVisibleHeight();
+    if (transition != _visibilityTransition) return;
+    widget.controller?.updateVisibilityState(this, next);
+    if (transition != _visibilityTransition) return;
+
+    final visible = _targetVisible;
+    if (visible == wasVisible) return;
+    widget.onVisibilityChanged?.call(visible);
+    if (transition != _visibilityTransition) return;
+    if (visible) {
+      widget.onBottomBarShown?.call();
+    } else {
+      widget.onBottomBarHidden?.call();
     }
+  }
+
+  /// The pill: [BottomBar.compactChild], or the selected item's icon.
+  Widget _buildCompact() {
+    final item = selectedItemOf(widget.child);
+    final custom = widget.compactChild;
+    return CompactPillButton(
+      onTap: () => _go(BottomBarVisibility.shown),
+      label: custom == null && item != null ? itemSemanticsLabel(item) : null,
+      child:
+          custom ??
+          (item == null
+              ? const SizedBox.shrink()
+              : DefaultCompactPill(item: item)),
+    );
+  }
+
+  /// Drops the pill from the tree once the bar has fully expanded.
+  void _handleMinimizeStatus(AnimationStatus status) {
+    if (status.isDismissed && !_pill && mounted) setState(() {});
+  }
+
+  void _syncVisibleHeight() {
+    _visibleHeight.value = switch (_visibility) {
+      BottomBarVisibility.shown => _barHeight.value,
+      BottomBarVisibility.hidden => 0,
+      BottomBarVisibility.minimized => _minimizedHeight(),
+    };
+  }
+
+  /// The footprint from the pill's top edge down, with the same margin above
+  /// it as the full bar has.
+  double _minimizedHeight() {
+    final group = _resolveBarRenderBox();
+    final pill = _compactKey.currentContext?.findRenderObject();
+    if (group == null || pill is! RenderBox || !pill.attached) {
+      return _barHeight.value;
+    }
+    final top = MatrixUtils.transformPoint(
+      pill.getTransformTo(group),
+      Offset.zero,
+    ).dy;
+    return math.max(0, _barHeight.value - top);
   }
 
   // -- BottomBarBindingForController -----------------------------------------
@@ -349,25 +482,30 @@ class _BottomBarState extends State<BottomBar>
   bool get isVisible => _targetVisible;
 
   @override
-  void requestVisible(bool visible) {
-    _setBarVisible(visible, notifyCallbacks: true, fromController: true);
-  }
+  void requestVisible(bool visible) =>
+      _go(visible ? BottomBarVisibility.shown : BottomBarVisibility.hidden);
+
+  @override
+  BottomBarVisibility get visibility => _visibility;
+
+  @override
+  void requestVisibility(BottomBarVisibility visibility) => _go(visibility);
 
   @override
   Future<void> scrollToBoundary({required bool toEnd}) async {
     if (await _scrollActiveToBoundary(toEnd: toEnd)) {
-      _setBarVisible(true, notifyCallbacks: true, fromController: true);
+      _go(BottomBarVisibility.shown);
     }
   }
 
   void _scrollToStartOnReselect() {
-    _setBarVisible(true, notifyCallbacks: true, fromController: true);
+    _go(BottomBarVisibility.shown);
     _scrollActiveToBoundary(toEnd: false);
   }
 
   Future<void> _handleActionTap() async {
     await _scrollActiveToBoundary(toEnd: _scrollBehavior.scrollOpposite);
-    _setBarVisible(true, notifyCallbacks: true, fromController: true);
+    _go(BottomBarVisibility.shown);
   }
 
   /// Animates the active scrollable to a boundary. Returns `false` without
@@ -462,8 +600,11 @@ class _BottomBarState extends State<BottomBar>
     widget.controller?.detach(this);
     _motionController.dispose();
     _edgeController.dispose();
+    _minimizeController.dispose();
     _barHeight.dispose();
     _isVisibleNotifier.dispose();
+    _visibilityNotifier.dispose();
+    _visibleHeight.dispose();
     _barFocusNode.dispose();
     super.dispose();
   }
@@ -512,6 +653,8 @@ class _BottomBarState extends State<BottomBar>
             child: BottomBarScope(
               barHeight: _barHeight,
               isVisible: _isVisibleNotifier,
+              visibility: _visibilityNotifier,
+              visibleHeight: _visibleHeight,
               bottomInset: bottomInset,
               child: widget.body,
             ),
@@ -592,6 +735,7 @@ class _BottomBarState extends State<BottomBar>
   void _handleBarFootprintChanged(Size size) {
     if (!mounted || _barHeight.value == size.height) return;
     _barHeight.value = size.height;
+    _syncVisibleHeight();
   }
 
   Widget _buildIcon(BottomBarThemeData theme) {
@@ -620,14 +764,16 @@ class _BottomBarState extends State<BottomBar>
     return widget.iconSemanticLabel ?? _defaultIconTooltip;
   }
 
-  void _animateBarTo(bool visible) {
-    final target = visible ? 1.0 : 0.0;
+  /// Springs [controller] to [target] from wherever it is, so a change
+  /// mid-flight turns around smoothly. Reduced motion snaps.
+  void _animate(BoundedSingleMotionController controller, double target) {
+    if (controller.value == target && !controller.isAnimating) return;
     if (_disableAnimations) {
-      _motionController.stop(canceled: true);
-      _motionController.value = target;
+      controller.stop(canceled: true);
+      controller.value = target;
       return;
     }
-    _motionController.animateTo(target, forward: visible);
+    controller.animateTo(target, forward: target == 1);
   }
 
   // -- scroll edge -----------------------------------------------------------
@@ -652,6 +798,7 @@ class _BottomBarState extends State<BottomBar>
       _targetCheckScheduled = false;
       if (!mounted) return;
       _followTarget();
+      _syncVisibleHeight();
       _scheduleTargetCheck();
     });
   }
@@ -667,14 +814,12 @@ class _BottomBarState extends State<BottomBar>
   void _followTarget() {
     final (:active, :paging) = _dispatcher.resolve();
     if (paging) return;
-    final tabVisible = active == null
+    final tabVisibility = active == null
         ? null
-        : _dispatcher.enterTab(active.tab, barVisible: _targetVisible);
-    if (tabVisible != null) {
-      _setBarVisible(tabVisible, notifyCallbacks: true, fromController: true);
-    }
+        : _dispatcher.enterTab(active.tab, current: _visibility);
+    if (tabVisibility != null) _go(tabVisibility);
     // A new tab shows its own edge at once, not a fade from the old tab's.
-    if (_tracksEdge) _syncEdge(active, snap: tabVisible != null);
+    if (_tracksEdge) _syncEdge(active, snap: tabVisibility != null);
   }
 
   void _syncEdge(ActiveScrollable? active, {required bool snap}) {
@@ -771,7 +916,11 @@ class _BottomBarState extends State<BottomBar>
             (_motion.transition == BottomBarTransition.fade ||
                 _motion.transition == BottomBarTransition.slideAndFade);
         final radius = _effectiveBarBorderRadius(theme, l);
-        Widget piece(String slot, Widget child) => BarSurface(
+        Widget piece(
+          String slot,
+          Widget child, {
+          Animation<double>? minimize,
+        }) => BarSurface(
           key: ValueKey(slot),
           decoration: surface == null
               ? _effectiveBarDecoration(theme, l)
@@ -782,6 +931,7 @@ class _BottomBarState extends State<BottomBar>
           visibility: _motionController,
           fades: fadesItself,
           backdropKey: _backdropKey,
+          minimize: minimize,
           child: Material(
             color: Colors.transparent,
             borderRadius: radius,
@@ -790,6 +940,14 @@ class _BottomBarState extends State<BottomBar>
         );
         final leading = l.docked ? null : widget.leading;
         final trailing = l.docked ? null : widget.trailing;
+        final content = MinimizeHost(
+          progress: _minimizeController,
+          minimized: _pill,
+          full: widget.child,
+          compact: _pill || _minimizeController.value != 0
+              ? KeyedSubtree(key: _compactKey, child: _buildCompact())
+              : null,
+        );
         // Semantics sort the pieces by the nearest text direction above
         // them, which the bar would otherwise not set.
         final bar = Semantics(
@@ -810,15 +968,16 @@ class _BottomBarState extends State<BottomBar>
                       piece('leading', _GroupPiece(child: leading)),
                     piece(
                       'pill',
+                      minimize: _minimizeController,
                       MediaQuery.maybeOf(context) != null
                           ? SafeArea(
                               top: false,
                               bottom: l.docked && l.respectSafeArea,
                               left: l.docked && l.respectSafeArea,
                               right: l.docked && l.respectSafeArea,
-                              child: widget.child,
+                              child: content,
                             )
-                          : widget.child,
+                          : content,
                     ),
                     if (trailing != null)
                       piece('trailing', _GroupPiece(child: trailing)),

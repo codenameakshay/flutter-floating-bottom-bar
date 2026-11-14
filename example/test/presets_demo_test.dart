@@ -18,7 +18,7 @@ void main() {
   testWidgets('presets page switches presets, dark mode and scrolls', (
     tester,
   ) async {
-    expect(demos.last.slug, 'presets');
+    expect(demos.map((d) => d.slug), contains('presets'));
 
     await _openPresets(tester);
     expect(find.text('BottomBarThemeData.glass()'), findsOneWidget);

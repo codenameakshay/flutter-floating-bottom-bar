@@ -4,6 +4,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
+import '../bottom_bar_controller.dart';
+
 /// The tab a list sits in: its nearest [IndexedStack] with the index shown,
 /// or the nearest page host with the page in view.
 typedef ScrollTab = (Object anchor, int index);
@@ -42,8 +44,8 @@ class ScrollNotificationDispatcher {
   bool showOnScrollEnd;
   bool Function(ScrollNotification)? predicate;
 
-  /// When true, [enterTab] gives a tab back the visibility it had when the
-  /// bar left it. When false, a new tab always shows the bar.
+  /// When true, [enterTab] gives a tab back the state it had when the bar
+  /// left it. When false, a new tab always shows the full bar.
   bool restoreTabVisibility;
 
   static const int _maxTracked = 16;
@@ -53,7 +55,7 @@ class ScrollNotificationDispatcher {
   _TrackedScrollState? _externalState;
 
   (WeakReference<Object>, int)? _tab;
-  final Expando<Map<int, bool>> _tabVisibility = Expando();
+  final Expando<Map<int, BottomBarVisibility>> _tabVisibility = Expando();
 
   /// The most recently scrolled scrollable that is still attached and in
   /// view, or `null` when there is none.
@@ -123,12 +125,15 @@ class ScrollNotificationDispatcher {
     return (active: selected.active, paging: paging);
   }
 
-  /// Records [tab] as the tab the bar follows, with the bar at [barVisible].
+  /// Records [tab] as the tab the bar follows, with the bar in [current].
   ///
-  /// Returns `null` when the tab did not change. Otherwise returns the
-  /// visibility the bar should take: `true`, or with [restoreTabVisibility]
-  /// the visibility the bar had when it last left [tab].
-  bool? enterTab(ScrollTab? tab, {required bool barVisible}) {
+  /// Returns `null` when the tab did not change. Otherwise returns the state
+  /// the bar should take: shown, or with [restoreTabVisibility] the state the
+  /// bar had when it last left [tab].
+  BottomBarVisibility? enterTab(
+    ScrollTab? tab, {
+    required BottomBarVisibility current,
+  }) {
     final hadPrevious = _tab != null;
     final anchor = _tab?.$1.target;
     final previous = anchor == null ? null : (anchor, _tab!.$2);
@@ -136,9 +141,11 @@ class ScrollNotificationDispatcher {
     _tab = (WeakReference(tab.$1), tab.$2);
     if (!hadPrevious) return null;
     if (previous != null) {
-      (_tabVisibility[previous.$1] ??= {})[previous.$2] = barVisible;
+      (_tabVisibility[previous.$1] ??= {})[previous.$2] = current;
     }
-    return !restoreTabVisibility || (_tabVisibility[tab.$1]?[tab.$2] ?? true);
+    const shown = BottomBarVisibility.shown;
+    if (!restoreTabVisibility) return shown;
+    return _tabVisibility[tab.$1]?[tab.$2] ?? shown;
   }
 
   /// Where [position]'s list sits among the page hosts above it: a
