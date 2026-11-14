@@ -314,6 +314,10 @@ class _ItemViewState extends State<_ItemView>
         selection?.selectedForegroundColor ??
         theme.selectedColor ??
         cs.primary;
+    final selectedLabelLookColor =
+        item.selectedColor ??
+        selection?.selectedLabelColor ??
+        selectedLookColor;
     final explicitSemanticLabel = item.semanticLabel ?? item.tooltip;
     final minHeight = BottomBarItemHeightScope.maybeOf(context) ?? 48;
 
@@ -368,6 +372,9 @@ class _ItemViewState extends State<_ItemView>
     final color = ink
         ? plainColor
         : Color.lerp(plainColor, selectedLookColor, t)!;
+    final labelColor = ink
+        ? plainColor
+        : Color.lerp(plainColor, selectedLabelLookColor, t)!;
 
     final ambientIconSize = IconTheme.of(context).size;
     final iconSize = theme.iconSize == null && theme.selectedIconSize == null
@@ -476,7 +483,7 @@ class _ItemViewState extends State<_ItemView>
           ? reveal(
               labelChild,
               DefaultTextStyle.merge(
-                style: TextStyle(color: selectedLookColor),
+                style: TextStyle(color: selectedLabelLookColor),
                 child: labelChild,
               ),
             )
@@ -495,7 +502,7 @@ class _ItemViewState extends State<_ItemView>
                 labelBase,
                 labelBase.merge(theme.selectedLabelStyle),
                 t,
-              )!.copyWith(color: color),
+              )!.copyWith(color: labelColor),
               child: selection == null
                   ? grown(label)
                   : Center(

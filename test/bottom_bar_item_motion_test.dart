@@ -248,23 +248,30 @@ void main() {
     expect(_iconColor(tester, Icons.search), _black);
   });
 
-  for (final reveal in [true, false]) {
+  for (final kind in ['underline', 'dot', 'container']) {
     testWidgets('onlySelected label grows in and the indicator tracks it '
-        '(${reveal ? 'underline' : 'dot'})', (tester) async {
+        '($kind)', (tester) async {
+      final container = kind == 'container';
       Widget row(int index) => _app(
         _row(
           selectedIndex: index,
-          indicator: reveal
-              ? const BottomBarIndicator.underline()
-              : const BottomBarIndicator.dot(),
+          indicator: switch (kind) {
+            'underline' => const BottomBarIndicator.underline(),
+            'dot' => const BottomBarIndicator.dot(),
+            _ => const BottomBarIndicator.container(),
+          },
           labelBehavior: BottomBarLabelBehavior.onlySelected,
           indicatorMotion: const CupertinoMotion.snappy(
             duration: Duration(milliseconds: 100),
           ),
         ),
-        items: const BottomBarItemThemeData(
-          motion: CupertinoMotion.smooth(duration: Duration(seconds: 2)),
-        ),
+        items:
+            const BottomBarItemThemeData(
+              motion: CupertinoMotion.smooth(duration: Duration(seconds: 2)),
+            ).copyWith(
+              iconSize: container ? 20 : null,
+              selectedIconSize: container ? 30 : null,
+            ),
       );
       await tester.pumpWidget(row(0));
       expect(find.text('Inbox'), findsNothing);
@@ -280,7 +287,12 @@ void main() {
         final content = icon.expandToInclude(label);
         widths.add(label.width);
         final painted = _paintedRect(tester);
-        if (reveal) {
+        if (container) {
+          expect(painted.width, closeTo(64, 0.01));
+          expect(painted.height, closeTo(32, 0.01));
+          expect(painted.center.dx, closeTo(icon.center.dx, 0.01));
+          expect(painted.center.dy, closeTo(icon.center.dy, 0.01));
+        } else if (kind == 'underline') {
           expect(painted.left, closeTo(content.left, 0.01));
           expect(painted.right, closeTo(content.right, 0.01));
           expect(painted.top, closeTo(content.bottom + 4, 0.01));

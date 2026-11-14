@@ -7,6 +7,7 @@ import 'package:motor/motor.dart';
 import 'bottom_bar_badge.dart';
 import 'bottom_bar_center_action_theme.dart';
 import 'bottom_bar_indicator.dart';
+import 'bottom_bar_items.dart' show BottomBarLabelBehavior;
 
 /// The haptic a [BottomBarItems] row plays when the user picks an item.
 enum BottomBarHaptics {
@@ -41,7 +42,8 @@ enum BottomBarHaptics {
 /// 1. Built-in defaults.
 /// 2. `ThemeData.extensions` [BottomBarThemeData.items].
 /// 3. The enclosing [BottomBar]'s `theme:` [BottomBarThemeData.items].
-/// 4. [BottomBarItems] arguments (`indicator`, `indicatorMotion`). An
+/// 4. [BottomBarItems] arguments (`indicator`, `indicatorMotion`,
+///    `labelBehavior`). An
 ///    indicator's foreground colour beats [selectedColor].
 /// 5. [BottomBarItem] arguments (`color`, `selectedColor`).
 ///
@@ -52,6 +54,7 @@ class BottomBarItemThemeData {
   const BottomBarItemThemeData({
     this.color,
     this.selectedColor,
+    this.labelBehavior,
     this.iconSize,
     this.selectedIconSize,
     this.labelStyle,
@@ -80,6 +83,12 @@ class BottomBarItemThemeData {
   /// Defaults to `colorScheme.primary`. A row indicator with its own
   /// foreground colour (pill, tint, underline) wins over this.
   final Color? selectedColor;
+
+  /// When labels show, for a [BottomBarItems] row with no `labelBehavior`
+  /// argument.
+  ///
+  /// Defaults to [BottomBarLabelBehavior.alwaysShow].
+  final BottomBarLabelBehavior? labelBehavior;
 
   /// Icon size of an unselected item. Defaults to the ambient [IconTheme].
   final double? iconSize;
@@ -160,6 +169,7 @@ class BottomBarItemThemeData {
     return copyWith(
       color: other.color,
       selectedColor: other.selectedColor,
+      labelBehavior: other.labelBehavior,
       iconSize: other.iconSize,
       selectedIconSize: other.selectedIconSize,
       labelStyle: other.labelStyle,
@@ -184,6 +194,7 @@ class BottomBarItemThemeData {
   BottomBarItemThemeData copyWith({
     Color? color,
     Color? selectedColor,
+    BottomBarLabelBehavior? labelBehavior,
     double? iconSize,
     double? selectedIconSize,
     TextStyle? labelStyle,
@@ -204,6 +215,7 @@ class BottomBarItemThemeData {
     return BottomBarItemThemeData(
       color: color ?? this.color,
       selectedColor: selectedColor ?? this.selectedColor,
+      labelBehavior: labelBehavior ?? this.labelBehavior,
       iconSize: iconSize ?? this.iconSize,
       selectedIconSize: selectedIconSize ?? this.selectedIconSize,
       labelStyle: labelStyle ?? this.labelStyle,
@@ -227,7 +239,8 @@ class BottomBarItemThemeData {
   ///
   /// Colours, sizes, styles, padding and radii interpolate. [badge] and
   /// [centerAction] use their own `lerp` methods. [splashFactory],
-  /// [motion], [indicator], [indicatorMotion] and [haptics] switch at
+  /// [labelBehavior], [motion], [indicator], [indicatorMotion] and [haptics]
+  /// switch at
   /// `t == 0.5`.
   static BottomBarItemThemeData? lerp(
     BottomBarItemThemeData? a,
@@ -241,6 +254,7 @@ class BottomBarItemThemeData {
     return BottomBarItemThemeData(
       color: Color.lerp(a.color, b.color, t),
       selectedColor: Color.lerp(a.selectedColor, b.selectedColor, t),
+      labelBehavior: first ? a.labelBehavior : b.labelBehavior,
       iconSize: lerpDouble(a.iconSize, b.iconSize, t),
       selectedIconSize: lerpDouble(a.selectedIconSize, b.selectedIconSize, t),
       labelStyle: lerpLabelStyle(a.labelStyle, b.labelStyle, t),
@@ -283,6 +297,7 @@ class BottomBarItemThemeData {
     return other is BottomBarItemThemeData &&
         other.color == color &&
         other.selectedColor == selectedColor &&
+        other.labelBehavior == labelBehavior &&
         other.iconSize == iconSize &&
         other.selectedIconSize == selectedIconSize &&
         other.labelStyle == labelStyle &&
@@ -305,6 +320,7 @@ class BottomBarItemThemeData {
   int get hashCode => Object.hash(
     color,
     selectedColor,
+    labelBehavior,
     iconSize,
     selectedIconSize,
     labelStyle,

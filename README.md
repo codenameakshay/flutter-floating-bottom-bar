@@ -135,6 +135,54 @@ BottomBar(
 The bar is stacked above the body, so use `BottomBarBodyPadding` when your body
 should reserve enough bottom space to stay clear of the bar.
 
+## Presets
+
+A preset is one line to a finished bar, and each one is a plain `BottomBarThemeData` that works as `theme:` or in `ThemeData.extensions`. It takes colours from your `ColorScheme`, so light, dark and dynamic colour work.
+
+| Glass | Material 3 |
+| --- | --- |
+| ![Glass](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/test/goldens/preset_glass_light.png) | ![Material 3](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/test/goldens/preset_material3_light.png) |
+| **Pill** | **Minimal** |
+| ![Pill](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/test/goldens/preset_pill_light.png) | ![Minimal](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/test/goldens/preset_minimal_light.png) |
+
+```dart
+BottomBar(theme: BottomBarThemeData.glass(), body: body, child: items)      // iOS 26 glass capsule
+BottomBar(theme: BottomBarThemeData.material3(), body: body, child: items)  // Flutter's NavigationBar
+BottomBar(theme: BottomBarThemeData.pill(), body: body, child: items)       // rounded bar, sliding pill
+BottomBar(theme: BottomBarThemeData.minimal(), body: body, child: items)    // flat bar, dot indicator
+```
+
+- `glass()` is the iOS 26 tab bar. It is a floating glass capsule that clears at the scroll edge. A tinted capsule sits behind the selected item, with springs and a selection haptic. The glass is 98% opaque, so labels keep 4.5:1 contrast over a white or a black backdrop. `accent` colours the selected item and its tint. `indicator` replaces the tint.
+- `material3()` matches the size and indicator of Flutter's Material 3 `NavigationBar`. The bar is docked, full width, on a solid `surfaceContainer`, and 80 px tall, with a 64 x 32 stadium. Its `BottomBarIndicator.container()` gives the selected icon `onSecondaryContainer` and the selected label `onSurface`, as `NavigationBar` does. `backgroundColor` and `indicatorColor` replace the two fills.
+- `pill()` is a floating, fully rounded, solid bar with a soft shadow. A sliding pill sits behind the selected item, with a small press scale and a selection haptic. The content under the pill takes black or white for contrast. `accent` fills the pill. `indicator` replaces it.
+- `minimal()` is a flat floating bar with no shadow. A dot sits under the selected item, with no ink and short, quiet motion. The bar fades instead of sliding. `accent` colours the selected item and the dot. `indicator` replaces the dot, for example with `BottomBarIndicator.underline()`. Only the selected item shows its label. Set `labelBehavior` on `BottomBarItems` or on the item theme to change that.
+
+To change a preset, use `copyWith` or `merge`.
+
+The `material3()`, `pill()` and `minimal()` presets keep their surface at the
+scroll edge. Merging one over `glass()` resets the glass edge surface. If you
+replace a preset's `surface` with `copyWith` and want the same surface at the
+edge, set `scrollEdgeSurface` to that surface too.
+
+```dart
+// Change one field.
+BottomBarThemeData.pill(accent: Colors.teal).copyWith(
+  motion: const BottomBarMotion.curved(),
+);
+
+// Layer your own theme on top. Null fields keep the preset's value.
+BottomBarThemeData.glass().merge(
+  const BottomBarThemeData(
+    items: BottomBarItemThemeData(haptics: BottomBarHaptics.none),
+  ),
+);
+
+// App-wide.
+ThemeData(extensions: [BottomBarThemeData.material3()]);
+```
+
+Try the [presets demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/presets) live.
+
 ## Common recipes
 
 ### Adaptive width + stable body padding
@@ -287,10 +335,10 @@ with built-in accessibility and RTL-aware badge placement.
 - A `BottomBarItem`'s `Text` label (with non-null `data`) is truncated to a
   single line with an ellipsis. `Text.rich` and other label widgets are left
   untouched.
-- `BottomBarItems.labelBehavior` (`BottomBarLabelBehavior.alwaysShow` by
-  default) controls when descendant labels render: `alwaysShow`,
-  `onlySelected`, or `alwaysHide`. An item used outside a `BottomBarItems`
-  row always shows its label.
+- `BottomBarItems.labelBehavior` controls when descendant labels render:
+  `alwaysShow`, `onlySelected`, or `alwaysHide`. A row with no argument uses
+  `BottomBarItemThemeData.labelBehavior`, then `alwaysShow`. An item used
+  outside a `BottomBarItems` row always shows its label.
 
 ### Indicators
 
@@ -318,6 +366,9 @@ BottomBarItems(
 - `BottomBarIndicator.underline()` is a bar under the content that stretches
   like a worm as it moves.
 - `BottomBarIndicator.dot()` is a dot that stretches into a capsule as it moves.
+- `BottomBarIndicator.container()` is Material 3's 64 x 32 capsule behind the
+  icon, in `secondaryContainer`. The selected icon takes
+  `onSecondaryContainer` and the selected label `onSurface`.
 - `BottomBarIndicator.builder((context, rect, settled) => ...)` draws your own
   indicator at the animated rect. The example app's `indicators` demo builds a
   "tubelight" with it.

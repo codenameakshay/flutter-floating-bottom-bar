@@ -84,6 +84,20 @@ sealed class BottomBarIndicator {
   const factory BottomBarIndicator.dot({Color? color, double size}) =
       _DotIndicator;
 
+  /// A fixed-size capsule centred on the selected item's icon, as in
+  /// Material 3's [NavigationBar].
+  ///
+  /// [color] defaults to `colorScheme.secondaryContainer` and
+  /// [foregroundColor], the selected icon's colour, to
+  /// `colorScheme.onSecondaryContainer` (or black or white over a custom
+  /// [color]). The selected label sits outside the capsule and takes
+  /// `colorScheme.onSurface`. [size] defaults to 64 by 32.
+  const factory BottomBarIndicator.container({
+    Color? color,
+    Color? foregroundColor,
+    Size size,
+  }) = _ContainerIndicator;
+
   /// A custom indicator. [builder] runs for every animation frame and its
   /// widget is positioned at the animated rect, which follows the item's
   /// content (icon plus visible label). The widget may paint outside that
@@ -121,12 +135,21 @@ sealed class BottomBarIndicator {
   bool get _stretch => false;
 
   Color? _foreground(ColorScheme colors) => null;
+
+  Color? _labelForeground(ColorScheme colors) => null;
 }
 
 /// The colour selected content should use over [indicator], if it differs
 /// from the item's default.
 Color? indicatorForeground(BottomBarIndicator? indicator, ColorScheme colors) =>
     indicator?._foreground(colors);
+
+/// The colour a selected label should use over [indicator], if it differs
+/// from [indicatorForeground].
+Color? indicatorLabelForeground(
+  BottomBarIndicator? indicator,
+  ColorScheme colors,
+) => indicator?._labelForeground(colors);
 
 /// The indicator a row draws: its own [row] argument, else the theme's
 /// [theme] one, and null for [BottomBarIndicator.none].
@@ -277,6 +300,44 @@ final class _DotIndicator extends BottomBarIndicator {
 
   @override
   Color _fill(ColorScheme colors) => color ?? colors.primary;
+}
+
+final class _ContainerIndicator extends BottomBarIndicator {
+  const _ContainerIndicator({
+    this.color,
+    this.foregroundColor,
+    this.size = const Size(64, 32),
+  }) : super._();
+
+  final Color? color;
+  final Color? foregroundColor;
+  final Size size;
+
+  @override
+  Rect _target(IndicatorGeometry geometry, TextDirection direction) =>
+      Rect.fromCenter(
+        center: geometry.icon.center,
+        width: size.width,
+        height: size.height,
+      );
+
+  @override
+  RRect _shape(Rect rect, TextDirection direction) =>
+      RRect.fromRectAndRadius(rect, Radius.circular(rect.shortestSide / 2));
+
+  @override
+  Color _fill(ColorScheme colors) => color ?? colors.secondaryContainer;
+
+  @override
+  Color _foreground(ColorScheme colors) =>
+      foregroundColor ??
+      switch (color) {
+        null => colors.onSecondaryContainer,
+        final c => _contrastOn(c),
+      };
+
+  @override
+  Color _labelForeground(ColorScheme colors) => colors.onSurface;
 }
 
 final class _NoIndicator extends BottomBarIndicator {

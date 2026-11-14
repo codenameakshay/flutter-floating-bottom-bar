@@ -2,9 +2,11 @@ import 'dart:ui' show lerpDouble;
 
 import 'package:material_ui/material_ui.dart';
 
+import 'bottom_bar_presets.dart';
 import 'config/bottom_bar_layout.dart';
 import 'config/bottom_bar_motion.dart';
 import 'config/bottom_bar_scroll_behavior.dart';
+import 'widgets/bottom_bar_indicator.dart';
 import 'widgets/bottom_bar_item_theme.dart';
 import 'widgets/bottom_bar_surface.dart';
 
@@ -44,6 +46,109 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
     this.surface,
     this.scrollEdgeSurface,
   });
+
+  /// The iOS 26 tab bar: a floating glass capsule that clears at the scroll
+  /// edge, a tinted capsule behind the selected item, springs and the
+  /// selection haptic.
+  ///
+  /// [accent] colours the selected item and its tint, default
+  /// `colorScheme.primary`. [indicator] replaces the tint.
+  ///
+  /// Colours left null fill from the [ColorScheme] when the bar builds, so
+  /// the preset follows light, dark and dynamic colour. A preset is a plain
+  /// [BottomBarThemeData]: pass it as `theme:` or add it to
+  /// `ThemeData.extensions`, and change the rest with [copyWith] or [merge]:
+  ///
+  /// ```dart
+  /// BottomBar(
+  ///   theme: BottomBarThemeData.glass().merge(
+  ///     const BottomBarThemeData(
+  ///       items: BottomBarItemThemeData(haptics: BottomBarHaptics.none),
+  ///     ),
+  ///   ),
+  ///   body: body,
+  ///   child: items,
+  /// )
+  /// ```
+  factory BottomBarThemeData.glass({
+    Color? accent,
+    BottomBarIndicator? indicator,
+  }) => glassPreset(accent: accent, indicator: indicator);
+
+  /// Flutter's Material 3 [NavigationBar]: docked full width on a solid
+  /// `surfaceContainer`, an 80 tall row, the 64 x 32 stadium indicator in
+  /// `secondaryContainer` behind the icon, and 12 sp medium labels.
+  ///
+  /// As in [NavigationBar], the selected icon takes `onSecondaryContainer`
+  /// and the selected label `onSurface`, from
+  /// [BottomBarIndicator.container]. Labels always show unless
+  /// [BottomBarItems.labelBehavior] says otherwise.
+  ///
+  /// [backgroundColor] and [indicatorColor] replace the two fills. Null
+  /// colours fill from the [ColorScheme] when the bar builds. Pass the preset
+  /// as `theme:` or a `ThemeData` extension, and change the rest with
+  /// [copyWith] or [merge]:
+  ///
+  /// ```dart
+  /// BottomBarThemeData.material3().copyWith(
+  ///   motion: const BottomBarMotion.curved(),
+  /// )
+  /// ```
+  factory BottomBarThemeData.material3({
+    Color? backgroundColor,
+    Color? indicatorColor,
+  }) => material3Preset(
+    backgroundColor: backgroundColor,
+    indicatorColor: indicatorColor,
+  );
+
+  /// A floating, fully rounded solid bar with a soft shadow, a sliding pill
+  /// behind the selected item, a small press scale and the selection haptic.
+  ///
+  /// [accent] fills the pill, default `colorScheme.primary`, and the content
+  /// it covers takes black or white for contrast. [indicator] replaces the
+  /// pill.
+  ///
+  /// Null colours fill from the [ColorScheme] when the bar builds. Pass the
+  /// preset as `theme:` or a `ThemeData` extension, and change the rest with
+  /// [copyWith] or [merge]:
+  ///
+  /// ```dart
+  /// BottomBarThemeData.pill(accent: Colors.teal).merge(
+  ///   const BottomBarThemeData(
+  ///     layout: BottomBarLayout.adaptive(maxWidth: 360),
+  ///   ),
+  /// )
+  /// ```
+  factory BottomBarThemeData.pill({
+    Color? accent,
+    BottomBarIndicator? indicator,
+  }) => pillPreset(accent: accent, indicator: indicator);
+
+  /// A flat floating bar with no shadow, a dot under the selected item,
+  /// no ink and short, quiet motion. The bar fades instead of sliding.
+  ///
+  /// Only the selected item shows its label. Set
+  /// [BottomBarItemThemeData.labelBehavior] or [BottomBarItems.labelBehavior]
+  /// to change that, for example to [BottomBarLabelBehavior.alwaysHide].
+  ///
+  /// [accent] colours the selected item and the dot, default
+  /// `colorScheme.primary`. [indicator] replaces the dot, for example with
+  /// `BottomBarIndicator.underline()`.
+  ///
+  /// Null colours fill from the [ColorScheme] when the bar builds. Pass the
+  /// preset as `theme:` or a `ThemeData` extension, and change the rest with
+  /// [copyWith] or [merge]:
+  ///
+  /// ```dart
+  /// BottomBarThemeData.minimal(
+  ///   indicator: const BottomBarIndicator.underline(),
+  /// )
+  /// ```
+  factory BottomBarThemeData.minimal({
+    Color? accent,
+    BottomBarIndicator? indicator,
+  }) => minimalPreset(accent: accent, indicator: indicator);
 
   /// Decoration applied to the floating bar's outer container.
   ///
@@ -104,6 +209,9 @@ class BottomBarThemeData extends ThemeExtension<BottomBarThemeData> {
   /// When [surface] is null, the bar blends from the fill, gradient, border
   /// and shadows of [barDecoration] instead, and drops its image. Null always
   /// paints [surface].
+  ///
+  /// [copyWith] and [merge] keep this field when the new value is null. To
+  /// change [surface] and keep the edge the same, set both.
   final BottomBarSurface? scrollEdgeSurface;
 
   /// Returns a new theme where non-null fields of [other] override fields of
