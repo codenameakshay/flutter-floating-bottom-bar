@@ -655,7 +655,8 @@ class RenderBarSurface extends RenderShiftedBox {
     while (ancestor != null && !identical(ancestor, this)) {
       if (ancestor is RenderIgnorePointer && ancestor.ignoring ||
           ancestor is RenderAbsorbPointer && ancestor.absorbing ||
-          ancestor is RenderOffstage && ancestor.offstage) {
+          ancestor is RenderOffstage && ancestor.offstage ||
+          ancestor is RenderMinimizeHost && ancestor.minimized) {
         return false;
       }
       if (ancestor is RenderBox && child != null) {

@@ -126,8 +126,10 @@ class BottomBar extends StatefulWidget {
   /// When null, the pill shows the selected [BottomBarItem]'s icon and badge,
   /// if [child] itself is a [BottomBarItems] with a
   /// [BottomBarItems.selectedIndex]. A [BottomBarItems] wrapped in another
-  /// widget, such as a [Padding], does not count. With neither, the bar has
-  /// no pill, and minimizing hides it instead.
+  /// widget, such as a [Padding], does not count, and neither does an item
+  /// whose icon or badge has a [GlobalKey], since the pill would mount it a
+  /// second time. With neither, the bar has no pill, and minimizing hides it
+  /// instead.
   ///
   /// The pill sits at the bar's leading edge (the right edge in RTL),
   /// vertically centred and inset from that edge as far as from the bar's
@@ -240,6 +242,7 @@ class _BottomBarState extends State<BottomBar>
   /// Whether the bar's shape is the pill: true while minimized, and kept
   /// while hidden so a minimized bar hides and comes back as a pill.
   bool _pill = false;
+  int _visibilityTransition = 0;
 
   /// 0 is the full bar, 1 the compact pill.
   late BoundedSingleMotionController _minimizeController;
@@ -308,6 +311,11 @@ class _BottomBarState extends State<BottomBar>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _syncMotionAndScroll(_resolvedTheme(context));
+    if (_disableAnimations) {
+      _animate(_motionController, _targetVisible ? 1 : 0);
+      _animate(_minimizeController, _pill ? 1 : 0);
+      _animate(_edgeController, _atEdge ? 1 : 0);
+    }
   }
 
   @override
@@ -395,6 +403,7 @@ class _BottomBarState extends State<BottomBar>
       next = BottomBarVisibility.hidden;
     }
     if (next == _visibility) return;
+    final transition = ++_visibilityTransition;
     final wasVisible = _targetVisible;
     setState(() {
       _visibility = next;
@@ -403,15 +412,20 @@ class _BottomBarState extends State<BottomBar>
       }
     });
     _visibilityNotifier.value = next;
+    if (transition != _visibilityTransition) return;
     _isVisibleNotifier.value = _targetVisible;
+    if (transition != _visibilityTransition) return;
     _animate(_motionController, _targetVisible ? 1 : 0);
     _animate(_minimizeController, _pill ? 1 : 0);
     _syncVisibleHeight();
+    if (transition != _visibilityTransition) return;
     widget.controller?.updateVisibilityState(this, next);
+    if (transition != _visibilityTransition) return;
 
     final visible = _targetVisible;
     if (visible == wasVisible) return;
     widget.onVisibilityChanged?.call(visible);
+    if (transition != _visibilityTransition) return;
     if (visible) {
       widget.onBottomBarShown?.call();
     } else {

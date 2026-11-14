@@ -21,7 +21,8 @@ double fullOpacity(double t) => 1 - _fullFade.transform(t.clamp(0.0, 1.0));
 double compactOpacity(double t) => _compactFade.transform(t.clamp(0.0, 1.0));
 
 /// The selected [BottomBarItem] of a [BottomBarItems] [child], or null when
-/// there is none to show in the default pill.
+/// there is none to show in the default pill. The pill mounts the item's icon
+/// and badge a second time, which a [GlobalKey] forbids.
 BottomBarItem? selectedItemOf(Widget child) {
   if (child is! BottomBarItems) return null;
   final index = child.selectedIndex;
@@ -29,7 +30,9 @@ BottomBarItem? selectedItemOf(Widget child) {
     return null;
   }
   final item = child.children[index];
-  return item is BottomBarItem ? item : null;
+  if (item is! BottomBarItem) return null;
+  final parts = [item.icon, item.selectedIcon, item.badge];
+  return parts.any((part) => part?.key is GlobalKey) ? null : item;
 }
 
 /// What a screen reader says for [item], badge included.
@@ -195,6 +198,8 @@ class RenderMinimizeHost extends RenderBox
   }
 
   bool _minimized;
+  bool get minimized => _minimized;
+
   set minimized(bool value) {
     if (value == _minimized) return;
     _minimized = value;

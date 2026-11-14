@@ -154,4 +154,31 @@ void main() {
     await tester.pumpAndSettle();
     expect(scope.visibleHeight.value, 0);
   });
+
+  testWidgets('a globally keyed selected icon hides instead of minimizing', (
+    tester,
+  ) async {
+    final controller = BottomBarController();
+    addTearDown(controller.dispose);
+    await _pump(
+      tester,
+      controller: controller,
+      child: BottomBarItems(
+        selectedIndex: 0,
+        onSelected: (_) {},
+        children: [
+          BottomBarItem(
+            icon: Icon(Icons.home, key: GlobalKey()),
+            label: const Text('Home'),
+          ),
+          const BottomBarItem(icon: Icon(Icons.search), label: Text('Search')),
+        ],
+      ),
+    );
+
+    controller.minimize();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(controller.visibility.value, BottomBarVisibility.hidden);
+  });
 }
