@@ -59,6 +59,7 @@ class _PresetsDemoPageState extends State<PresetsDemoPage> {
                 slivers: [
                   SliverAppBar(
                     pinned: true,
+                    scrolledUnderElevation: 0,
                     title: const Text('Presets'),
                     actions: [
                       IconButton(
