@@ -430,6 +430,7 @@ class _SelectableItemsState extends State<_SelectableItems>
     final moved = index != old.selectedIndex;
     if (_dragIndex != null &&
         (moved ||
+            items.direction != old.direction ||
             items.children.length != old.children.length ||
             !items.dragToSelect ||
             _indicator == null)) {

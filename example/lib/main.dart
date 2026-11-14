@@ -116,23 +116,8 @@ final _currentRoute = ValueNotifier<String?>(null);
 
 class _RouteTracker extends NavigatorObserver {
   @override
-  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    _setRoute(route.settings.name);
-  }
-
-  @override
-  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    _setRoute(previousRoute?.settings.name);
-  }
-
-  @override
-  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    _setRoute(previousRoute?.settings.name);
-  }
-
-  @override
-  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
-    _setRoute(newRoute?.settings.name);
+  void didChangeTop(Route<dynamic> topRoute, Route<dynamic>? previousTopRoute) {
+    _setRoute(topRoute.settings.name);
   }
 
   /// Routes are reported while the Navigator builds, so the notifier is set

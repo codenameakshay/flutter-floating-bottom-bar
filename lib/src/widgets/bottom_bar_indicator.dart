@@ -465,7 +465,7 @@ class IndicatorMotion extends ChangeNotifier {
     required TickerProvider vsync,
     required int index,
     required Motion motion,
-    this.axis = Axis.horizontal,
+    Axis axis = Axis.horizontal,
   }) : _to = index,
        _lead = SingleMotionController(
          motion: motion,
@@ -477,15 +477,30 @@ class IndicatorMotion extends ChangeNotifier {
          vsync: vsync,
          initialValue: 1,
        ) {
+    _axis = axis;
     _from = List.generate(4, (_) => {index: 1.0});
     _reveal = (index: index, animated: false);
     _lead.addListener(notifyListeners);
     _trail.addListener(notifyListeners);
   }
 
+  late Axis _axis;
+
   /// The row's main axis. Drag positions and the direction of travel are
   /// measured along it.
-  Axis axis;
+  Axis get axis => _axis;
+  set axis(Axis value) {
+    if (value == _axis) return;
+    _axis = value;
+    for (final (a, b) in [(0, 1), (2, 3)]) {
+      final blend = _from[a];
+      _from[a] = _from[b];
+      _from[b] = blend;
+      final trailing = _trails[a];
+      _trails[a] = _trails[b];
+      _trails[b] = trailing;
+    }
+  }
 
   final SingleMotionController _lead;
   final SingleMotionController _trail;
