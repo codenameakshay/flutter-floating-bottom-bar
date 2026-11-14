@@ -23,7 +23,7 @@ void main() {
     await _openPresets(tester);
     expect(find.text('BottomBarThemeData.glass()'), findsOneWidget);
 
-    await tester.tap(find.text('Material 3'));
+    await tester.tap(find.text('M3'));
     await tester.pumpAndSettle();
     expect(find.text('BottomBarThemeData.material3()'), findsOneWidget);
 

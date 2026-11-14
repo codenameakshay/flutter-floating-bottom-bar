@@ -3,7 +3,7 @@ import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 
 enum _Preset {
   glass(label: 'Glass', code: 'BottomBarThemeData.glass()'),
-  material3(label: 'Material 3', code: 'BottomBarThemeData.material3()'),
+  material3(label: 'M3', code: 'BottomBarThemeData.material3()'),
   pill(label: 'Pill', code: 'BottomBarThemeData.pill()'),
   minimal(label: 'Minimal', code: 'BottomBarThemeData.minimal()');
 
@@ -166,6 +166,7 @@ class _PresetsDemoPageState extends State<PresetsDemoPage> {
   Widget _codeLine(ColorScheme colorScheme) {
     return Semantics(
       label: 'Code: ${_preset.code}',
+      excludeSemantics: true,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
@@ -179,6 +180,10 @@ class _PresetsDemoPageState extends State<PresetsDemoPage> {
             Expanded(
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
+                layoutBuilder: (current, previous) => Stack(
+                  alignment: AlignmentDirectional.centerStart,
+                  children: [...previous, ?current],
+                ),
                 child: Text(
                   _preset.code,
                   key: ValueKey(_preset),
