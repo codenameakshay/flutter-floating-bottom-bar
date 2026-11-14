@@ -41,6 +41,17 @@ void main() {
   );
   _minimizeGolden('minimize_glass_rtl.png', direction: TextDirection.rtl);
   _minimizeGolden('minimize_midpoint_light.png', midpoint: true);
+  _minimizeGolden('minimize_pieces_light.png', pieces: true);
+  _minimizeGolden(
+    'minimize_pieces_dark.png',
+    pieces: true,
+    brightness: Brightness.dark,
+  );
+  _minimizeGolden(
+    'minimize_pieces_rtl.png',
+    pieces: true,
+    direction: TextDirection.rtl,
+  );
 }
 
 void _minimizeGolden(
@@ -49,6 +60,7 @@ void _minimizeGolden(
   TextDirection direction = TextDirection.ltr,
   bool glass = true,
   bool midpoint = false,
+  bool pieces = false,
 }) {
   testWidgets(name, (tester) async {
     tester.view
@@ -69,6 +81,12 @@ void _minimizeGolden(
           child: BottomBar(
             body: const _Stripes(),
             layout: const BottomBarLayout(width: 360),
+            leading: pieces
+                ? IconButton(onPressed: () {}, icon: const Icon(Icons.person))
+                : null,
+            trailing: pieces
+                ? IconButton(onPressed: () {}, icon: const Icon(Icons.search))
+                : null,
             theme: BottomBarThemeData(
               surface: glass
                   ? const BottomBarSurface.glass()

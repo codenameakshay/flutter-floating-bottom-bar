@@ -9,10 +9,13 @@ import '../widgets/bottom_bar_items.dart';
 import 'bar_surface.dart';
 import 'item_theme_scope.dart';
 
-// The full bar fades out over the first part of the morph and the pill fades
-// in over the last part, so the two overlap briefly in the middle.
-const _fullFade = Interval(0, 0.55, curve: Curves.easeOut);
-const _compactFade = Interval(0.45, 1, curve: Curves.easeIn);
+// The full bar holds on while it shrinks and the pill comes in early, so the
+// glass always shows one of them while they cross.
+const _fullFade = Interval(0, 0.6, curve: Curves.easeIn);
+const _compactFade = Interval(0.3, 0.85, curve: Curves.easeOut);
+
+/// The pill grows to its size from this scale as it fades in.
+const _compactStartScale = 0.8;
 
 /// The full bar's content opacity at morph progress [t].
 double fullOpacity(double t) => 1 - _fullFade.transform(t.clamp(0.0, 1.0));
@@ -87,22 +90,25 @@ class DefaultCompactPill extends StatelessWidget {
   }
 }
 
-/// The compact pill as one button that expands the bar.
+/// The compact pill as one collapsed button that expands the bar.
 ///
 /// With [label] the pill's own semantics replace its child's, so a screen
-/// reader hears the selected item once. Without one the child's semantics
-/// stay inside the button.
+/// reader hears the selected item once. Without one the child's labels merge
+/// into the button and its own actions are dropped, so the pill reads as one
+/// button, like "Midnight City, button, Expand".
 class CompactPillButton extends StatelessWidget {
   const CompactPillButton({
     super.key,
     required this.onTap,
     required this.label,
     required this.child,
+    this.focusNode,
   });
 
   final VoidCallback onTap;
   final String? label;
   final Widget child;
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -112,17 +118,23 @@ class CompactPillButton extends StatelessWidget {
           MaterialLocalizations,
         )?.collapsedIconTapHint ??
         'Expand';
-    return Semantics(
-      container: true,
-      button: true,
-      label: label,
-      hint: hint,
-      onTap: onTap,
-      excludeSemantics: label != null,
-      child: InkWell(
+    return MergeSemantics(
+      child: Semantics(
+        button: true,
+        expanded: false,
+        label: label,
+        hint: hint,
         onTap: onTap,
-        customBorder: const StadiumBorder(),
-        child: child,
+        excludeSemantics: label != null,
+        child: Semantics(
+          blockUserActions: true,
+          child: InkWell(
+            focusNode: focusNode,
+            onTap: onTap,
+            customBorder: const StadiumBorder(),
+            child: child,
+          ),
+        ),
       ),
     );
   }
@@ -130,11 +142,13 @@ class CompactPillButton extends StatelessWidget {
 
 /// Holds the full bar content and, while the bar minimizes, the compact pill.
 ///
-/// [progress] runs from 0 (full bar) to 1 (pill). The full content fades out
-/// and the pill fades in on it. Only the side [minimized] points to takes
-/// pointers, focus and semantics. The pill sits at the leading edge,
-/// vertically centred, inset from the leading edge as far as from the top,
-/// so it is concentric with a capsule bar's leading end.
+/// [progress] runs from 0 (full bar) to 1 (pill). The full content shrinks
+/// with the outline toward the pill and fades out, and the pill grows in. Only
+/// the side [minimized] points to takes pointers, focus and semantics. The
+/// pill sits at the leading edge, vertically centred, inset from the leading
+/// edge as far as from the top, so it is concentric with a capsule bar's
+/// leading end. With [flushStart] it sits on the leading edge instead, so a
+/// leading piece before the bar keeps the group's spacing to it.
 ///
 /// The enclosing [RenderBarSurface] reads [RenderMinimizeHost.compactRect]
 /// to shrink its outline onto the pill.
@@ -143,6 +157,7 @@ class MinimizeHost extends MultiChildRenderObjectWidget {
     super.key,
     required this.progress,
     required this.minimized,
+    this.flushStart = false,
     required Widget full,
     Widget? compact,
   }) : super(
@@ -155,12 +170,14 @@ class MinimizeHost extends MultiChildRenderObjectWidget {
 
   final Animation<double> progress;
   final bool minimized;
+  final bool flushStart;
 
   @override
   RenderMinimizeHost createRenderObject(BuildContext context) =>
       RenderMinimizeHost(
         progress: progress,
         minimized: minimized,
+        flushStart: flushStart,
         textDirection: Directionality.of(context),
       );
 
@@ -172,6 +189,7 @@ class MinimizeHost extends MultiChildRenderObjectWidget {
     renderObject
       ..progress = progress
       ..minimized = minimized
+      ..flushStart = flushStart
       ..textDirection = Directionality.of(context);
   }
 }
@@ -185,6 +203,7 @@ class RenderMinimizeHost extends RenderBox
   RenderMinimizeHost({
     required this._progress,
     required this._minimized,
+    this._flushStart = false,
     required this._textDirection,
   });
 
@@ -206,6 +225,13 @@ class RenderMinimizeHost extends RenderBox
     markNeedsSemanticsUpdate();
   }
 
+  bool _flushStart;
+  set flushStart(bool value) {
+    if (value == _flushStart) return;
+    _flushStart = value;
+    markNeedsLayout();
+  }
+
   TextDirection _textDirection;
   set textDirection(TextDirection value) {
     if (value == _textDirection) return;
@@ -222,12 +248,53 @@ class RenderMinimizeHost extends RenderBox
   double get _fullOpacity => fullOpacity(_t);
   double get _compactOpacity => _compact == null ? 0 : compactOpacity(_t);
 
+  static Offset _offsetOf(RenderBox child) =>
+      (child.parentData! as _MinimizeParentData).offset;
+
+  /// Where [child] paints: the full content scaled into the outline as it
+  /// shrinks onto the pill, the pill growing in about its centre.
+  Matrix4 _transformOf(RenderBox child) {
+    final at = _offsetOf(child);
+    final t = _t;
+    final compact = _compact;
+    if (t == 0 || compact == null) {
+      return Matrix4.translationValues(at.dx, at.dy, 0);
+    }
+    final Rect from;
+    final Rect to;
+    final double scale;
+    final pill = _offsetOf(compact) & compact.size;
+    if (identical(child, compact)) {
+      from = to = pill;
+      scale = _compactStartScale + (1 - _compactStartScale) * t;
+    } else {
+      from = at & child.size;
+      to = Rect.lerp(Offset.zero & size, pill, t)!;
+      scale = math.min(
+        1.0,
+        math.min(
+          from.width == 0 ? 1.0 : to.width / from.width,
+          from.height == 0 ? 1.0 : to.height / from.height,
+        ),
+      );
+    }
+    return Matrix4.translationValues(to.center.dx, to.center.dy, 0)
+      ..scaleByDouble(scale, scale, 1, 1)
+      ..translateByDouble(
+        from.left - from.center.dx,
+        from.top - from.center.dy,
+        0,
+        1,
+      );
+  }
+
   static bool _partial(double opacity) => opacity > 0 && opacity < 1;
 
   bool _composited = false;
   void _progressChanged() {
     markNeedsPaint();
     _host?.markNeedsPaint();
+    markNeedsSemanticsUpdate();
     if (alwaysNeedsCompositing == _composited) return;
     _composited = alwaysNeedsCompositing;
     markNeedsCompositingBitsUpdate();
@@ -239,15 +306,25 @@ class RenderMinimizeHost extends RenderBox
 
   final _fullLayer = LayerHandle<OpacityLayer>();
   final _compactLayer = LayerHandle<OpacityLayer>();
+  final _fullTransformLayer = LayerHandle<TransformLayer>();
+  final _compactTransformLayer = LayerHandle<TransformLayer>();
 
-  /// The pill's rect in [ancestor]'s coordinates, or null without a pill.
+  /// The pill's resting rect in [ancestor]'s coordinates, or null without a
+  /// pill. Its grow-in scale does not count.
   Rect? compactRectIn(RenderObject ancestor) {
     final compact = _compact;
     if (compact == null || !compact.hasSize || !attached) return null;
     return MatrixUtils.transformRect(
-      compact.getTransformTo(ancestor),
-      Offset.zero & compact.size,
+      getTransformTo(ancestor),
+      _offsetOf(compact) & compact.size,
     );
+  }
+
+  void _dropLayers() {
+    _fullLayer.layer = null;
+    _compactLayer.layer = null;
+    _fullTransformLayer.layer = null;
+    _compactTransformLayer.layer = null;
   }
 
   @override
@@ -274,15 +351,13 @@ class RenderMinimizeHost extends RenderBox
     _progress.removeListener(_progressChanged);
     if (identical(_host?.minimizeHost, this)) _host?.minimizeHost = null;
     _host = null;
-    _fullLayer.layer = null;
-    _compactLayer.layer = null;
+    _dropLayers();
     super.detach();
   }
 
   @override
   void dispose() {
-    _fullLayer.layer = null;
-    _compactLayer.layer = null;
+    _dropLayers();
     super.dispose();
   }
 
@@ -299,10 +374,11 @@ class RenderMinimizeHost extends RenderBox
     if (compact == null) return;
     compact.layout(BoxConstraints.loose(size), parentUsesSize: true);
     final inset = math.max(0.0, (size.height - compact.size.height) / 2);
+    final start = _flushStart ? 0.0 : inset;
     (compact.parentData! as _MinimizeParentData).offset = Offset(
       _textDirection == TextDirection.ltr
-          ? inset
-          : size.width - inset - compact.size.width,
+          ? start
+          : size.width - start - compact.size.width,
       inset,
     );
   }
@@ -336,36 +412,57 @@ class RenderMinimizeHost extends RenderBox
     void paintFaded(
       RenderBox? child,
       double opacity,
-      LayerHandle<OpacityLayer> handle,
+      LayerHandle<OpacityLayer> opacityHandle,
+      LayerHandle<TransformLayer> transformHandle,
     ) {
       if (child == null || opacity == 0) {
-        handle.layer = null;
+        opacityHandle.layer = null;
+        transformHandle.layer = null;
         return;
       }
-      final at = (child.parentData! as _MinimizeParentData).offset;
+      void paintChild(PaintingContext context, Offset offset) {
+        transformHandle.layer = context.pushTransform(
+          needsCompositing,
+          offset,
+          _transformOf(child),
+          (context, offset) => context.paintChild(child, offset),
+          oldLayer: transformHandle.layer,
+        );
+      }
+
       if (opacity == 1) {
-        handle.layer = null;
-        context.paintChild(child, offset + at);
+        opacityHandle.layer = null;
+        paintChild(context, offset);
         return;
       }
-      handle.layer = context.pushOpacity(
+      opacityHandle.layer = context.pushOpacity(
         offset,
         (opacity * 255).round(),
-        (context, offset) => context.paintChild(child, offset + at),
-        oldLayer: handle.layer,
+        paintChild,
+        oldLayer: opacityHandle.layer,
       );
     }
 
-    paintFaded(_full, _fullOpacity, _fullLayer);
-    paintFaded(_compact, _compactOpacity, _compactLayer);
+    paintFaded(_full, _fullOpacity, _fullLayer, _fullTransformLayer);
+    paintFaded(
+      _compact,
+      _compactOpacity,
+      _compactLayer,
+      _compactTransformLayer,
+    );
+  }
+
+  @override
+  void applyPaintTransform(RenderBox child, Matrix4 transform) {
+    transform.multiply(_transformOf(child));
   }
 
   @override
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
     final child = _minimized ? _compact : _full;
     if (child == null) return false;
-    return result.addWithPaintOffset(
-      offset: (child.parentData! as _MinimizeParentData).offset,
+    return result.addWithPaintTransform(
+      transform: _transformOf(child),
       position: position,
       hitTest: (result, position) => child.hitTest(result, position: position),
     );

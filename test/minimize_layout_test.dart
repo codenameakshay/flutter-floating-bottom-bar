@@ -202,11 +202,29 @@ void main() {
       surface.outlineRect.bottom,
       moreOrLessEquals(Rect.lerp(bar, halfPill, 0.5)!.bottom),
     );
-    expect(surface.outline.notch!.width, closeTo(64 * fullOpacity(0.5), 0.01));
+    // The content shrinks into the outline (174 / 300 wide), and the notch
+    // follows the action where it paints.
+    const scale = 174 / 300;
+    expect(
+      surface.outline.notch!.width,
+      closeTo((56 * scale + 8) * fullOpacity(0.5), 0.01),
+    );
+    final button = tester.renderObject<RenderBox>(
+      find.descendant(
+        of: find.byType(CenterActionSlot),
+        matching: find.byType(SizedBox),
+      ),
+    );
+    final painted = MatrixUtils.transformRect(
+      button.getTransformTo(surface),
+      Offset.zero & button.size,
+    );
+    expect(painted.width, closeTo(56 * scale, 0.01));
     final notchCentreHalf =
         surface.outline.notch!.center + surface.outlineRect.center;
-    expect(notchCentreHalf.dx, closeTo(notchCentreBefore.dx, 0.01));
-    expect(notchCentreHalf.dy, closeTo(notchCentreBefore.dy, 0.01));
+    expect(notchCentreHalf.dx, closeTo(painted.center.dx, 0.01));
+    expect(notchCentreHalf.dy, closeTo(painted.center.dy, 0.01));
+    expect(notchCentreBefore.dx, closeTo(150, 0.01));
 
     await tester.pumpWidget(_morphHarness(1, full: _notchedFull()));
     surface = _surface(tester);

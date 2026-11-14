@@ -12,6 +12,8 @@ class _MinimizeDemoPageState extends State<MinimizeDemoPage> {
   final _controller = BottomBarController();
   BottomBarMinimizeBehavior _mode = BottomBarMinimizeBehavior.onScrollDown;
   bool _nowPlaying = false;
+  bool _leading = false;
+  bool _trailing = false;
   int _index = 0;
 
   @override
@@ -79,6 +81,16 @@ class _MinimizeDemoPageState extends State<MinimizeDemoPage> {
               value: _nowPlaying,
               onChanged: (value) => setState(() => _nowPlaying = value),
             ),
+            SwitchListTile(
+              title: const Text('Leading piece'),
+              value: _leading,
+              onChanged: (value) => setState(() => _leading = value),
+            ),
+            SwitchListTile(
+              title: const Text('Trailing search'),
+              value: _trailing,
+              onChanged: (value) => setState(() => _trailing = value),
+            ),
           ],
         ),
       ),
@@ -107,6 +119,20 @@ class _MinimizeDemoPageState extends State<MinimizeDemoPage> {
         theme: BottomBarThemeData.glass(),
         scrollBehavior: BottomBarScrollBehavior(minimizeBehavior: _mode),
         compactChild: _nowPlaying ? _nowPlayingPill(colorScheme) : null,
+        leading: _leading
+            ? IconButton(
+                tooltip: 'Account',
+                onPressed: () {},
+                icon: const Icon(Icons.account_circle_outlined),
+              )
+            : null,
+        trailing: _trailing
+            ? IconButton(
+                tooltip: 'Search',
+                onPressed: () {},
+                icon: const Icon(Icons.search_rounded),
+              )
+            : null,
         body: BottomBarBodyPadding(
           child: ListView(
             children: [

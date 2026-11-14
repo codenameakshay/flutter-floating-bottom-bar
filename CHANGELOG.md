@@ -12,6 +12,13 @@
   `visibility` and `visibleHeight`. `barHeight` and `BottomBarBodyPadding`
   keep the full height while minimized. With the default `never`, nothing
   changes. Add a minimize demo in `example/lib/demos/minimize_demo.dart`.
+- Finish minimize on scroll. The `leading` and `trailing` pieces keep their
+  place while the bar minimizes, with the pill one `groupSpacing` after a
+  leading piece. The items shrink into the outline as it morphs, so the
+  glass is never empty. The pill is one collapsed button to screen readers,
+  and a `compactChild`'s text becomes its label. Focus moves to the pill
+  when the bar minimizes around it, and to the selected item when the pill
+  expands. No new API.
 - Add four presets on `BottomBarThemeData`: `glass()`, `material3()`,
   `pill()` and `minimal()`. Each is one line to a finished bar, built from
   the existing layout, surface, indicator, motion and item theme. Colours
