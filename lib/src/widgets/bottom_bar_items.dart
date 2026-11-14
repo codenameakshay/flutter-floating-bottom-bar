@@ -68,6 +68,9 @@ enum BottomBarLabelBehavior {
 ///
 /// Add a [centerAction] for a primary action in the middle of the row,
 /// inline, raised above the bar, or raised with a notch cut into the bar.
+///
+/// Set [direction] to [Axis.vertical] to stack the items in a column, as in a
+/// navigation rail. [BottomBarAdaptive] does this on wide screens.
 class BottomBarItems extends StatelessWidget {
   /// Creates a [BottomBarItems] row.
   const BottomBarItems({
@@ -84,6 +87,7 @@ class BottomBarItems extends StatelessWidget {
     this.onLongPressed,
     this.dragToSelect = false,
     this.centerAction,
+    this.direction = Axis.horizontal,
   });
 
   /// The widgets to display in the row — typically [BottomBarItem] instances.
@@ -93,7 +97,7 @@ class BottomBarItems extends StatelessWidget {
   ///
   /// Defaults to [MainAxisAlignment.spaceAround]. In wide bounded rows, this
   /// only affects layout when [children] is empty because each child is
-  /// expanded.
+  /// expanded. A vertical column ignores it: it is as tall as its items.
   final MainAxisAlignment spacing;
 
   /// Controls when descendant [BottomBarItem] labels are visible.
@@ -176,6 +180,17 @@ class BottomBarItems extends StatelessWidget {
   /// inline whatever its [BottomBarCenterAction.style].
   final BottomBarCenterAction? centerAction;
 
+  /// Whether the items run in a row ([Axis.horizontal], the default) or a
+  /// column ([Axis.vertical]).
+  ///
+  /// A column stacks the items at their own height and stretches them to its
+  /// width. Its [centerAction] moves to the top, inline, like the action at
+  /// the top of a navigation rail. A column taller than the space it gets
+  /// scrolls, and then [dragToSelect] has no effect. Everything else works as
+  /// in a row: the [indicator] and its motion, badges, [dragToSelect] (by
+  /// sliding up and down), reselect, long-press and haptics.
+  final Axis direction;
+
   @override
   Widget build(BuildContext context) {
     final index = selectedIndex;
@@ -192,6 +207,9 @@ class BottomBarItems extends StatelessWidget {
     List<Widget> children,
     Widget Function(Widget row, {required bool reveal})? track,
   ) {
+    if (direction == Axis.vertical) {
+      return _columnLayout(context, children, track);
+    }
     Widget row(List<Widget> rowChildren, {bool reveal = false}) {
       final row = Row(
         mainAxisAlignment: spacing,
@@ -258,6 +276,72 @@ class BottomBarItems extends StatelessWidget {
       ),
     );
   }
+
+  Widget _columnLayout(
+    BuildContext context,
+    List<Widget> children,
+    Widget Function(Widget row, {required bool reveal})? track,
+  ) {
+    final action = centerAction;
+    return BottomBarItemsScope(
+      labelBehavior:
+          labelBehavior ??
+          itemThemeOf(context).labelBehavior ??
+          BottomBarLabelBehavior.alwaysShow,
+      child: BottomBarItemHeightScope(
+        minHeight: 48,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final column = Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: constraints.hasBoundedWidth
+                  ? CrossAxisAlignment.stretch
+                  : CrossAxisAlignment.center,
+              children: [
+                if (action != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: CenterActionInline(inline: true, child: action),
+                  ),
+                ...children,
+              ],
+            );
+            Widget tracked(bool scrolls) =>
+                track == null ? column : track(column, reveal: scrolls);
+            if (!constraints.hasBoundedHeight) return tracked(false);
+            return _ColumnScroll(builder: tracked);
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// Scrolls a column of items and tells [builder] whether it overflows.
+class _ColumnScroll extends StatefulWidget {
+  const _ColumnScroll({required this.builder});
+
+  final Widget Function(bool scrolls) builder;
+
+  @override
+  State<_ColumnScroll> createState() => _ColumnScrollState();
+}
+
+class _ColumnScrollState extends State<_ColumnScroll> {
+  bool _scrolls = false;
+
+  bool _onMetrics(ScrollMetricsNotification notification) {
+    final scrolls = notification.metrics.maxScrollExtent > 0;
+    if (scrolls != _scrolls) setState(() => _scrolls = scrolls);
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      NotificationListener<ScrollMetricsNotification>(
+        onNotification: _onMetrics,
+        child: SingleChildScrollView(child: widget.builder(_scrolls)),
+      );
 }
 
 class _SelectableItems extends StatefulWidget {
@@ -275,8 +359,8 @@ class _SelectableItemsState extends State<_SelectableItems>
     duration: Duration(milliseconds: 450),
   );
 
-  /// How far the finger may stray above or below the row before a drag
-  /// cancels.
+  /// How far the finger may stray off the row, across its axis, before a
+  /// drag cancels.
   static const _dragCancelSlop = 2 * kTouchSlop;
 
   late final IndicatorMotion _motion;
@@ -294,6 +378,7 @@ class _SelectableItemsState extends State<_SelectableItems>
       vsync: this,
       index: widget.items.selectedIndex!,
       motion: widget.items.indicatorMotion ?? _defaultMotion,
+      axis: widget.items.direction,
     );
     WidgetsBinding.instance.addObserver(this);
   }
@@ -339,6 +424,7 @@ class _SelectableItemsState extends State<_SelectableItems>
     super.didUpdateWidget(oldWidget);
     final items = widget.items;
     final old = oldWidget.items;
+    _motion.axis = items.direction;
     _syncTheme();
     final index = items.selectedIndex!;
     final moved = index != old.selectedIndex;
@@ -381,17 +467,21 @@ class _SelectableItemsState extends State<_SelectableItems>
     _onDragUpdate(details.localPosition);
   }
 
+  bool get _vertical => widget.items.direction == Axis.vertical;
+
   void _onDragUpdate(Offset position) {
     if (_dragIndex == null) return;
     final box = context.findRenderObject() as RenderBox?;
-    final height = box != null && box.hasSize ? box.size.height : 0.0;
-    if (position.dy < -_dragCancelSlop ||
-        position.dy > height + _dragCancelSlop) {
+    final size = box != null && box.hasSize ? box.size : Size.zero;
+    final (along, across, extent) = _vertical
+        ? (position.dy, position.dx, size.width)
+        : (position.dx, position.dy, size.height);
+    if (across < -_dragCancelSlop || across > extent + _dragCancelSlop) {
       _cancelDrag();
       return;
     }
-    if (!_reduceMotion) _motion.follow(position.dx);
-    final index = _motion.indexAt(position.dx);
+    if (!_reduceMotion) _motion.follow(along);
+    final index = _motion.indexAt(along);
     if (index != null && index != _dragIndex) {
       setState(() => _dragIndex = index);
       if (_haptics != BottomBarHaptics.none) {
@@ -405,7 +495,8 @@ class _SelectableItemsState extends State<_SelectableItems>
     if (index == null) return;
     setState(() => _dragIndex = null);
     if (_motion.dragging) {
-      _motion.release(index, velocity: details.velocity.pixelsPerSecond.dx);
+      final velocity = details.velocity.pixelsPerSecond;
+      _motion.release(index, velocity: _vertical ? velocity.dy : velocity.dx);
     }
     _select(index);
     SchedulerBinding.instance.addPostFrameCallback((_) {
@@ -432,18 +523,31 @@ class _SelectableItemsState extends State<_SelectableItems>
 
   Map<Type, GestureRecognizerFactory> _dragGestures(bool enabled) {
     if (!enabled) return const {};
-    return {
-      HorizontalDragGestureRecognizer:
-          GestureRecognizerFactoryWithHandlers<HorizontalDragGestureRecognizer>(
-            () => HorizontalDragGestureRecognizer(debugOwner: this),
-            (recognizer) => recognizer
-              ..onlyAcceptDragOnThreshold = true
-              ..onStart = _onDragStart
-              ..onUpdate = ((details) => _onDragUpdate(details.localPosition))
-              ..onEnd = _onDragEnd
-              ..onCancel = _cancelDrag,
-          ),
-    };
+    void configure(DragGestureRecognizer recognizer) => recognizer
+      ..onlyAcceptDragOnThreshold = true
+      ..onStart = _onDragStart
+      ..onUpdate = ((details) => _onDragUpdate(details.localPosition))
+      ..onEnd = _onDragEnd
+      ..onCancel = _cancelDrag;
+    return _vertical
+        ? {
+            VerticalDragGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<
+                  VerticalDragGestureRecognizer
+                >(
+                  () => VerticalDragGestureRecognizer(debugOwner: this),
+                  configure,
+                ),
+          }
+        : {
+            HorizontalDragGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<
+                  HorizontalDragGestureRecognizer
+                >(
+                  () => HorizontalDragGestureRecognizer(debugOwner: this),
+                  configure,
+                ),
+          };
   }
 
   @override

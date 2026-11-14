@@ -70,7 +70,9 @@ sealed class BottomBarIndicator {
   ///
   /// Content above the bar takes [color], which defaults to
   /// `colorScheme.primary`. [thickness] defaults to 3. A null [width] matches
-  /// the content width.
+  /// the content width. In a vertical [BottomBarItems], the bar stands on the
+  /// slot's start edge instead, as tall as the content, and [width] sets its
+  /// height.
   const factory BottomBarIndicator.underline({
     Color? color,
     double thickness,
@@ -111,7 +113,7 @@ sealed class BottomBarIndicator {
   /// [BottomBarItemThemeData.indicator].
   const factory BottomBarIndicator.none() = _NoIndicator;
 
-  Rect _target(IndicatorGeometry geometry, TextDirection direction);
+  Rect _target(IndicatorGeometry geometry, TextDirection direction, Axis axis);
 
   /// The indicator's painted shape at [rect], or null if it does not paint.
   RRect? _shape(Rect rect, TextDirection direction) => null;
@@ -120,7 +122,7 @@ sealed class BottomBarIndicator {
 
   /// Where covered content shows its selected look, or null when the
   /// selected item simply takes [_foreground].
-  RRect? _ink(RRect shape) => null;
+  RRect? _ink(RRect shape, Axis axis) => null;
 
   void _paint(
     Canvas canvas,
@@ -164,7 +166,7 @@ BottomBarIndicator? effectiveIndicator(
 /// Whether [indicator] reveals the selected look only where it covers an
 /// item.
 bool indicatorInks(BottomBarIndicator? indicator) =>
-    indicator?._ink(RRect.zero) != null;
+    indicator?._ink(RRect.zero, Axis.horizontal) != null;
 
 Color _contrastOn(Color color) =>
     ThemeData.estimateBrightnessForColor(color) == Brightness.dark
@@ -190,8 +192,11 @@ final class _PillIndicator extends BottomBarIndicator {
   bool get _stretch => stretch;
 
   @override
-  Rect _target(IndicatorGeometry geometry, TextDirection direction) =>
-      inset.resolve(direction).deflateRect(geometry.slot);
+  Rect _target(
+    IndicatorGeometry geometry,
+    TextDirection direction,
+    Axis axis,
+  ) => inset.resolve(direction).deflateRect(geometry.slot);
 
   @override
   RRect _shape(Rect rect, TextDirection direction) => switch (borderRadius) {
@@ -206,7 +211,7 @@ final class _PillIndicator extends BottomBarIndicator {
   Color _fill(ColorScheme colors) => color ?? colors.primary;
 
   @override
-  RRect _ink(RRect shape) => shape;
+  RRect _ink(RRect shape, Axis axis) => shape;
 
   @override
   Color _foreground(ColorScheme colors) =>
@@ -247,8 +252,18 @@ final class _UnderlineIndicator extends BottomBarIndicator {
   bool get _stretch => true;
 
   @override
-  Rect _target(IndicatorGeometry geometry, TextDirection direction) {
+  Rect _target(IndicatorGeometry geometry, TextDirection direction, Axis axis) {
     final content = geometry.content;
+    if (axis == Axis.vertical) {
+      final h = width ?? content.height;
+      final slot = geometry.slot;
+      return Rect.fromLTWH(
+        direction == TextDirection.ltr ? slot.left : slot.right - thickness,
+        content.center.dy - h / 2,
+        thickness,
+        h,
+      );
+    }
     final w = width ?? content.width;
     return Rect.fromLTWH(
       content.center.dx - w / 2,
@@ -265,10 +280,12 @@ final class _UnderlineIndicator extends BottomBarIndicator {
   @override
   Color _fill(ColorScheme colors) => color ?? colors.primary;
 
-  /// A column through the bar, so content above it takes the bar's colour.
+  /// A band through the bar across the row, so the content it marks takes
+  /// the bar's colour.
   @override
-  RRect _ink(RRect shape) =>
-      RRect.fromLTRBR(shape.left, -1e5, shape.right, 1e5, Radius.zero);
+  RRect _ink(RRect shape, Axis axis) => axis == Axis.horizontal
+      ? RRect.fromLTRBR(shape.left, -1e5, shape.right, 1e5, Radius.zero)
+      : RRect.fromLTRBR(-1e5, shape.top, 1e5, shape.bottom, Radius.zero);
 
   @override
   Color _foreground(ColorScheme colors) => color ?? colors.primary;
@@ -284,15 +301,18 @@ final class _DotIndicator extends BottomBarIndicator {
   bool get _stretch => true;
 
   @override
-  Rect _target(IndicatorGeometry geometry, TextDirection direction) =>
-      Rect.fromCenter(
-        center: Offset(
-          geometry.icon.center.dx,
-          geometry.content.bottom + 4 + size / 2,
-        ),
-        width: size,
-        height: size,
-      );
+  Rect _target(
+    IndicatorGeometry geometry,
+    TextDirection direction,
+    Axis axis,
+  ) => Rect.fromCenter(
+    center: Offset(
+      geometry.icon.center.dx,
+      geometry.content.bottom + 4 + size / 2,
+    ),
+    width: size,
+    height: size,
+  );
 
   @override
   RRect _shape(Rect rect, TextDirection direction) =>
@@ -314,12 +334,15 @@ final class _ContainerIndicator extends BottomBarIndicator {
   final Size size;
 
   @override
-  Rect _target(IndicatorGeometry geometry, TextDirection direction) =>
-      Rect.fromCenter(
-        center: geometry.icon.center,
-        width: size.width,
-        height: size.height,
-      );
+  Rect _target(
+    IndicatorGeometry geometry,
+    TextDirection direction,
+    Axis axis,
+  ) => Rect.fromCenter(
+    center: geometry.icon.center,
+    width: size.width,
+    height: size.height,
+  );
 
   @override
   RRect _shape(Rect rect, TextDirection direction) =>
@@ -344,8 +367,11 @@ final class _NoIndicator extends BottomBarIndicator {
   const _NoIndicator() : super._();
 
   @override
-  Rect _target(IndicatorGeometry geometry, TextDirection direction) =>
-      geometry.slot;
+  Rect _target(
+    IndicatorGeometry geometry,
+    TextDirection direction,
+    Axis axis,
+  ) => geometry.slot;
 }
 
 final class _BuilderIndicator extends BottomBarIndicator {
@@ -354,8 +380,11 @@ final class _BuilderIndicator extends BottomBarIndicator {
   final BottomBarIndicatorBuilder builder;
 
   @override
-  Rect _target(IndicatorGeometry geometry, TextDirection direction) =>
-      geometry.content;
+  Rect _target(
+    IndicatorGeometry geometry,
+    TextDirection direction,
+    Axis axis,
+  ) => geometry.content;
 }
 
 /// Where one item sits in the row, in the row's coordinates.
@@ -436,6 +465,7 @@ class IndicatorMotion extends ChangeNotifier {
     required TickerProvider vsync,
     required int index,
     required Motion motion,
+    this.axis = Axis.horizontal,
   }) : _to = index,
        _lead = SingleMotionController(
          motion: motion,
@@ -452,6 +482,10 @@ class IndicatorMotion extends ChangeNotifier {
     _lead.addListener(notifyListeners);
     _trail.addListener(notifyListeners);
   }
+
+  /// The row's main axis. Drag positions and the direction of travel are
+  /// measured along it.
+  Axis axis;
 
   final SingleMotionController _lead;
   final SingleMotionController _trail;
@@ -528,17 +562,20 @@ class IndicatorMotion extends ChangeNotifier {
     return sum;
   }
 
-  /// Where a drag at [x] sits, as a fractional item index clamped to the
-  /// row. Works in either text direction because it follows item centres.
-  static double? _position(double x, List<Rect> rects) {
+  double _along(Offset point) => axis == Axis.horizontal ? point.dx : point.dy;
+
+  /// Where a drag at [x] along the [axis] sits, as a fractional item index
+  /// clamped to the row. Works in either text direction because it follows
+  /// item centres.
+  double? _position(double x, List<Rect> rects) {
     if (rects.isEmpty) return null;
     for (var i = 0; i < rects.length - 1; i++) {
-      final a = rects[i].center.dx;
-      final b = rects[i + 1].center.dx;
+      final a = _along(rects[i].center);
+      final b = _along(rects[i + 1].center);
       if (a != b && (x - a) * (x - b) <= 0) return i + (x - a) / (b - a);
     }
-    final first = (x - rects.first.center.dx).abs();
-    final last = (x - rects.last.center.dx).abs();
+    final first = (x - _along(rects.first.center)).abs();
+    final last = (x - _along(rects.last.center)).abs();
     return first <= last ? 0 : rects.length - 1.0;
   }
 
@@ -558,7 +595,8 @@ class IndicatorMotion extends ChangeNotifier {
     return from + (_blend(target, edge, rects) - from) * _progress(edge);
   }
 
-  /// The item nearest [x] in the latest geometry, or null before layout.
+  /// The item nearest [x] along the [axis] in the latest geometry, or null
+  /// before layout.
   int? indexAt(double x) => _position(x, _rects)?.round();
 
   /// The indicator rect for the item [rects], or null when the selected
@@ -603,7 +641,8 @@ class IndicatorMotion extends ChangeNotifier {
     _retarget(index);
   }
 
-  /// Moves the indicator toward a drag at [x], in the row's coordinates.
+  /// Moves the indicator toward a drag at [x] along the [axis], in the row's
+  /// coordinates.
   ///
   /// The first call springs it from where it is to the finger, later calls
   /// track the finger exactly. Between items it blends their rects, and it
@@ -618,7 +657,7 @@ class IndicatorMotion extends ChangeNotifier {
   }
 
   /// Ends a drag and springs the indicator to [index], carrying the finger's
-  /// horizontal [velocity] in logical pixels per second.
+  /// [velocity] along the [axis] in logical pixels per second.
   void release(int index, {double velocity = 0}) {
     if (_dragX == null) {
       animateTo(index);
@@ -678,10 +717,15 @@ class IndicatorMotion extends ChangeNotifier {
       _blend(goal, 2, rects),
       _blend(goal, 3, rects),
     );
-    final travel = target.center.dx - (current[0] + current[2]) / 2;
+    // Edges 0 to 3 are left, top, right, bottom: the start and end edges
+    // along the axis are 0 and 2 horizontally, 1 and 3 vertically.
+    final (startEdge, endEdge) = axis == Axis.horizontal ? (0, 2) : (1, 3);
+    final travel =
+        _along(target.center) - (current[startEdge] + current[endEdge]) / 2;
     _trails
-      ..[0] = _stretch && travel > 0
-      ..[2] = _stretch && travel < 0;
+      ..fillRange(0, 4, false)
+      ..[startEdge] = _stretch && travel > 0
+      ..[endEdge] = _stretch && travel < 0;
 
     if (reveal) {
       _reveal = (index: index, animated: true);
@@ -1083,7 +1127,7 @@ class RenderIndicatorTrack extends RenderBox
 
   Rect? _resolve() => _motion.resolve([
     for (final slot in _slots)
-      _indicator._target(_geometry(slot), _textDirection),
+      _indicator._target(_geometry(slot), _textDirection, _motion.axis),
   ]);
 
   @override
@@ -1156,7 +1200,7 @@ class RenderIndicatorTrack extends RenderBox
   RRect? _resolveInk() {
     final rect = _resolve();
     final shape = rect == null ? null : _indicator._shape(rect, _textDirection);
-    return shape == null ? null : _indicator._ink(shape);
+    return shape == null ? null : _indicator._ink(shape, _motion.axis);
   }
 
   @override
