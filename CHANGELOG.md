@@ -78,6 +78,11 @@
 - Add a docked demo in `example/lib/demos/docked_demo.dart`, with switches
   for floating or docked, glass and right to left. The example app now runs
   edge to edge on Android with a transparent navigation bar.
+- Add `BottomBarAdaptive`, a bar below 600 wide and a navigation rail on the
+  start side at 600 and above. Both take the same `BottomBarItems`, theme and
+  presets, and the body keeps its state when the window crosses the
+  breakpoint. Add `BottomBarItems.direction`, which lays the items out in a
+  column when set to `Axis.vertical`.
 
 ## 3.1.0
 

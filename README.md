@@ -63,6 +63,7 @@ surface, or any custom child.
 - [Centre action](#centre-action): an inline, raised or notched button in the middle of the row. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/center-action).
 - [Glass surface](#glass-surface): `BottomBarThemeData.surface` paints the bar as frosted glass or a solid fill, and [`scrollEdgeSurface`](#scroll-edge-surface) changes it when nothing scrolls under the bar. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/glass-surface).
 - [Works with go_router](#works-with-go_router): a `StatefulShellRoute` recipe, with no go_router dependency in the package. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/go-router-shell).
+- [Adaptive rail](#adaptive-rail) shows a bar on narrow windows and a navigation rail on wide ones, from the same `BottomBarItems`.
 - The hidden action is accessibility-safe by default: it is non-interactive and
   excluded from semantics while the bar is visible, keeps at least a 48x48 hit
   target when active, uses direction-aware icon/tooltip text, and defaults its
@@ -1061,6 +1062,87 @@ footprint when shown, the pill's footprint when minimized, and 0 when hidden.
 Use it for things that float above the bar, like a button.
 
 Try the [minimize demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/minimize) live.
+
+### Adaptive rail
+
+`BottomBarAdaptive` shows a bottom bar on narrow screens and a navigation rail
+on wide ones. Both come from the same `BottomBarItems`, theme and presets.
+
+```dart
+class _HomeState extends State<Home> {
+  int index = 0;
+  final pages = <Widget>[HomePage(), InboxPage(), ProfilePage()];
+
+  @override
+  Widget build(BuildContext context) {
+    return BottomBarAdaptive(
+      theme: BottomBarThemeData.glass(),
+      items: BottomBarItems(
+        selectedIndex: index,
+        onSelected: (i) => setState(() => index = i),
+        children: [
+          BottomBarItem(
+            icon: const Icon(Icons.home),
+            label: const Text('Home'),
+          ),
+          BottomBarItem(
+            icon: const Icon(Icons.inbox),
+            label: const Text('Inbox'),
+          ),
+          BottomBarItem(
+            icon: const Icon(Icons.person),
+            label: const Text('Profile'),
+          ),
+        ],
+      ),
+      body: pages[index],
+    );
+  }
+}
+```
+
+- Below `breakpoint` the widget is a `BottomBar`. The default is 600, the
+  Material 3 compact width.
+- At or above `breakpoint` the items run down a rail on the start side. That
+  is the right side in RTL. The body sits beside the rail.
+- The breakpoint is measured against the width this widget gets, not the
+  screen.
+
+Crossing the breakpoint keeps the body's state. The body moves between the
+bar and the rail without a rebuild, so scroll positions and text fields
+survive. The selected index survives too, because your app owns it. The bar
+comes back shown.
+
+Rail options:
+
+- `railStyle` takes `BottomBarRailStyle.attached` for a full-height rail on
+  the start edge, or `BottomBarRailStyle.floating` for a vertical capsule
+  inset from the edge. It defaults to `attached` for a docked layout, such
+  as `material3()`, and to `floating` for any other.
+- `railLabelBehavior` sets when labels show in the rail. It defaults to the
+  `labelBehavior` of `items`, then to the theme's.
+- `railLeading` and `railTrailing` are widgets above and below the items,
+  such as a logo or a settings button.
+
+Presets fit the rail too. `BottomBarThemeData.material3()` gives an attached
+Material 3 rail. `BottomBarThemeData.glass()` gives a floating glass capsule.
+
+Some bar features do not apply in rail mode.
+
+- The rail never hides on scroll.
+- The hidden back-to-top action and minimize on scroll apply to the bar only.
+- `controller` is attached only while the bar shows.
+- `BottomBarItems.scrollToStartOnReselect` works in both modes.
+
+The rail keeps clear of the safe area, including a notch in landscape. The
+body drops the start-side inset, because the rail already covers it.
+`BottomBarBodyPadding` reserves only the bottom inset while the rail shows.
+
+`BottomBarItems(direction: Axis.vertical)` stacks the items in a column. It
+is the same column the rail uses. The centre action moves to the top. A
+column taller than its space scrolls, and `dragToSelect` has no effect then.
+
+Try the [adaptive rail demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/adaptive-rail) live.
 
 ## Migrating from another bar
 

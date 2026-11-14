@@ -443,6 +443,79 @@ from Home's root that page refuses the iOS edge swipe, so the demo puts a
 Close button on each tab root. You do not need any of this when go_router is
 your app's router.
 
+## go_router shell with an adaptive rail
+
+`BottomBarAdaptive` takes the shell's `navigationShell` as its `body`. The
+shell keeps each branch's stack, and the rail keeps the shell's state when the
+window crosses the breakpoint.
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+import 'package:go_router/go_router.dart';
+
+final router = GoRouter(
+  initialLocation: '/home',
+  routes: [
+    StatefulShellRoute.indexedStack(
+      builder: (context, state, navigationShell) => Scaffold(
+        body: BottomBarAdaptive(
+          theme: BottomBarThemeData.glass(),
+          items: BottomBarItems(
+            selectedIndex: navigationShell.currentIndex,
+            onSelected: (i) => navigationShell.goBranch(
+              i,
+              initialLocation: i == navigationShell.currentIndex,
+            ),
+            children: [
+              BottomBarItem(
+                icon: const Icon(Icons.home),
+                label: const Text('Home'),
+              ),
+              BottomBarItem(
+                icon: const Icon(Icons.search),
+                label: const Text('Search'),
+              ),
+              BottomBarItem(
+                icon: const Icon(Icons.inbox),
+                label: const Text('Inbox'),
+              ),
+              BottomBarItem(
+                icon: const Icon(Icons.person),
+                label: const Text('Profile'),
+              ),
+            ],
+          ),
+          body: navigationShell,
+        ),
+      ),
+      branches: [
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: '/home', builder: (_, _) => const HomePage()),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: '/search', builder: (_, _) => const SearchPage()),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: '/inbox', builder: (_, _) => const InboxPage()),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: '/profile', builder: (_, _) => const ProfilePage()),
+          ],
+        ),
+      ],
+    ),
+  ],
+);
+```
+
 ## Demo index
 
 - `example/lib/demos/basic_demo.dart`
@@ -454,6 +527,9 @@ your app's router.
 - `example/lib/demos/custom_transition_demo.dart`
 - `example/lib/demos/go_router_shell_demo.dart`
 - `example/lib/demos/tabs_demo.dart`
+- `example/lib/demos/adaptive_rail_demo.dart`
+
+The adaptive rail demo is live at `#/adaptive-rail`.
 
 ## Recording gifs
 
