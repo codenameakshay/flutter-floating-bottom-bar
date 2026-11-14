@@ -483,7 +483,7 @@ class _ItemViewState extends State<_ItemView>
           ? reveal(
               labelChild,
               DefaultTextStyle.merge(
-                style: TextStyle(color: selectedLookColor),
+                style: TextStyle(color: selectedLabelLookColor),
                 child: labelChild,
               ),
             )
