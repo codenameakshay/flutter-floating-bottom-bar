@@ -10,6 +10,9 @@ import 'widgets/bottom_bar_surface.dart';
 
 const _capsule = BorderRadius.all(Radius.circular(100));
 
+// Indicators have no value equality, so the defaults stay const and two calls
+// to one preset compare equal.
+
 BottomBarThemeData glassPreset({
   Color? accent,
   BottomBarIndicator? indicator,
@@ -34,12 +37,18 @@ BottomBarThemeData glassPreset({
     motion: const CupertinoMotion.bouncy(),
     indicator:
         indicator ??
-        BottomBarIndicator.tint(
-          color: accent?.withValues(alpha: 0.12),
-          inset: const EdgeInsets.all(4),
-          borderRadius: _capsule,
-          stretch: true,
-        ),
+        (accent == null
+            ? const BottomBarIndicator.tint(
+                inset: EdgeInsets.all(4),
+                borderRadius: _capsule,
+                stretch: true,
+              )
+            : BottomBarIndicator.tint(
+                color: accent.withValues(alpha: 0.12),
+                inset: const EdgeInsets.all(4),
+                borderRadius: _capsule,
+                stretch: true,
+              )),
     indicatorMotion: const CupertinoMotion.bouncy(),
     haptics: BottomBarHaptics.selectionClick,
   ),
@@ -136,11 +145,16 @@ BottomBarThemeData pillPreset({Color? accent, BottomBarIndicator? indicator}) =>
         pressedScale: 0.92,
         indicator:
             indicator ??
-            BottomBarIndicator.pill(
-              color: accent,
-              inset: const EdgeInsets.all(6),
-              stretch: true,
-            ),
+            (accent == null
+                ? const BottomBarIndicator.pill(
+                    inset: EdgeInsets.all(6),
+                    stretch: true,
+                  )
+                : BottomBarIndicator.pill(
+                    color: accent,
+                    inset: const EdgeInsets.all(6),
+                    stretch: true,
+                  )),
         indicatorMotion: const CupertinoMotion.snappy(),
         haptics: BottomBarHaptics.selectionClick,
       ),
@@ -168,7 +182,11 @@ BottomBarThemeData minimalPreset({
     splashFactory: NoSplash.splashFactory,
     overlayColor: const WidgetStatePropertyAll(Colors.transparent),
     motion: const CurvedMotion(Duration(milliseconds: 200), Curves.easeOut),
-    indicator: indicator ?? BottomBarIndicator.dot(color: accent),
+    indicator:
+        indicator ??
+        (accent == null
+            ? const BottomBarIndicator.dot()
+            : BottomBarIndicator.dot(color: accent)),
     indicatorMotion: const CupertinoMotion.smooth(
       duration: Duration(milliseconds: 350),
     ),

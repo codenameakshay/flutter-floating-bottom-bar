@@ -1,4 +1,5 @@
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+import 'package:flutter_floating_bottom_bar/src/internal/bar_surface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -73,6 +74,7 @@ void main() {
       final label = tester.getRect(find.text('Search'));
 
       expect(bar.height, navBar.height);
+      expect(tester.getSize(find.byType(BarSurface)).height, navBar.height);
       expect(icon.size, navIcon.size);
       expect(icon.top - bar.top, navIcon.top - navBar.top);
       expect(label.top - bar.top, navLabel.top - navBar.top);
