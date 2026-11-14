@@ -1030,11 +1030,24 @@ BottomBar(
   the top. This is the same whatever the bar's alignment.
 - The bar's outline shrinks onto the pill on the bar's own spring. Width,
   height and corner radius move together, and the glass, fill, border and
-  shadows follow it. A notch closes as the centre action fades. The move can
-  be interrupted both ways, and reduced motion snaps.
-- Tap the pill to expand the bar. To a screen reader the pill is one button
-  with the selected item's label and an "Expand" hint. While minimized the
-  full bar's items take no pointer, focus or semantics.
+  shadows follow it. The items shrink with the outline and fade, and the
+  pill grows in, so the glass is never empty. A notch closes as the centre
+  action fades. The move can be interrupted both ways, and reduced motion
+  snaps.
+- **Groups.** The detached `leading` and `trailing` pieces keep their size
+  and place while the bar minimizes. A leading piece stays at the leading
+  edge, and the pill sits one `groupSpacing` after it. A trailing piece
+  stays at the trailing edge, like the iOS 26 search button. Taps in the
+  empty space between them reach the body.
+- **Semantics.** To a screen reader the pill is one collapsed button with an
+  "Expand" hint. The default pill reads the selected item's label. A
+  `compactChild` reads its own text, so a now-playing pill reads "Midnight
+  City, button, Expand". Controls inside a `compactChild` merge into that one
+  button. Minimizing and expanding announce nothing, as on iOS.
+- **Focus.** While minimized the full bar's items take no pointer, focus or
+  semantics. When the bar minimizes with focus on one of its items, focus
+  moves to the pill. When the pill expands by tap, Enter or Space, focus
+  moves to the selected item.
 - `BottomBarController` has `minimize()`, `expand()` and a `visibility`
   listenable (`shown`, `minimized`, `hidden`). `isVisible` stays true while
   minimized. `minimize()` works in every mode.
@@ -1044,9 +1057,6 @@ the full bar's height while the bar is minimized or hidden, so content never
 jumps. `BottomBarScope.visibleHeight` is what the bar covers now: the full
 footprint when shown, the pill's footprint when minimized, and 0 when hidden.
 Use it for things that float above the bar, like a button.
-
-The detached `leading` and `trailing` pieces stay where they are while the
-bar is minimized.
 
 Try the [minimize demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/minimize) live.
 

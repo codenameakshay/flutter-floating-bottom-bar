@@ -136,9 +136,12 @@ class BottomBar extends StatefulWidget {
   /// The pill sits at the bar's leading edge (the right edge in RTL),
   /// vertically centred and inset from that edge as far as from the bar's
   /// top, whatever [BottomBarLayout.alignment] says. [compactChild] takes its
-  /// own size, up to the bar's. Tapping the pill anywhere [compactChild] does
-  /// not handle itself expands the bar. To a screen reader the pill is one
-  /// button with an "Expand" hint, holding [compactChild]'s semantics.
+  /// own size, up to the bar's. A [leading] piece keeps its place, and the
+  /// pill sits [BottomBarLayout.groupSpacing] after it. Tapping the pill
+  /// anywhere [compactChild] does not handle itself expands the bar. To a
+  /// screen reader the pill is one collapsed button with an "Expand" hint,
+  /// labelled with [compactChild]'s text. Controls inside [compactChild]
+  /// merge into that button.
   ///
   /// See [BottomBarScrollBehavior.minimizeBehavior] and
   /// [BottomBarController.minimize].
