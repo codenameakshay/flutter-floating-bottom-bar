@@ -1,5 +1,14 @@
 ## Unreleased
 
+- Add four presets on `BottomBarThemeData`: `glass()`, `material3()`,
+  `pill()` and `minimal()`. Each is one line to a finished bar, built from
+  the existing layout, surface, indicator, motion and item theme. Colours
+  come from the `ColorScheme`, so light, dark and dynamic colour work. A
+  preset is a plain theme. Pass it as `theme:`, add it to
+  `ThemeData.extensions`, or change it with `copyWith` and `merge`.
+  `material3()` matches `NavigationBar`'s height, type and 64 x 32
+  indicator. Add a presets demo in `example/lib/demos/presets_demo.dart`.
+
 - The bar and `BottomBarController` follow the active tab in an
   `IndexedStack`, `PageView` or `TabBarView`. Only the list on the page in
   view drives the bar. A page swipe never hides or shows it, and a neighbour

@@ -135,6 +135,49 @@ BottomBar(
 The bar is stacked above the body, so use `BottomBarBodyPadding` when your body
 should reserve enough bottom space to stay clear of the bar.
 
+## Presets
+
+A preset is one line to a finished bar, and each one is a plain `BottomBarThemeData` that works as `theme:` or in `ThemeData.extensions`. It takes colours from your `ColorScheme`, so light, dark and dynamic colour work.
+
+| Glass | Material 3 |
+| --- | --- |
+| ![Glass](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/test/goldens/preset_glass_light.png) | ![Material 3](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/test/goldens/preset_material3_light.png) |
+| **Pill** | **Minimal** |
+| ![Pill](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/test/goldens/preset_pill_light.png) | ![Minimal](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/main/test/goldens/preset_minimal_light.png) |
+
+```dart
+BottomBar(theme: BottomBarThemeData.glass(), body: body, child: items)      // iOS 26 glass capsule
+BottomBar(theme: BottomBarThemeData.material3(), body: body, child: items)  // Flutter's NavigationBar
+BottomBar(theme: BottomBarThemeData.pill(), body: body, child: items)       // rounded bar, sliding pill
+BottomBar(theme: BottomBarThemeData.minimal(), body: body, child: items)    // flat bar, dot indicator
+```
+
+- `glass()` is the iOS 26 tab bar. It is a floating glass capsule that clears at the scroll edge. A tinted capsule sits behind the selected item, with springs and a selection haptic. The glass is 98% opaque, so labels keep 4.5:1 contrast over a white or a black backdrop. `accent` colours the selected item and its tint. `indicator` replaces the tint.
+- `material3()` matches Flutter's Material 3 `NavigationBar`. The bar is docked, full width, on a solid `surfaceContainer`, and 80 px tall. Its 64 x 32 indicator matches too. The selected icon and label use `primary`. `backgroundColor` and `indicatorColor` replace the two fills.
+- `pill()` is a floating, fully rounded, solid bar with a soft shadow. A sliding pill sits behind the selected item, with a small press scale and a selection haptic. The content under the pill takes black or white for contrast. `accent` fills the pill. `indicator` replaces it.
+- `minimal()` is a flat floating bar with no shadow. A dot sits under the selected item, with no ink and short, quiet motion. The bar fades instead of sliding. `accent` colours the selected item and the dot. `indicator` replaces the dot, for example with `BottomBarIndicator.underline()`. Pair it with `labelBehavior: BottomBarLabelBehavior.onlySelected` on `BottomBarItems`. Label behaviour is a row argument, so a theme cannot set it.
+
+To change a preset, use `copyWith` or `merge`.
+
+```dart
+// Change one field.
+BottomBarThemeData.pill(accent: Colors.teal).copyWith(
+  motion: const BottomBarMotion.curved(),
+);
+
+// Layer your own theme on top. Null fields keep the preset's value.
+BottomBarThemeData.glass().merge(
+  const BottomBarThemeData(
+    items: BottomBarItemThemeData(haptics: BottomBarHaptics.none),
+  ),
+);
+
+// App-wide.
+ThemeData(extensions: [BottomBarThemeData.material3()]);
+```
+
+Try the [presets demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/presets) live.
+
 ## Common recipes
 
 ### Adaptive width + stable body padding
