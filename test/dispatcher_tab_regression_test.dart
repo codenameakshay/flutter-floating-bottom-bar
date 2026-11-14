@@ -130,10 +130,19 @@ void main() {
     final otherHost = Object();
     final replacementHost = Object();
 
-    expect(dispatcher.enterTab((oldHost, 0), current: BottomBarVisibility.hidden), isNull);
-    expect(dispatcher.enterTab((otherHost, 0), current: BottomBarVisibility.shown), BottomBarVisibility.shown);
     expect(
-      dispatcher.enterTab((replacementHost, 0), current: BottomBarVisibility.hidden),
+      dispatcher.enterTab((oldHost, 0), current: BottomBarVisibility.hidden),
+      isNull,
+    );
+    expect(
+      dispatcher.enterTab((otherHost, 0), current: BottomBarVisibility.shown),
+      BottomBarVisibility.shown,
+    );
+    expect(
+      dispatcher.enterTab((
+        replacementHost,
+        0,
+      ), current: BottomBarVisibility.hidden),
       BottomBarVisibility.shown,
     );
   });
@@ -145,7 +154,10 @@ void main() {
     await _forceGC(timeout: const Duration(seconds: 10), fullGcCycles: 2);
 
     expect(anchor.target, isNull);
-    expect(dispatcher.enterTab((Object(), 0), current: BottomBarVisibility.hidden), BottomBarVisibility.shown);
+    expect(
+      dispatcher.enterTab((Object(), 0), current: BottomBarVisibility.hidden),
+      BottomBarVisibility.shown,
+    );
   }, testOn: 'vm');
 
   testWidgets('restores a page after its non-keepalive list is recreated', (
@@ -167,19 +179,28 @@ void main() {
 
     final originalPosition = host.lists[0].position;
     final firstTab = dispatcher.resolve().active!.tab!;
-    expect(dispatcher.enterTab(firstTab, current: BottomBarVisibility.shown), isNull);
+    expect(
+      dispatcher.enterTab(firstTab, current: BottomBarVisibility.shown),
+      isNull,
+    );
 
     host.pages.jumpToPage(2);
     await tester.pumpAndSettle();
     expect(host.lists[0].hasClients, isFalse);
     final lastTab = dispatcher.resolve().active!.tab!;
-    expect(dispatcher.enterTab(lastTab, current: BottomBarVisibility.hidden), BottomBarVisibility.shown);
+    expect(
+      dispatcher.enterTab(lastTab, current: BottomBarVisibility.hidden),
+      BottomBarVisibility.shown,
+    );
 
     host.pages.jumpToPage(0);
     await tester.pumpAndSettle();
     expect(host.lists[0].position, isNot(same(originalPosition)));
     final recreatedTab = dispatcher.resolve().active!.tab!;
-    expect(dispatcher.enterTab(recreatedTab, current: BottomBarVisibility.shown), BottomBarVisibility.hidden);
+    expect(
+      dispatcher.enterTab(recreatedTab, current: BottomBarVisibility.shown),
+      BottomBarVisibility.hidden,
+    );
   });
 }
 

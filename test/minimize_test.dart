@@ -107,9 +107,7 @@ void main() {
     expect(controller.visibility.value, BottomBarVisibility.shown);
   });
 
-  testWidgets('a bar with no pill hides instead of minimizing', (
-    tester,
-  ) async {
+  testWidgets('a bar with no pill hides instead of minimizing', (tester) async {
     final controller = BottomBarController();
     addTearDown(controller.dispose);
     await _pump(
