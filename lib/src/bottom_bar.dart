@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/semantics.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:motor/motor.dart';
 
@@ -264,6 +265,8 @@ class _BottomBarState extends State<BottomBar>
     canRequestFocus: false,
   );
   final GlobalKey _barRenderKey = GlobalKey();
+  final GlobalKey _leadingPieceKey = GlobalKey();
+  final GlobalKey _trailingPieceKey = GlobalKey();
 
   /// Every piece of the bar reads the backdrop under it once, together.
   final BackdropKey _backdropKey = BackdropKey();
@@ -1033,25 +1036,55 @@ class _BottomBarState extends State<BottomBar>
           Widget child, {
           Animation<double>? minimize,
           Clip clip = Clip.none,
-        }) => BarSurface(
-          key: ValueKey(slot),
-          decoration: surface == null
-              ? _effectiveBarDecoration(theme, l)
-              : BoxDecoration(borderRadius: radius),
-          surface: surface,
-          edgeSurface: edgeSurface,
-          edge: _edgeController,
-          visibility: _motionController,
-          fades: fadesItself,
-          backdropKey: _backdropKey,
-          minimize: minimize,
-          child: Material(
-            color: Colors.transparent,
-            borderRadius: radius,
-            clipBehavior: clip,
-            child: child,
-          ),
-        );
+        }) {
+          final childKey = switch (slot) {
+            'leading' => _leadingPieceKey,
+            'trailing' => _trailingPieceKey,
+            _ => null,
+          };
+          if (childKey != null) {
+            child = KeyedSubtree(key: childKey, child: child);
+          }
+          if (widget.accessory != null) {
+            final rank = switch (slot) {
+              'leading' => _pill ? 0.0 : 1.0,
+              'pill' => _pill ? 1.0 : 2.0,
+              'accessory' => _pill ? 2.0 : 0.0,
+              _ => 3.0,
+            };
+            child = FocusTraversalOrder(
+              order: NumericFocusOrder(rank),
+              child: Semantics(
+                container: true,
+                sortKey: OrdinalSortKey(rank),
+                child: FocusTraversalGroup(
+                  policy: ReadingOrderTraversalPolicy(),
+                  child: child,
+                ),
+              ),
+            );
+          }
+          return BarSurface(
+            key: ValueKey(slot),
+            decoration: surface == null
+                ? _effectiveBarDecoration(theme, l)
+                : BoxDecoration(borderRadius: radius),
+            surface: surface,
+            edgeSurface: edgeSurface,
+            edge: _edgeController,
+            visibility: _motionController,
+            fades: fadesItself,
+            backdropKey: _backdropKey,
+            minimize: minimize,
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: radius,
+              clipBehavior: clip,
+              child: child,
+            ),
+          );
+        }
+
         final leading = l.docked ? null : widget.leading;
         final trailing = l.docked ? null : widget.trailing;
         final accessory = widget.accessory;
@@ -1068,8 +1101,12 @@ class _BottomBarState extends State<BottomBar>
               ? _buildCompact()
               : null,
         );
-        // Semantics sort the pieces by the nearest text direction above
-        // them, which the bar would otherwise not set.
+        Widget orderGroup(Widget group) => accessory == null
+            ? group
+            : FocusTraversalGroup(
+                policy: OrderedTraversalPolicy(),
+                child: group,
+              );
         final bar = Semantics(
           textDirection: Directionality.of(context),
           child: Focus(
@@ -1079,54 +1116,56 @@ class _BottomBarState extends State<BottomBar>
               scrollToStart: _scrollToStartOnReselect,
               child: SizedBox(
                 width: _effectiveBarWidth(constraints, l),
-                child: BarGroup(
-                  key: _barRenderKey,
-                  pillIndex: leading == null ? 0 : 1,
-                  spacing: l.groupSpacing,
-                  hasAccessory: accessory != null,
-                  accessoryInset: l.docked
-                      ? EdgeInsets.only(
-                          left: l.groupSpacing + sides.left,
-                          right: l.groupSpacing + sides.right,
-                        )
-                      : EdgeInsets.zero,
-                  minimize: accessory == null ? null : _minimizeController,
-                  children: [
-                    if (leading != null)
-                      piece('leading', _GroupPiece(child: leading)),
-                    piece(
-                      'pill',
-                      minimize: _minimizeController,
-                      MediaQuery.maybeOf(context) != null
-                          ? SafeArea(
-                              top: false,
-                              bottom: l.docked && l.respectSafeArea,
-                              left: l.docked && l.respectSafeArea,
-                              right: l.docked && l.respectSafeArea,
-                              child: content,
-                            )
-                          : content,
-                    ),
-                    if (trailing != null)
-                      piece('trailing', _GroupPiece(child: trailing)),
-                    if (accessory != null)
+                child: orderGroup(
+                  BarGroup(
+                    key: _barRenderKey,
+                    pillIndex: leading == null ? 0 : 1,
+                    spacing: l.groupSpacing,
+                    hasAccessory: accessory != null,
+                    accessoryInset: l.docked
+                        ? EdgeInsets.only(
+                            left: l.groupSpacing + sides.left,
+                            right: l.groupSpacing + sides.right,
+                          )
+                        : EdgeInsets.zero,
+                    minimize: accessory == null ? null : _minimizeController,
+                    children: [
+                      if (leading != null)
+                        piece('leading', _GroupPiece(child: leading)),
                       piece(
-                        'accessory',
-                        clip: Clip.antiAlias,
-                        ValueListenableBuilder(
-                          valueListenable: _accessoryPlacement,
-                          builder: (context, placement, child) =>
-                              AccessoryPlacementScope(
-                                placement: placement,
-                                child: child!,
-                              ),
-                          child: Semantics(
-                            container: true,
-                            child: _GroupPiece(child: accessory),
+                        'pill',
+                        minimize: _minimizeController,
+                        MediaQuery.maybeOf(context) != null
+                            ? SafeArea(
+                                top: false,
+                                bottom: l.docked && l.respectSafeArea,
+                                left: l.docked && l.respectSafeArea,
+                                right: l.docked && l.respectSafeArea,
+                                child: content,
+                              )
+                            : content,
+                      ),
+                      if (trailing != null)
+                        piece('trailing', _GroupPiece(child: trailing)),
+                      if (accessory != null)
+                        piece(
+                          'accessory',
+                          clip: Clip.antiAlias,
+                          ValueListenableBuilder(
+                            valueListenable: _accessoryPlacement,
+                            builder: (context, placement, child) =>
+                                AccessoryPlacementScope(
+                                  placement: placement,
+                                  child: child!,
+                                ),
+                            child: Semantics(
+                              container: true,
+                              child: _GroupPiece(child: accessory),
+                            ),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

@@ -355,9 +355,20 @@ class RenderBarGroup extends RenderBox
     final accessory = _accessory;
     if (accessory == null) return rowSize;
     final width = math.max(0.0, pillWidth - _accessoryInset.horizontal);
-    final height = accessory
-        .getDryLayout(BoxConstraints(minWidth: width, maxWidth: width))
-        .height;
+    final height = _t > 0 && _accessoryHeight != null
+        ? _accessoryHeight!
+        : accessory
+              .getDryLayout(
+                BoxConstraints(
+                  minWidth: width,
+                  maxWidth: width,
+                  maxHeight: math.max(
+                    0.0,
+                    constraints.maxHeight - rowSize.height - _spacing,
+                  ),
+                ),
+              )
+              .height;
     return constraints.constrain(
       Size(rowSize.width, rowSize.height + height + _spacing),
     );
