@@ -40,21 +40,22 @@ void main() {
         ),
       ),
     );
-    expect([...mounts]..sort(), ['item', 'leading', 'trailing']);
+    const mountedOnce = ['item', 'leading', 'trailing'];
+    expect([...mounts]..sort(), mountedOnce);
 
     setOuter(() => showAccessory = true);
     await tester.pumpAndSettle();
     expect(find.text('Now playing'), findsOneWidget);
     expect(
       [...mounts]..sort(),
-      ['item', 'leading', 'trailing'],
+      mountedOnce,
       reason: 'a mini player that appears must not remount the bar',
     );
 
     setOuter(() => showAccessory = false);
     await tester.pumpAndSettle();
     expect(find.text('Now playing'), findsNothing);
-    expect([...mounts]..sort(), ['item', 'leading', 'trailing']);
+    expect([...mounts]..sort(), mountedOnce);
   });
 }
 

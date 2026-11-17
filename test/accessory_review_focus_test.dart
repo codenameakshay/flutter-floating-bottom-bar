@@ -380,9 +380,16 @@ void main() {
               progress,
               expanding: true,
             );
+            const expanded = [
+              'accessory',
+              'leading',
+              'Home',
+              'Inbox',
+              'trailing',
+            ];
             expect(
               _spokenControls(tester),
-              ['accessory', 'leading', 'Home', 'Inbox', 'trailing'],
+              expanded,
               reason: 'expansion progress $actualProgress',
             );
           } finally {
