@@ -10,6 +10,8 @@ import '../config/bottom_bar_scroll_behavior.dart';
 import '../internal/bar_surface.dart';
 import '../internal/item_theme_scope.dart';
 import '../internal/scroll_notification_dispatcher.dart';
+import '../internal/size_observer.dart';
+import 'bottom_bar_accessory.dart';
 import 'bottom_bar_items.dart';
 import 'bottom_bar_surface.dart';
 
@@ -55,7 +57,7 @@ enum BottomBarRailStyle {
 /// minimize do not apply to it, and [controller] is attached only while the
 /// bar shows. [BottomBarItems.scrollToStartOnReselect] works in both.
 /// Inside [body], [BottomBarBodyPadding] reserves only the bottom safe-area
-/// inset while the rail shows.
+/// inset while the rail shows, plus the [accessory] when there is one.
 class BottomBarAdaptive extends StatefulWidget {
   /// Creates a [BottomBarAdaptive].
   const BottomBarAdaptive({
@@ -67,6 +69,7 @@ class BottomBarAdaptive extends StatefulWidget {
     this.railLabelBehavior,
     this.railLeading,
     this.railTrailing,
+    this.accessory,
     this.controller,
     this.layout,
     this.motion,
@@ -103,6 +106,17 @@ class BottomBarAdaptive extends StatefulWidget {
   /// A widget below the items in the rail, such as a settings button.
   final Widget? railTrailing;
 
+  /// See [BottomBar.accessory].
+  ///
+  /// While the rail shows, the accessory floats at the bottom of the body,
+  /// inset [BottomBarLayout.offset] from the body's sides and bottom and
+  /// clear of the bottom safe area, no wider than [BottomBarLayout.maxWidth].
+  /// It keeps the bar's surface and radius, is always
+  /// [BottomBarAccessoryPlacement.expanded], and never hides.
+  /// [BottomBarBodyPadding] reserves its height. It keeps its state across
+  /// the breakpoint.
+  final Widget? accessory;
+
   /// See [BottomBar.controller]. Attached only while the bar shows.
   final BottomBarController? controller;
 
@@ -135,6 +149,19 @@ class _BottomBarAdaptiveState extends State<BottomBarAdaptive> {
   final _railBarHeight = ValueNotifier<double>(0);
   final _railVisible = ValueNotifier<bool>(true);
 
+  /// Moves the accessory between the bar and the rail without rebuilding it.
+  final _accessoryKey = GlobalKey(debugLabel: 'BottomBarAdaptive accessory');
+
+  @override
+  void didUpdateWidget(BottomBarAdaptive oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.accessory == null && oldWidget.accessory != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && widget.accessory == null) _railBarHeight.value = 0;
+      });
+    }
+  }
+
   @override
   void dispose() {
     _railBarHeight.dispose();
@@ -145,6 +172,9 @@ class _BottomBarAdaptiveState extends State<BottomBarAdaptive> {
   @override
   Widget build(BuildContext context) {
     final body = KeyedSubtree(key: _bodyKey, child: widget.body);
+    final accessory = widget.accessory == null
+        ? null
+        : KeyedSubtree(key: _accessoryKey, child: widget.accessory!);
     return LayoutBuilder(
       builder: (context, constraints) =>
           constraints.maxWidth < widget.breakpoint
@@ -154,10 +184,11 @@ class _BottomBarAdaptiveState extends State<BottomBarAdaptive> {
               motion: widget.motion,
               scrollBehavior: widget.scrollBehavior,
               theme: widget.theme,
+              accessory: accessory,
               body: body,
               child: widget.items,
             )
-          : _buildRail(context, body),
+          : _buildRail(context, body, accessory),
     );
   }
 
@@ -204,7 +235,7 @@ class _BottomBarAdaptiveState extends State<BottomBarAdaptive> {
     );
   }
 
-  Widget _buildRail(BuildContext context, Widget body) {
+  Widget _buildRail(BuildContext context, Widget body, Widget? accessory) {
     final theme = _resolvedTheme(context);
     final layout = widget.layout ?? theme.layout ?? const BottomBarLayout();
     final floating =
@@ -316,35 +347,85 @@ class _BottomBarAdaptiveState extends State<BottomBarAdaptive> {
       ),
     );
 
+    Widget? floatingAccessory;
+    if (accessory != null) {
+      final accessoryRadius = widget.layout != null || theme.layout != null
+          ? layout.effectiveBorderRadius
+          : decoration?.borderRadius ?? BorderRadius.zero;
+      floatingAccessory = Align(
+        alignment: Alignment.bottomCenter,
+        child: SizeObserver(
+          onSizeChanged: (size) => _railBarHeight.value = size.height,
+          child: SafeArea(
+            top: false,
+            left: safe,
+            right: safe,
+            bottom: safe,
+            child: Padding(
+              padding: EdgeInsets.all(layout.offset),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: layout.maxWidth ?? double.infinity,
+                ),
+                child: BarSurface(
+                  decoration: surface == null
+                      ? decoration?.shape == BoxShape.rectangle
+                            ? decoration!.copyWith(
+                                borderRadius: accessoryRadius,
+                              )
+                            : decoration
+                      : BoxDecoration(borderRadius: accessoryRadius),
+                  surface: surface,
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: accessoryRadius,
+                    clipBehavior: Clip.antiAlias,
+                    child: AccessoryPlacementScope(
+                      placement: BottomBarAccessoryPlacement.expanded,
+                      child: Semantics(
+                        container: true,
+                        child: piece(accessory),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    Widget pane = NotificationListener<ScrollMetricsNotification>(
+      onNotification: (notification) {
+        _railScrolls.track(notification);
+        return false;
+      },
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          _railScrolls.handle(notification);
+          return false;
+        },
+        child: BottomBarScope(
+          barHeight: _railBarHeight,
+          isVisible: _railVisible,
+          bottomInset: safe
+              ? MediaQuery.maybePaddingOf(context)?.bottom ?? 0
+              : 0,
+          child: body,
+        ),
+      ),
+    );
+    if (floatingAccessory != null) {
+      pane = Stack(fit: StackFit.expand, children: [pane, floatingAccessory]);
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         rail,
         Expanded(
-          child: _withoutStartInset(
-            context,
-            ltr: ltr,
-            child: NotificationListener<ScrollMetricsNotification>(
-              onNotification: (notification) {
-                _railScrolls.track(notification);
-                return false;
-              },
-              child: NotificationListener<ScrollNotification>(
-                onNotification: (notification) {
-                  _railScrolls.handle(notification);
-                  return false;
-                },
-                child: BottomBarScope(
-                  barHeight: _railBarHeight,
-                  isVisible: _railVisible,
-                  bottomInset: safe
-                      ? MediaQuery.maybePaddingOf(context)?.bottom ?? 0
-                      : 0,
-                  child: body,
-                ),
-              ),
-            ),
-          ),
+          child: _withoutStartInset(context, ltr: ltr, child: pane),
         ),
       ],
     );

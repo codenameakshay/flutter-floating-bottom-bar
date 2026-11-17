@@ -312,13 +312,14 @@ class RenderMinimizeHost extends RenderBox
   /// The pill's resting rect in [ancestor]'s coordinates, or null without a
   /// pill. Its grow-in scale does not count.
   Rect? compactRectIn(RenderObject ancestor) {
-    final compact = _compact;
-    if (compact == null || !compact.hasSize || !attached) return null;
-    return MatrixUtils.transformRect(
-      getTransformTo(ancestor),
-      _offsetOf(compact) & compact.size,
-    );
+    final rest = _compactRest;
+    if (rest == null || _compact == null || !attached) return null;
+    return MatrixUtils.transformRect(getTransformTo(ancestor), rest);
   }
+
+  /// The pill's resting rect at the last layout, so an ancestor can read it
+  /// during its own layout.
+  Rect? _compactRest;
 
   void _dropLayers() {
     _fullLayer.layer = null;
@@ -365,22 +366,26 @@ class RenderMinimizeHost extends RenderBox
   void performLayout() {
     final full = _full;
     if (full == null) {
+      _compactRest = null;
       size = constraints.smallest;
       return;
     }
     full.layout(constraints, parentUsesSize: true);
     size = full.size;
     final compact = _compact;
+    _compactRest = null;
     if (compact == null) return;
     compact.layout(BoxConstraints.loose(size), parentUsesSize: true);
     final inset = math.max(0.0, (size.height - compact.size.height) / 2);
     final start = _flushStart ? 0.0 : inset;
-    (compact.parentData! as _MinimizeParentData).offset = Offset(
+    final offset = Offset(
       _textDirection == TextDirection.ltr
           ? start
           : size.width - start - compact.size.width,
       inset,
     );
+    (compact.parentData! as _MinimizeParentData).offset = offset;
+    _compactRest = offset & compact.size;
   }
 
   @override
