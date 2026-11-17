@@ -162,7 +162,8 @@ class BottomBar extends StatefulWidget {
   ///
   /// When the bar minimizes, the accessory moves down beside the pill, on
   /// the same spring, and takes the width between the pill and [trailing].
-  /// There it is as tall as the pill. [BottomBarScope.barHeight] keeps the
+  /// There it is as tall as the pill, and its corners round into the
+  /// pill's capsule. [BottomBarScope.barHeight] keeps the
   /// full height. The footprint changes only when the accessory comes or
   /// goes, or when its height changes while it is expanded: while minimized,
   /// the bar holds its expanded height until it expands again.
@@ -1038,6 +1039,7 @@ class _BottomBarState extends State<BottomBar>
           String slot,
           Widget child, {
           Animation<double>? minimize,
+          Animation<double>? capsule,
           Clip clip = Clip.none,
         }) {
           final childKey = switch (slot) {
@@ -1079,6 +1081,7 @@ class _BottomBarState extends State<BottomBar>
             fades: fadesItself,
             backdropKey: _backdropKey,
             minimize: minimize,
+            capsule: capsule,
             child: Material(
               color: Colors.transparent,
               borderRadius: radius,
@@ -1154,6 +1157,7 @@ class _BottomBarState extends State<BottomBar>
                         piece(
                           'accessory',
                           clip: Clip.antiAlias,
+                          capsule: _minimizeController,
                           ValueListenableBuilder(
                             valueListenable: _accessoryPlacement,
                             builder: (context, placement, child) =>

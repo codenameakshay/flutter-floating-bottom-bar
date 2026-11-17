@@ -25,6 +25,7 @@ class BarSurface extends SingleChildRenderObjectWidget {
     this.fades = false,
     this.backdropKey,
     this.minimize,
+    this.capsule,
     super.child,
   });
 
@@ -60,6 +61,10 @@ class BarSurface extends SingleChildRenderObjectWidget {
   /// keeps its full outline.
   final Animation<double>? minimize;
 
+  /// How far the outline's corners have rounded into a capsule, from 0 (the
+  /// decoration's radius) to 1 (half the outline's shorter side).
+  final Animation<double>? capsule;
+
   @override
   RenderBarSurface createRenderObject(BuildContext context) => RenderBarSurface(
     decoration: decoration,
@@ -70,6 +75,7 @@ class BarSurface extends SingleChildRenderObjectWidget {
     fades: fades,
     backdropKey: backdropKey,
     minimize: minimize,
+    capsule: capsule,
     configuration: createLocalImageConfiguration(context),
   );
 
@@ -84,6 +90,7 @@ class BarSurface extends SingleChildRenderObjectWidget {
       ..fades = fades
       ..backdropKey = backdropKey
       ..minimize = minimize
+      ..capsule = capsule
       ..configuration = createLocalImageConfiguration(context);
   }
 }
@@ -98,6 +105,7 @@ class RenderBarSurface extends RenderShiftedBox {
     this._fades = false,
     this._backdropKey,
     this._minimize,
+    this._capsule,
     required this._configuration,
   }) : super(null);
 
@@ -201,6 +209,15 @@ class RenderBarSurface extends RenderShiftedBox {
     if (identical(value, _minimize)) return;
     if (attached) _minimize?.removeListener(markNeedsPaint);
     _minimize = value;
+    if (attached) value?.addListener(markNeedsPaint);
+    markNeedsPaint();
+  }
+
+  Animation<double>? _capsule;
+  set capsule(Animation<double>? value) {
+    if (identical(value, _capsule)) return;
+    if (attached) _capsule?.removeListener(markNeedsPaint);
+    _capsule = value;
     if (attached) value?.addListener(markNeedsPaint);
     markNeedsPaint();
   }
@@ -332,15 +349,24 @@ class RenderBarSurface extends RenderShiftedBox {
             );
     }
     final surface = _painted;
-    final radius = decoration?.borderRadius ?? BorderRadius.zero;
+    var radius = decoration?.borderRadius ?? BorderRadius.zero;
+    if (morph != 0) {
+      radius = BorderRadiusGeometry.lerp(
+        radius,
+        BorderRadius.circular(_compactRect!.shortestSide / 2),
+        morph,
+      )!;
+    }
+    final capsule = (_capsule?.value ?? 0).clamp(0.0, 1.0);
+    if (capsule != 0) {
+      radius = BorderRadiusGeometry.lerp(
+        radius,
+        BorderRadius.circular(outlineRect.shortestSide / 2),
+        capsule,
+      )!;
+    }
     return BarOutline(
-      borderRadius: morph == 0
-          ? radius
-          : BorderRadiusGeometry.lerp(
-              radius,
-              BorderRadius.circular(_compactRect!.shortestSide / 2),
-              morph,
-            )!,
+      borderRadius: radius,
       notch: notch,
       border: surface != null ? surface.border : decoration?.border,
     );
@@ -368,6 +394,7 @@ class RenderBarSurface extends RenderShiftedBox {
     _visibility?.addListener(_visibilityChanged);
     _edge?.addListener(_edgeChanged);
     _minimize?.addListener(markNeedsPaint);
+    _capsule?.addListener(markNeedsPaint);
     _edgeChanged();
   }
 
@@ -376,6 +403,7 @@ class RenderBarSurface extends RenderShiftedBox {
     _visibility?.removeListener(_visibilityChanged);
     _edge?.removeListener(_edgeChanged);
     _minimize?.removeListener(markNeedsPaint);
+    _capsule?.removeListener(markNeedsPaint);
     _clipLayer.layer = null;
     _backdropLayer.layer = null;
     _opacityLayer.layer = null;
