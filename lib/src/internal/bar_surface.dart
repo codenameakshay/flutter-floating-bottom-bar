@@ -63,6 +63,7 @@ class BarSurface extends SingleChildRenderObjectWidget {
 
   /// How far the outline's corners have rounded into a capsule, from 0 (the
   /// decoration's radius) to 1 (half the outline's shorter side).
+  /// When set, the child is clipped and hit-tested through the outline.
   final Animation<double>? capsule;
 
   @override
@@ -219,6 +220,7 @@ class RenderBarSurface extends RenderShiftedBox {
     if (attached) _capsule?.removeListener(markNeedsPaint);
     _capsule = value;
     if (attached) value?.addListener(markNeedsPaint);
+    if (value == null) _childClipLayer.layer = null;
     markNeedsPaint();
   }
 
@@ -275,6 +277,7 @@ class RenderBarSurface extends RenderShiftedBox {
       (_surface != null && child != null && _opacity > 0 && _opacity < 1);
 
   final _clipLayer = LayerHandle<ClipPathLayer>();
+  final _childClipLayer = LayerHandle<ClipPathLayer>();
   final _backdropLayer = LayerHandle<BackdropFilterLayer>();
   final _opacityLayer = LayerHandle<OpacityLayer>();
 
@@ -405,6 +408,7 @@ class RenderBarSurface extends RenderShiftedBox {
     _minimize?.removeListener(markNeedsPaint);
     _capsule?.removeListener(markNeedsPaint);
     _clipLayer.layer = null;
+    _childClipLayer.layer = null;
     _backdropLayer.layer = null;
     _opacityLayer.layer = null;
     _painter?.dispose();
@@ -417,6 +421,7 @@ class RenderBarSurface extends RenderShiftedBox {
   void dispose() {
     _painter?.dispose();
     _clipLayer.layer = null;
+    _childClipLayer.layer = null;
     _backdropLayer.layer = null;
     _opacityLayer.layer = null;
     super.dispose();
@@ -493,12 +498,12 @@ class RenderBarSurface extends RenderShiftedBox {
         _opacityLayer.layer = context.pushOpacity(
           offset,
           (opacity * 255).round(),
-          super.paint,
+          _paintChild,
           oldLayer: _opacityLayer.layer,
         );
       } else {
         _opacityLayer.layer = null;
-        super.paint(context, offset);
+        _paintChild(context, offset);
       }
       return;
     }
@@ -519,7 +524,25 @@ class RenderBarSurface extends RenderShiftedBox {
       );
       if (decoration.isComplex) context.setIsComplexHint();
     }
-    super.paint(context, offset);
+    _paintChild(context, offset);
+  }
+
+  void _paintChild(PaintingContext context, Offset offset) {
+    if (_capsule == null || child == null) {
+      _childClipLayer.layer = null;
+      super.paint(context, offset);
+      return;
+    }
+    final rect = _outlineRect;
+    _childClipLayer.layer = context.pushClipPath(
+      needsCompositing,
+      offset,
+      rect,
+      outline.getOuterPath(rect, textDirection: _configuration.textDirection),
+      super.paint,
+      clipBehavior: Clip.antiAlias,
+      oldLayer: _childClipLayer.layer,
+    );
   }
 
   // The blurred backdrop clipped to the outline, then the fill,
@@ -701,6 +724,16 @@ class RenderBarSurface extends RenderShiftedBox {
   @override
   bool hitTest(BoxHitTestResult result, {required Offset position}) {
     if (!size.contains(position)) return false;
+    if (_capsule != null &&
+        child != null &&
+        !outline
+            .getOuterPath(
+              _outlineRect,
+              textDirection: _configuration.textDirection,
+            )
+            .contains(position)) {
+      return false;
+    }
     // The raised action paints above the bar's own box, where its ancestors
     // up to here would reject the pointer, so test it directly.
     final button = _action?._lifted ?? false ? _action!.child : null;

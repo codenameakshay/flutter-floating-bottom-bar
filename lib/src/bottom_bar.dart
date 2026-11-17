@@ -1040,7 +1040,6 @@ class _BottomBarState extends State<BottomBar>
           Widget child, {
           Animation<double>? minimize,
           Animation<double>? capsule,
-          Clip clip = Clip.none,
         }) {
           final childKey = switch (slot) {
             'leading' => _leadingPieceKey,
@@ -1084,8 +1083,7 @@ class _BottomBarState extends State<BottomBar>
             capsule: capsule,
             child: Material(
               color: Colors.transparent,
-              borderRadius: radius,
-              clipBehavior: clip,
+              borderRadius: capsule == null ? radius : null,
               child: child,
             ),
           );
@@ -1156,7 +1154,6 @@ class _BottomBarState extends State<BottomBar>
                       if (accessory != null)
                         piece(
                           'accessory',
-                          clip: Clip.antiAlias,
                           capsule: _minimizeController,
                           ValueListenableBuilder(
                             valueListenable: _accessoryPlacement,
