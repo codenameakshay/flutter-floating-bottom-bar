@@ -163,7 +163,10 @@ class BottomBar extends StatefulWidget {
   /// When the bar minimizes, the accessory moves down beside the pill, on
   /// the same spring, and takes the width between the pill and [trailing].
   /// There it is as tall as the pill. [BottomBarScope.barHeight] keeps the
-  /// full height. Read [BottomBarAccessoryPlacement.of] inside the accessory
+  /// full height. The footprint changes only when the accessory comes or
+  /// goes, or when its height changes while it is expanded: while minimized,
+  /// the bar holds its expanded height until it expands again.
+  /// Read [BottomBarAccessoryPlacement.of] inside the accessory
   /// to choose what to show: it turns [BottomBarAccessoryPlacement.inline]
   /// when the move passes its midpoint, and back to
   /// [BottomBarAccessoryPlacement.expanded] when it passes it again. While it
