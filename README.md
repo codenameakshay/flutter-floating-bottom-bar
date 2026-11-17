@@ -1112,6 +1112,8 @@ class NowPlaying extends StatelessWidget {
   controls and never expands the bar.
 - Docked: in a `BottomBarLayout.docked()` bar, the accessory floats above the
   docked bar, inset `groupSpacing` from each side, plus the side safe area.
+- Shape: expanded, the accessory takes the bar's corner radius. As it moves
+  inline, its corners round into the pill's capsule.
 - Rail: with `BottomBarAdaptive`, the accessory floats at the bottom of the
   body pane, inset `BottomBarLayout.offset`. It is always expanded. Body
   padding reserves its space. Its state survives the switch between the bar
