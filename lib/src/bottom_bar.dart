@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/semantics.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:motor/motor.dart';
 
@@ -19,6 +20,7 @@ import 'internal/scroll_notification_dispatcher.dart';
 import 'internal/size_observer.dart';
 import 'internal/bottom_bar_action.dart';
 import 'internal/visibility_animator.dart';
+import 'widgets/bottom_bar_accessory.dart';
 import 'widgets/bottom_bar_item.dart';
 import 'widgets/bottom_bar_items.dart';
 import 'widgets/bottom_bar_surface.dart';
@@ -76,6 +78,7 @@ class BottomBar extends StatefulWidget {
     this.leading,
     this.trailing,
     this.compactChild,
+    this.accessory,
     this.controller,
     this.layout,
     this.motion,
@@ -146,6 +149,37 @@ class BottomBar extends StatefulWidget {
   /// See [BottomBarScrollBehavior.minimizeBehavior] and
   /// [BottomBarController.minimize].
   final Widget? compactChild;
+
+  /// A piece stacked above the bar, like a mini player or a dock, as with
+  /// SwiftUI's `tabViewBottomAccessory`.
+  ///
+  /// It is as wide as the bar between [leading] and [trailing], takes its
+  /// own height, and sits [BottomBarLayout.groupSpacing] above the bar's top,
+  /// above a raised centre action's top when there is one. It paints with
+  /// the bar's surface, glass, scroll edge blend and corner radius, and hides
+  /// and shows with the bar. [BottomBarScope.barHeight] and
+  /// [BottomBarBodyPadding] count it and the spacing.
+  ///
+  /// When the bar minimizes, the accessory moves down beside the pill, on
+  /// the same spring, and takes the width between the pill and [trailing].
+  /// There it is as tall as the pill, and its corners round into the
+  /// pill's capsule. [BottomBarScope.barHeight] keeps the
+  /// full height. The footprint changes only when the accessory comes or
+  /// goes, or when its height changes while it is expanded: while minimized,
+  /// the bar holds its expanded height until it expands again.
+  /// Read [BottomBarAccessoryPlacement.of] inside the accessory
+  /// to choose what to show: it turns [BottomBarAccessoryPlacement.inline]
+  /// when the move passes its midpoint, and back to
+  /// [BottomBarAccessoryPlacement.expanded] when it passes it again. While it
+  /// moves, the accessory lays out at every size in between and clips to its
+  /// outline.
+  ///
+  /// Tapping the accessory runs its own controls. It never expands the bar.
+  ///
+  /// In a [BottomBarLayout.docked] bar the accessory floats above it, inset
+  /// [BottomBarLayout.groupSpacing] from each side, plus the side safe-area
+  /// insets.
+  final Widget? accessory;
 
   /// Optional imperative controller for the bar.
   ///
@@ -235,6 +269,8 @@ class _BottomBarState extends State<BottomBar>
     canRequestFocus: false,
   );
   final GlobalKey _barRenderKey = GlobalKey();
+  final GlobalKey _leadingPieceKey = GlobalKey();
+  final GlobalKey _trailingPieceKey = GlobalKey();
 
   /// Every piece of the bar reads the backdrop under it once, together.
   final BackdropKey _backdropKey = BackdropKey();
@@ -260,6 +296,16 @@ class _BottomBarState extends State<BottomBar>
     skipTraversal: true,
   );
   final FocusNode _pillFocusNode = FocusNode(debugLabel: 'BottomBar pill');
+
+  /// Turns inline as the minimize spring passes its midpoint.
+  final ValueNotifier<BottomBarAccessoryPlacement> _accessoryPlacement =
+      ValueNotifier(BottomBarAccessoryPlacement.expanded);
+
+  void _syncAccessoryPlacement() {
+    _accessoryPlacement.value = _minimizeController.value >= 0.5
+        ? BottomBarAccessoryPlacement.inline
+        : BottomBarAccessoryPlacement.expanded;
+  }
 
   BottomBarLayout _effectiveLayout(BottomBarThemeData theme) {
     return widget.layout ?? theme.layout ?? const BottomBarLayout();
@@ -301,10 +347,13 @@ class _BottomBarState extends State<BottomBar>
       motion: _motion.resolveMotion(),
       vsync: this,
     );
-    _minimizeController = BoundedSingleMotionController(
-      motion: _motion.resolveMotion(),
-      vsync: this,
-    )..addStatusListener(_handleMinimizeStatus);
+    _minimizeController =
+        BoundedSingleMotionController(
+            motion: _motion.resolveMotion(),
+            vsync: this,
+          )
+          ..addStatusListener(_handleMinimizeStatus)
+          ..addListener(_syncAccessoryPlacement);
 
     _dispatcher = ScrollNotificationDispatcher(
       deltaThreshold: _scrollBehavior.deltaThreshold,
@@ -668,6 +717,7 @@ class _BottomBarState extends State<BottomBar>
     _motionController.dispose();
     _edgeController.dispose();
     _minimizeController.dispose();
+    _accessoryPlacement.dispose();
     _barHeight.dispose();
     _isVisibleNotifier.dispose();
     _visibilityNotifier.dispose();
@@ -989,26 +1039,62 @@ class _BottomBarState extends State<BottomBar>
           String slot,
           Widget child, {
           Animation<double>? minimize,
-        }) => BarSurface(
-          key: ValueKey(slot),
-          decoration: surface == null
-              ? _effectiveBarDecoration(theme, l)
-              : BoxDecoration(borderRadius: radius),
-          surface: surface,
-          edgeSurface: edgeSurface,
-          edge: _edgeController,
-          visibility: _motionController,
-          fades: fadesItself,
-          backdropKey: _backdropKey,
-          minimize: minimize,
-          child: Material(
-            color: Colors.transparent,
-            borderRadius: radius,
-            child: child,
-          ),
-        );
+          Animation<double>? capsule,
+        }) {
+          final childKey = switch (slot) {
+            'leading' => _leadingPieceKey,
+            'trailing' => _trailingPieceKey,
+            _ => null,
+          };
+          if (childKey != null) {
+            child = KeyedSubtree(key: childKey, child: child);
+          }
+          if (widget.accessory != null) {
+            final rank = switch (slot) {
+              'leading' => _pill ? 0.0 : 1.0,
+              'pill' => _pill ? 1.0 : 2.0,
+              'accessory' => _pill ? 2.0 : 0.0,
+              _ => 3.0,
+            };
+            child = FocusTraversalOrder(
+              order: NumericFocusOrder(rank),
+              child: Semantics(
+                container: true,
+                sortKey: OrdinalSortKey(rank),
+                child: FocusTraversalGroup(
+                  policy: ReadingOrderTraversalPolicy(),
+                  child: child,
+                ),
+              ),
+            );
+          }
+          return BarSurface(
+            key: ValueKey(slot),
+            decoration: surface == null
+                ? _effectiveBarDecoration(theme, l)
+                : BoxDecoration(borderRadius: radius),
+            surface: surface,
+            edgeSurface: edgeSurface,
+            edge: _edgeController,
+            visibility: _motionController,
+            fades: fadesItself,
+            backdropKey: _backdropKey,
+            minimize: minimize,
+            capsule: capsule,
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: capsule == null ? radius : null,
+              child: child,
+            ),
+          );
+        }
+
         final leading = l.docked ? null : widget.leading;
         final trailing = l.docked ? null : widget.trailing;
+        final accessory = widget.accessory;
+        final sides = l.docked && l.respectSafeArea
+            ? MediaQuery.maybePaddingOf(context) ?? EdgeInsets.zero
+            : EdgeInsets.zero;
         final content = MinimizeHost(
           key: _minimizeHostKey,
           progress: _minimizeController,
@@ -1019,8 +1105,12 @@ class _BottomBarState extends State<BottomBar>
               ? _buildCompact()
               : null,
         );
-        // Semantics sort the pieces by the nearest text direction above
-        // them, which the bar would otherwise not set.
+        Widget orderGroup(Widget group) => accessory == null
+            ? group
+            : FocusTraversalGroup(
+                policy: OrderedTraversalPolicy(),
+                child: group,
+              );
         final bar = Semantics(
           textDirection: Directionality.of(context),
           child: Focus(
@@ -1030,29 +1120,56 @@ class _BottomBarState extends State<BottomBar>
               scrollToStart: _scrollToStartOnReselect,
               child: SizedBox(
                 width: _effectiveBarWidth(constraints, l),
-                child: BarGroup(
-                  key: _barRenderKey,
-                  pillIndex: leading == null ? 0 : 1,
-                  spacing: l.groupSpacing,
-                  children: [
-                    if (leading != null)
-                      piece('leading', _GroupPiece(child: leading)),
-                    piece(
-                      'pill',
-                      minimize: _minimizeController,
-                      MediaQuery.maybeOf(context) != null
-                          ? SafeArea(
-                              top: false,
-                              bottom: l.docked && l.respectSafeArea,
-                              left: l.docked && l.respectSafeArea,
-                              right: l.docked && l.respectSafeArea,
-                              child: content,
-                            )
-                          : content,
-                    ),
-                    if (trailing != null)
-                      piece('trailing', _GroupPiece(child: trailing)),
-                  ],
+                child: orderGroup(
+                  BarGroup(
+                    key: _barRenderKey,
+                    pillIndex: leading == null ? 0 : 1,
+                    spacing: l.groupSpacing,
+                    hasAccessory: accessory != null,
+                    accessoryInset: l.docked
+                        ? EdgeInsets.only(
+                            left: l.groupSpacing + sides.left,
+                            right: l.groupSpacing + sides.right,
+                          )
+                        : EdgeInsets.zero,
+                    minimize: accessory == null ? null : _minimizeController,
+                    children: [
+                      if (leading != null)
+                        piece('leading', _GroupPiece(child: leading)),
+                      piece(
+                        'pill',
+                        minimize: _minimizeController,
+                        MediaQuery.maybeOf(context) != null
+                            ? SafeArea(
+                                top: false,
+                                bottom: l.docked && l.respectSafeArea,
+                                left: l.docked && l.respectSafeArea,
+                                right: l.docked && l.respectSafeArea,
+                                child: content,
+                              )
+                            : content,
+                      ),
+                      if (trailing != null)
+                        piece('trailing', _GroupPiece(child: trailing)),
+                      if (accessory != null)
+                        piece(
+                          'accessory',
+                          capsule: _minimizeController,
+                          ValueListenableBuilder(
+                            valueListenable: _accessoryPlacement,
+                            builder: (context, placement, child) =>
+                                AccessoryPlacementScope(
+                                  placement: placement,
+                                  child: child!,
+                                ),
+                            child: Semantics(
+                              container: true,
+                              child: _GroupPiece(child: accessory),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),

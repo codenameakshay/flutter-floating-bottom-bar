@@ -6,7 +6,9 @@ import 'package:flutter/widgets.dart';
 import 'bar_surface.dart';
 
 /// Lays the bar's pieces out in one row: an optional leading piece, the pill,
-/// and an optional trailing piece, in reading order.
+/// and an optional trailing piece, in reading order. With [hasAccessory] the
+/// last child is the accessory, laid out above the row or beside the
+/// minimized pill.
 ///
 /// The row is as wide as its incoming max width. Each side piece is exactly
 /// as tall as the pill's bar and at least as wide as it is tall, and the pill
@@ -15,6 +17,13 @@ import 'bar_surface.dart';
 /// overflows at its end. Every piece sits on the pill's bottom edge, so a
 /// raised centre action rises above all of them.
 ///
+/// The accessory is as wide as the pill, less [accessoryInset], takes its
+/// own height, and sits [spacing] above the row's top, a raised centre
+/// action's top included. As [minimize] runs to 1 it moves onto the
+/// minimized pill's row, between the pill and the trailing piece, as tall as
+/// the pill, in the width left free. The row keeps its place and the group
+/// keeps its height throughout, so the bar's footprint never changes.
+///
 /// The gaps paint nothing and hit-test nothing, so taps in them reach the
 /// content under the bar.
 class BarGroup extends MultiChildRenderObjectWidget {
@@ -22,19 +31,36 @@ class BarGroup extends MultiChildRenderObjectWidget {
     super.key,
     required this.pillIndex,
     required this.spacing,
+    this.hasAccessory = false,
+    this.accessoryInset = EdgeInsets.zero,
+    this.minimize,
     required super.children,
   });
 
-  /// Index of the pill in [children]. Every other child is a side piece.
+  /// Index of the pill in [children]. Every other child is a side piece,
+  /// except the last one with [hasAccessory].
   final int pillIndex;
 
   final double spacing;
+
+  /// Whether the last child is the accessory.
+  final bool hasAccessory;
+
+  /// How far the accessory keeps from the pill's sides, and from the
+  /// group's sides while inline.
+  final EdgeInsets accessoryInset;
+
+  /// How far the pill has minimized, from 0 (full) to 1 (pill).
+  final Animation<double>? minimize;
 
   @override
   RenderBarGroup createRenderObject(BuildContext context) => RenderBarGroup(
     pillIndex: pillIndex,
     spacing: spacing,
     textDirection: Directionality.of(context),
+    hasAccessory: hasAccessory,
+    accessoryInset: accessoryInset,
+    minimize: minimize,
   );
 
   @override
@@ -42,7 +68,10 @@ class BarGroup extends MultiChildRenderObjectWidget {
     renderObject
       ..pillIndex = pillIndex
       ..spacing = spacing
-      ..textDirection = Directionality.of(context);
+      ..textDirection = Directionality.of(context)
+      ..hasAccessory = hasAccessory
+      ..accessoryInset = accessoryInset
+      ..minimize = minimize;
   }
 }
 
@@ -54,6 +83,9 @@ class RenderBarGroup extends RenderBox
     required this._pillIndex,
     required this._spacing,
     required this._textDirection,
+    this._hasAccessory = false,
+    this._accessoryInset = EdgeInsets.zero,
+    this._minimize,
   });
 
   int _pillIndex;
@@ -77,18 +109,74 @@ class RenderBarGroup extends RenderBox
     markNeedsLayout();
   }
 
+  bool _hasAccessory;
+  set hasAccessory(bool value) {
+    if (value == _hasAccessory) return;
+    _hasAccessory = value;
+    _accessoryHeight = null;
+    markNeedsLayout();
+  }
+
+  EdgeInsets _accessoryInset;
+  set accessoryInset(EdgeInsets value) {
+    if (value == _accessoryInset) return;
+    _accessoryInset = value;
+    markNeedsLayout();
+  }
+
+  Animation<double>? _minimize;
+  set minimize(Animation<double>? value) {
+    if (identical(value, _minimize)) return;
+    if (attached) _minimize?.removeListener(_minimizeChanged);
+    _minimize = value;
+    if (attached) value?.addListener(_minimizeChanged);
+    _minimizeChanged();
+  }
+
+  void _minimizeChanged() {
+    if (_hasAccessory) markNeedsLayout();
+  }
+
+  double get _t => (_minimize?.value ?? 0).clamp(0.0, 1.0);
+
+  /// The accessory's height above the bar, kept while it is inline so the
+  /// group's height holds still.
+  double? _accessoryHeight;
+
   /// The side pieces' total width at the last layout. The pill is laid out
   /// against it first, so a stable row lays the pill out once.
   double _piecesWidth = 0;
 
-  /// The top of the highest side piece, or null without one.
-  double? get piecesTop {
+  RenderBox? get _accessory =>
+      _hasAccessory && childCount > 1 ? lastChild : null;
+
+  List<RenderBox> get _row {
     final children = getChildrenAsList();
-    if (children.length < 2) return null;
+    if (_accessory != null) children.removeLast();
+    return children;
+  }
+
+  /// The top of the highest side piece, or null without one. The accessory
+  /// does not count.
+  double? get piecesTop {
+    final row = _row;
+    if (row.length < 2) return null;
     return [
-      for (final (i, child) in children.indexed)
+      for (final (i, child) in row.indexed)
         if (i != _pillIndex) (child.parentData! as _GroupParentData).offset.dy,
     ].reduce(math.min);
+  }
+
+  @override
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    _minimize?.addListener(_minimizeChanged);
+  }
+
+  @override
+  void detach() {
+    _minimize?.removeListener(_minimizeChanged);
+    super.detach();
   }
 
   @override
@@ -100,19 +188,95 @@ class RenderBarGroup extends RenderBox
 
   @override
   void performLayout() {
-    final children = getChildrenAsList();
-    if (children.isEmpty) {
+    final row = _row;
+    if (row.isEmpty) {
       size = constraints.smallest;
       return;
     }
-    final pill = children[_pillIndex];
-    if (children.length == 1) {
-      pill.layout(constraints, parentUsesSize: true);
-      size = pill.size;
-      (pill.parentData! as _GroupParentData).offset = Offset.zero;
+    final pill = row[_pillIndex];
+    final rowSize = _layoutRow(row, pill);
+    final accessory = _accessory;
+    if (accessory == null) {
+      size = constraints.constrain(rowSize);
+      _placeRow(row, 0, rowSize.height);
       return;
     }
-    final pieces = [...children]..removeAt(_pillIndex);
+
+    final rowWidth = rowSize.width;
+    final inset = _accessoryInset;
+    final expandedWidth = math.max(0.0, pill.size.width - inset.horizontal);
+    BoxConstraints expanded() => BoxConstraints(
+      minWidth: expandedWidth,
+      maxWidth: expandedWidth,
+      maxHeight: math.max(
+        0.0,
+        constraints.maxHeight - rowSize.height - _spacing,
+      ),
+    );
+    final t = _t;
+    if (t == 0 || _accessoryHeight == null) {
+      accessory.layout(expanded(), parentUsesSize: true);
+      _accessoryHeight = accessory.size.height;
+    }
+    final band = _accessoryHeight! + _spacing;
+    size = constraints.constrain(Size(rowWidth, band + rowSize.height));
+    _placeRow(row, band, rowSize.height);
+
+    final pillOffset = (pill.parentData! as _GroupParentData).offset;
+    final expandedRect = Rect.fromLTWH(
+      pillOffset.dx + inset.left,
+      0,
+      expandedWidth,
+      _accessoryHeight!,
+    );
+    final inline = t == 0 ? null : _inlineRect(row, pill);
+    final rect = inline == null
+        ? expandedRect
+        : Rect.lerp(expandedRect, inline, t)!;
+    if (inline != null) {
+      accessory.layout(BoxConstraints.tight(rect.size), parentUsesSize: true);
+    }
+    (accessory.parentData! as _GroupParentData).offset = rect.topLeft;
+  }
+
+  /// Where the accessory sits beside the minimized pill, or null without a
+  /// pill to sit beside.
+  Rect? _inlineRect(List<RenderBox> row, RenderBox pill) {
+    final host = pill is RenderBarSurface ? pill.minimizeHost : null;
+    final compact = host?.compactRectIn(this);
+    if (compact == null) return null;
+    final trailing = _pillIndex + 1 < row.length ? row[_pillIndex + 1] : null;
+    final trailingRect = trailing == null
+        ? null
+        : (trailing.parentData! as _GroupParentData).offset & trailing.size;
+    final double start;
+    final double end;
+    if (_textDirection == TextDirection.ltr) {
+      start = compact.right + _spacing;
+      end = trailingRect == null
+          ? size.width - _accessoryInset.right
+          : trailingRect.left - _spacing;
+    } else {
+      start = trailingRect == null
+          ? _accessoryInset.left
+          : trailingRect.right + _spacing;
+      end = compact.left - _spacing;
+    }
+    return Rect.fromLTWH(
+      start,
+      compact.top,
+      math.max(0.0, end - start),
+      compact.height,
+    );
+  }
+
+  /// Lays out the pill and the side pieces and returns the row's size.
+  Size _layoutRow(List<RenderBox> row, RenderBox pill) {
+    if (row.length == 1) {
+      pill.layout(constraints, parentUsesSize: true);
+      return pill.size;
+    }
+    final pieces = [...row]..removeAt(_pillIndex);
     final width = constraints.hasBoundedWidth
         ? constraints.maxWidth
         : getMaxIntrinsicWidth(constraints.maxHeight);
@@ -163,15 +327,21 @@ class RenderBarGroup extends RenderBox
       }
     }
 
-    final height = math.max(pill.size.height, barHeight);
-    final rowWidth = piecesWidth + gaps + pill.size.width;
-    size = constraints.constrain(Size(rowWidth, height));
+    return Size(
+      piecesWidth + gaps + pill.size.width,
+      math.max(pill.size.height, barHeight),
+    );
+  }
+
+  /// Puts the row's children on its bottom edge, [top] below the group's
+  /// top, in reading order.
+  void _placeRow(List<RenderBox> row, double top, double height) {
     var x = 0.0;
-    for (final child in children) {
+    for (final child in row) {
       final w = child.size.width;
       (child.parentData! as _GroupParentData).offset = Offset(
         _textDirection == TextDirection.ltr ? x : size.width - x - w,
-        height - child.size.height,
+        top + height - child.size.height,
       );
       x += w + _spacing;
     }
@@ -179,10 +349,38 @@ class RenderBarGroup extends RenderBox
 
   @override
   Size computeDryLayout(BoxConstraints constraints) {
-    final children = getChildrenAsList();
-    if (children.isEmpty) return constraints.smallest;
+    final row = _row;
+    if (row.isEmpty) return constraints.smallest;
+    final (rowSize, pillWidth) = _dryRow(row, constraints);
+    final accessory = _accessory;
+    if (accessory == null) return rowSize;
+    final width = math.max(0.0, pillWidth - _accessoryInset.horizontal);
+    final height = _t > 0 && _accessoryHeight != null
+        ? _accessoryHeight!
+        : accessory
+              .getDryLayout(
+                BoxConstraints(
+                  minWidth: width,
+                  maxWidth: width,
+                  maxHeight: math.max(
+                    0.0,
+                    constraints.maxHeight - rowSize.height - _spacing,
+                  ),
+                ),
+              )
+              .height;
+    return constraints.constrain(
+      Size(rowSize.width, rowSize.height + height + _spacing),
+    );
+  }
+
+  /// The row's dry size and the pill's width in it.
+  (Size, double) _dryRow(List<RenderBox> children, BoxConstraints constraints) {
     final pill = children[_pillIndex];
-    if (children.length == 1) return pill.getDryLayout(constraints);
+    if (children.length == 1) {
+      final size = pill.getDryLayout(constraints);
+      return (size, size.width);
+    }
     final pieces = [...children]..removeAt(_pillIndex);
     final width = constraints.hasBoundedWidth
         ? constraints.maxWidth
@@ -212,16 +410,17 @@ class RenderBarGroup extends RenderBox
           .width;
     }
     pillSize = pill.getDryLayout(pillConstraints(piecesWidth));
-    return constraints.constrain(
+    final size = constraints.constrain(
       Size(
         piecesWidth + gaps + pillSize.width,
         math.max(pillSize.height, barHeight),
       ),
     );
+    return (size, pillSize.width);
   }
 
   double _intrinsicWidth(double height, {required bool minimum}) {
-    final children = getChildrenAsList();
+    final children = _row;
     if (children.isEmpty) return 0;
     final pill = children[_pillIndex];
     double widthOf(RenderBox child, double height) => minimum

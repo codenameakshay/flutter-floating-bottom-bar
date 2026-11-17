@@ -41,6 +41,7 @@ const BottomBar({
 |---|---|---|---|
 | `child` | `Widget` | required | The floating widget itself (your tab bar / search bar / row). |
 | `body` | `Widget` | required | The scrollable beneath. Any descendant scrollable drives hide/show. **No `ScrollController` needed.** |
+| `accessory` | `Widget?` | `null` | A mini player or dock stacked above the bar, like iOS 26 `tabViewBottomAccessory`. Read `BottomBarAccessoryPlacement.of(context)` inside it to pick its shape. Its spacing is `layout.groupSpacing`. It hides with the bar, and tapping it never expands the bar. Docked and rail modes float it, see [Accessory](../../../../README.md#accessory). |
 | `controller` | `BottomBarController?` | `null` | Imperative `show()` / `hide()` / `scrollToStart()`. |
 | `layout` | `BottomBarLayout?` | `BottomBarLayout()` | See below. |
 | `motion` | `BottomBarMotion?` | `BottomBarMotion()` (Cupertino snappy + slide) | See below. |
@@ -267,6 +268,18 @@ const BottomBarBodyPadding({
 ```
 
 Use inside `BottomBar.body` to reserve the bar's live footprint (measured height + `layout.offset` + bottom safe-area when enabled) as bottom padding, so content stays clear of the floating bar. The reserved space stays in place even while the bar is hidden, since it tracks `BottomBarScope.barHeight`'s layout footprint rather than the bar's animated transform. It only reserves bottom-edge clearance and does not account for `BottomBarLayout.alignment`.
+
+## `BottomBarAccessoryPlacement`
+
+```dart
+enum BottomBarAccessoryPlacement { expanded, inline }
+```
+
+Read it inside `BottomBar.accessory` with `BottomBarAccessoryPlacement.of(context)` (or `maybeOf`, which returns `null` outside an accessory).
+
+- `expanded`: above the bar, as wide as the bar between the leading and trailing pieces.
+- `inline`: beside the minimized pill, in the width up to the trailing piece.
+- The value flips at the midpoint of the minimize morph, in both directions.
 
 ## `BottomBarItem` / `BottomBarItems`
 

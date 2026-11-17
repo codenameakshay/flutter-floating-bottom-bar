@@ -19,6 +19,7 @@ export 'src/widgets/bottom_bar_center_action.dart'
     show BottomBarCenterAction, BottomBarCenterActionStyle;
 export 'src/widgets/bottom_bar_center_action_theme.dart'
     show BottomBarCenterActionThemeData;
+export 'src/widgets/bottom_bar_accessory.dart' show BottomBarAccessoryPlacement;
 export 'src/widgets/bottom_bar_adaptive.dart';
 export 'src/widgets/bottom_bar_badge.dart'
     show BottomBarBadge, BottomBarBadgeThemeData;

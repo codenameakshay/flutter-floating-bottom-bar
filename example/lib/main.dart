@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'demos/accessory_demo.dart';
 import 'demos/adaptive_rail_demo.dart';
 import 'demos/ai_prompt_dock_demo.dart';
 import 'demos/badges_demo.dart';
@@ -109,6 +110,11 @@ final demos = <({String slug, String title, WidgetBuilder builder})>[
     slug: 'adaptive-rail',
     title: 'Adaptive rail',
     builder: (_) => const AdaptiveRailDemoPage(),
+  ),
+  (
+    slug: 'accessory',
+    title: 'Accessory',
+    builder: (_) => const AccessoryDemoPage(),
   ),
 ];
 
