@@ -1,5 +1,11 @@
 ## Unreleased
 
+- Add `BottomBar.accessory`, a mini player or dock above the bar, like the
+  iOS 26 tab view bottom accessory. It moves inline beside the minimized
+  pill on the morph's spring. `BottomBarAccessoryPlacement.of` tells it
+  which placement it is in. Body padding counts it. `BottomBarAdaptive`
+  forwards it and floats it over the body beside the rail. Add an accessory
+  demo in `example/lib/demos/accessory_demo.dart`.
 - Add minimize on scroll, like the iOS 26 tab bar.
   `BottomBarScrollBehavior.minimizeBehavior` (`never`, `onScrollDown`,
   `onScrollUp`) makes scrolling shrink the bar into a compact pill at its

@@ -1063,6 +1063,62 @@ Use it for things that float above the bar, like a button.
 
 Try the [minimize demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/minimize) live.
 
+### Accessory
+
+On iOS 26 a tab view can show a mini player or a dock above the tab bar
+(`tabViewBottomAccessory`). `BottomBar.accessory` does the same. It is a
+widget that sits above the bar.
+
+```dart
+BottomBar(
+  accessory: const NowPlaying(),
+  body: const BottomBarBodyPadding(child: Library()),
+  child: BottomBarItems(
+    selectedIndex: index,
+    onSelected: (i) => setState(() => index = i),
+    children: items,
+  ),
+)
+
+class NowPlaying extends StatelessWidget {
+  const NowPlaying({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (BottomBarAccessoryPlacement.of(context)) {
+      BottomBarAccessoryPlacement.expanded => const ExpandedPlayer(),
+      BottomBarAccessoryPlacement.inline => const PlayButton(),
+    };
+  }
+}
+```
+
+- The placement tells the accessory which shape to draw. `expanded` sits
+  above the bar, as wide as the bar between the leading and trailing
+  pieces. `inline` sits beside the minimized pill, in the width up to the
+  trailing piece. Read it with `BottomBarAccessoryPlacement.of(context)`,
+  like SwiftUI's `tabViewBottomAccessoryPlacement`.
+- The placement flips at the midpoint of the minimize morph, in both
+  directions. The accessory moves on the bar's spring, so it changes shape
+  as it moves.
+- Spacing: above the bar, the accessory sits `BottomBarLayout.groupSpacing`
+  above the bar's top. With a raised centre action, the gap counts from the
+  action's top.
+- Padding: `BottomBarScope.barHeight` and `BottomBarBodyPadding` include the
+  accessory and its spacing. They keep the full height while the bar is
+  minimized, so content never jumps. `BottomBarScope.visibleHeight` is what
+  the bar covers now.
+- It hides and shows with the bar. Tapping the inline accessory runs its own
+  controls and never expands the bar.
+- Docked: in a `BottomBarLayout.docked()` bar, the accessory floats above the
+  docked bar, inset `groupSpacing` from each side, plus the side safe area.
+- Rail: with `BottomBarAdaptive`, the accessory floats at the bottom of the
+  body pane, inset `BottomBarLayout.offset`. It is always expanded. Body
+  padding reserves its space. Its state survives the switch between the bar
+  and the rail.
+
+Try the [accessory demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/accessory) live.
+
 ### Adaptive rail
 
 `BottomBarAdaptive` shows a bottom bar on narrow screens and a navigation rail
@@ -1174,6 +1230,7 @@ No backward-compatibility shim ships with v2.
 | --- | --- | --- | --- |
 | `child` | `Widget` | required | Floating content shown above the body. |
 | `body` | `Widget` | required | Descendant scrollables here drive hide/show via notifications. |
+| `accessory` | `Widget?` | `null` | A mini player or dock above the bar. See [Accessory](#accessory). |
 | `controller` | `BottomBarController?` | `null` | Imperative show/hide/scroll API. |
 | `layout` | `BottomBarLayout?` | `null` | Falls back to theme layout, then `const BottomBarLayout()`. |
 | `motion` | `BottomBarMotion?` | `null` | Falls back to theme motion, then `const BottomBarMotion()`. |
