@@ -147,6 +147,7 @@ class _SwitcherDemoPageState extends State<SwitcherDemoPage> {
 
   @override
   Widget build(BuildContext context) {
+    const photoCount = 60;
     return Scaffold(
       appBar: AppBar(title: const Text('Morph between bars')),
       body: BottomBar(
@@ -157,25 +158,33 @@ class _SwitcherDemoPageState extends State<SwitcherDemoPage> {
             edgeHighlight: const Color(0x59FFFFFF),
           ),
         ),
-        body: Builder(
-          builder: (context) => ValueListenableBuilder<double>(
-            valueListenable: BottomBarScope.of(context).barHeight,
-            builder: (context, barHeight, _) => GridView.builder(
-              padding: EdgeInsets.only(bottom: barHeight),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                mainAxisSpacing: 2,
-                crossAxisSpacing: 2,
-              ),
-              itemCount: 60,
-              itemBuilder: (context, index) => _Tile(
-                index: index,
-                selected: _selected.contains(index),
-                onTap: _selected.isEmpty ? null : () => _toggle(index),
-                onLongPress: () => _toggle(index),
+        body: CustomScrollView(
+          semanticChildCount: photoCount,
+          slivers: [
+            Builder(
+              builder: (context) => ValueListenableBuilder<double>(
+                valueListenable: BottomBarScope.of(context).barHeight,
+                builder: (context, barHeight, grid) => SliverPadding(
+                  padding: EdgeInsets.only(bottom: barHeight),
+                  sliver: grid,
+                ),
+                child: SliverGrid.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 2,
+                    crossAxisSpacing: 2,
+                  ),
+                  itemCount: photoCount,
+                  itemBuilder: (context, index) => _Tile(
+                    index: index,
+                    selected: _selected.contains(index),
+                    onTap: _selected.isEmpty ? null : () => _toggle(index),
+                    onLongPress: () => _toggle(index),
+                  ),
+                ),
               ),
             ),
-          ),
+          ],
         ),
         child: BottomBarSwitcher(
           child: switch (_dock) {
