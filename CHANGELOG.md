@@ -1,5 +1,13 @@
 ## Unreleased
 
+- Add `showBottomBarPanel`, which grows the bar into a panel above a scrim
+  and shrinks it back into the bar when it closes. The morph follows the
+  bar's motion. It starts from the bar, the pill or the bottom edge, and can
+  turn around mid-flight. The panel paints the bar's glass and shadows, and
+  the bar's content fades out as the panel's content fades in. It closes on
+  pop, back with predictive back, Escape, a scrim tap or a drag down. Focus
+  is trapped and returned. Add a panel demo in
+  `example/lib/demos/panel_demo.dart`.
 - Add `BottomBarSwitcher`, which swaps the bar's content with a morph of the
   bar itself. The height springs from the old child's size to the new one's
   and retargets mid-flight, and the outline, glass and shadows follow. The old
