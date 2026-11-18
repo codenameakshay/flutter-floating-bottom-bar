@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+import 'package:flutter_floating_bottom_bar/src/internal/bar_group.dart';
 import 'package:flutter_floating_bottom_bar/src/internal/bar_surface.dart';
 import 'package:flutter_floating_bottom_bar/src/widgets/bottom_bar_panel.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,6 +15,38 @@ RenderBarPanel panel(WidgetTester tester) =>
 RenderBarSurface source(WidgetTester tester) => tester
     .renderObjectList<RenderBarSurface>(find.byType(BarSurface))
     .firstWhere((surface) => surface.minimizeHost != null);
+
+RenderBarSurface surfaceFor(WidgetTester tester, Finder descendant) {
+  for (
+    RenderObject? object = tester.renderObject(descendant);
+    object != null;
+    object = object.parent
+  ) {
+    if (object is RenderBarSurface) return object;
+  }
+  throw StateError('No RenderBarSurface above $descendant');
+}
+
+RenderBarGroup groupFor(RenderBarSurface surface) {
+  for (RenderObject? object = surface; object != null; object = object.parent) {
+    if (object is RenderBarGroup) return object;
+  }
+  throw StateError('No RenderBarGroup above $surface');
+}
+
+Rect rectOf(RenderBox box) =>
+    MatrixUtils.transformRect(box.getTransformTo(null), Offset.zero & box.size);
+
+BarPanelRoute<dynamic> routeFor(Element element) =>
+    ModalRoute.of(element)! as BarPanelRoute<dynamic>;
+
+RenderBarPanel panelForRoute(BarPanelRoute route) {
+  final element = find
+      .byType(PanelBox)
+      .evaluate()
+      .firstWhere((candidate) => identical(ModalRoute.of(candidate), route));
+  return element.findRenderObject()! as RenderBarPanel;
+}
 
 Rect outlineOf(WidgetTester tester, RenderBarSurface surface) =>
     MatrixUtils.transformRect(
@@ -108,6 +141,7 @@ class _Harness extends StatefulWidget {
     this.direction = TextDirection.ltr,
     this.glass = true,
     this.controller,
+    this.motion,
     this.body = const Center(child: Text('Behind')),
   });
 
@@ -115,6 +149,7 @@ class _Harness extends StatefulWidget {
   final TextDirection direction;
   final bool glass;
   final BottomBarController? controller;
+  final BottomBarMotion? motion;
   final Widget body;
 
   @override
@@ -136,10 +171,12 @@ class _HarnessState extends State<_Harness> {
               ? const BottomBarSurface.glass()
               : const BottomBarSurface.solid(),
         ),
-        motion: const BottomBarMotion.curved(
-          duration: Duration(milliseconds: 400),
-          curve: Curves.linear,
-        ),
+        motion:
+            harness.motion ??
+            const BottomBarMotion.curved(
+              duration: Duration(milliseconds: 400),
+              curve: Curves.linear,
+            ),
         body: harness.body,
         child: BottomBarItems(
           selectedIndex: 0,
@@ -179,6 +216,21 @@ void main() {
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
     expect(await result, 'done');
+  });
+
+  testWidgets('a BottomBar element context can open its panel', (tester) async {
+    useView(tester);
+    await tester.pumpWidget(const _Harness());
+    final result = openPanel(
+      tester,
+      context: tester.element(find.byType(BottomBar)),
+    );
+    await tester.pumpAndSettle();
+    expect(panel(tester).currentRect, panel(tester).panelRect);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
+    expect(await result, isNull);
   });
 
   testWidgets('morph from the minimized pill', (tester) async {
@@ -252,6 +304,92 @@ void main() {
     expect(await result, isNull);
   });
 
+  testWidgets('popping during a spring preserves its current velocity', (
+    tester,
+  ) async {
+    useView(tester);
+    await tester.pumpWidget(_Harness(motion: const BottomBarMotion()));
+    final result = openPanel(tester);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 64));
+    final route =
+        ModalRoute.of(tester.element(find.byType(PanelBox)))! as BarPanelRoute;
+    final animation = route.animation!;
+    final progressAtVelocityStart = animation.value;
+    await tester.pump(const Duration(milliseconds: 1));
+    final valueBeforePop = animation.value;
+    final velocityBeforePop =
+        (valueBeforePop - progressAtVelocityStart) / 0.001;
+    expect(velocityBeforePop, greaterThan(0));
+    Navigator.of(tester.element(find.byType(PanelBox))).pop();
+    await tester.pump();
+    expect(animation.value, closeTo(valueBeforePop, 0.001));
+    await tester.pump(const Duration(milliseconds: 1));
+    final velocityAfterPop = (animation.value - valueBeforePop) / 0.001;
+    expect(
+      velocityAfterPop,
+      closeTo(velocityBeforePop, 0.15),
+      reason: 'popping replaced the active opening spring velocity',
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
+    expect(await result, isNull);
+  });
+
+  testWidgets('replacement panel inherits the closing panel morph', (
+    tester,
+  ) async {
+    useView(tester);
+    await tester.pumpWidget(_Harness(motion: const BottomBarMotion()));
+    final oldResult = openPanel(tester);
+    await tester.pumpAndSettle();
+    final oldContext = tester.element(find.byType(PanelBox));
+    final oldRoute = routeFor(oldContext);
+    final oldPanel = panelForRoute(oldRoute);
+    var oldCompleted = false;
+    oldResult.then((_) => oldCompleted = true);
+
+    Navigator.of(oldContext).pop();
+    await tester.pump(const Duration(milliseconds: 64));
+    final closingAnimation = oldRoute.animation!;
+    final progressAtVelocityStart = closingAnimation.value;
+    await tester.pump(const Duration(milliseconds: 8));
+    final progressBeforeHandoff = closingAnimation.value;
+    final velocityBeforeHandoff =
+        (progressBeforeHandoff - progressAtVelocityStart) / 0.008;
+    final rectBeforeHandoff = oldPanel.currentRect;
+    expect(progressBeforeHandoff, inInclusiveRange(0, 1));
+    expect(progressBeforeHandoff, lessThan(1));
+    expect(velocityBeforeHandoff, lessThan(0));
+
+    final replacementResult = openPanel(tester);
+    await tester.pump();
+    final replacementContext = tester.element(find.byType(PanelBox).last);
+    final replacementRoute = routeFor(replacementContext);
+    final replacementPanel = panelForRoute(replacementRoute);
+    final replacementAnimation = replacementRoute.animation!;
+    expect(find.byType(PanelBox), findsOneWidget);
+    expect(replacementAnimation.value, closeTo(progressBeforeHandoff, 0.01));
+    expectRect(replacementPanel.currentRect, rectBeforeHandoff);
+    expect(tester.layers.whereType<BackdropFilterLayer>().length, 1);
+    final replacementProgressAtVelocityStart = replacementAnimation.value;
+    await tester.pump(const Duration(milliseconds: 8));
+    final replacementVelocity =
+        (replacementAnimation.value - replacementProgressAtVelocityStart) /
+        0.008;
+    expect(replacementVelocity, closeTo(velocityBeforeHandoff, 0.5));
+
+    await tester.pumpAndSettle();
+    expect(oldCompleted, isTrue);
+    expect(await oldResult, isNull);
+    expect(replacementAnimation.value, 1);
+    expect(tester.layers.whereType<BackdropFilterLayer>().length, 1);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
+    expect(await replacementResult, isNull);
+  });
+
   testWidgets('tapping Done pops with the value', (tester) async {
     useView(tester);
     await tester.pumpWidget(const _Harness());
@@ -317,6 +455,79 @@ void main() {
     expect(await result, isNull);
   });
 
+  testWidgets('predictive cancel interrupts a spring open without a jump', (
+    tester,
+  ) async {
+    useView(tester);
+    await tester.pumpWidget(_Harness(motion: const BottomBarMotion()));
+    final result = openPanel(tester);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 64));
+    final context = tester.element(find.byType(PanelBox));
+    final route = routeFor(context);
+    final animation = route.animation!;
+    final navigator = Navigator.of(context);
+    final panelBeforeGesture = panel(tester);
+    final progressBeforeGesture = animation.value;
+    final rectBeforeGesture = panelBeforeGesture.currentRect;
+    expect(progressBeforeGesture, greaterThan(0));
+    expect(progressBeforeGesture, lessThan(1));
+
+    await backGesture(tester, 'startBackGesture');
+    await tester.pump();
+    expect(navigator.userGestureInProgress, isTrue);
+    expect(animation.value, closeTo(progressBeforeGesture, 0.001));
+    expectRect(panel(tester).currentRect, rectBeforeGesture);
+    await backGesture(tester, 'updateBackGestureProgress', 0.2);
+    await tester.pump();
+    expect(animation.value, closeTo(progressBeforeGesture * 0.8, 0.01));
+    await backGesture(tester, 'cancelBackGesture');
+    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(animation.value, 1);
+    expectRect(panel(tester).currentRect, panel(tester).panelRect);
+    expect(navigator.userGestureInProgress, isFalse);
+    navigator.pop();
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
+    expect(await result, isNull);
+  });
+
+  testWidgets('predictive commit interrupts a spring open without a jump', (
+    tester,
+  ) async {
+    useView(tester);
+    await tester.pumpWidget(_Harness(motion: const BottomBarMotion()));
+    final result = openPanel(tester);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 64));
+    final context = tester.element(find.byType(PanelBox));
+    final route = routeFor(context);
+    final animation = route.animation!;
+    final navigator = Navigator.of(context);
+    final progressBeforeGesture = animation.value;
+    final rectBeforeGesture = panel(tester).currentRect;
+    expect(progressBeforeGesture, greaterThan(0));
+    expect(progressBeforeGesture, lessThan(1));
+
+    await backGesture(tester, 'startBackGesture');
+    await tester.pump();
+    expect(navigator.userGestureInProgress, isTrue);
+    expect(animation.value, closeTo(progressBeforeGesture, 0.001));
+    expectRect(panel(tester).currentRect, rectBeforeGesture);
+    await backGesture(tester, 'updateBackGestureProgress', 0.2);
+    await tester.pump();
+    final progressAtCommit = progressBeforeGesture * 0.8;
+    expect(animation.value, closeTo(progressAtCommit, 0.01));
+    await backGesture(tester, 'commitBackGesture');
+    await tester.pump();
+    expect(animation.value, closeTo(progressAtCommit, 0.01));
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
+    expect(navigator.userGestureInProgress, isFalse);
+    expect(await result, isNull);
+  });
+
   testWidgets('cancelled predictive back gesture springs back open', (
     tester,
   ) async {
@@ -332,6 +543,74 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(PanelBox), findsOneWidget);
     expect(p.currentRect, p.panelRect);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
+    expect(await result, isNull);
+  });
+
+  testWidgets('predictive back commit does not pop a newer route', (
+    tester,
+  ) async {
+    useView(tester);
+    await tester.pumpWidget(const _Harness());
+    final result = openPanel(tester);
+    await tester.pumpAndSettle();
+    final navigator = Navigator.of(tester.element(find.byType(PanelBox)));
+    await backGesture(tester, 'startBackGesture');
+    await backGesture(tester, 'updateBackGestureProgress', 0.4);
+    await tester.pump();
+    navigator.push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => const Scaffold(body: Text('New route')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await backGesture(tester, 'commitBackGesture');
+    await tester.pumpAndSettle();
+    expect(find.text('New route'), findsOneWidget);
+    expect(navigator.userGestureInProgress, isFalse);
+    navigator.pop();
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
+    expect(await result, isNull);
+  });
+
+  testWidgets('predictive back commit rechecks a changed PopScope', (
+    tester,
+  ) async {
+    useView(tester);
+    final canPop = ValueNotifier(true);
+    addTearDown(canPop.dispose);
+    await tester.pumpWidget(const _Harness());
+    final result = openPanel(
+      tester,
+      builder: (context) => ValueListenableBuilder<bool>(
+        valueListenable: canPop,
+        builder: (context, allowed, child) =>
+            PopScope<void>(canPop: allowed, child: child!),
+        child: defaultPanel(context),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final navigator = Navigator.of(tester.element(find.byType(PanelBox)));
+    final focusBeforeGesture = FocusManager.instance.primaryFocus;
+    expect(focusBeforeGesture, isNotNull);
+    await backGesture(tester, 'startBackGesture');
+    await backGesture(tester, 'updateBackGestureProgress', 0.4);
+    await tester.pump();
+    canPop.value = false;
+    await tester.pump();
+    await backGesture(tester, 'commitBackGesture');
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsOneWidget);
+    expect(navigator.userGestureInProgress, isFalse);
+    expect(panel(tester).currentRect, panel(tester).panelRect);
+    expect(FocusManager.instance.primaryFocus, same(focusBeforeGesture));
+    canPop.value = true;
+    await tester.pump();
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
     expect(find.byType(PanelBox), findsNothing);
@@ -397,6 +676,169 @@ void main() {
     expect(await result, isNull);
   });
 
+  testWidgets('cancelled vertical drag springs the panel fully open', (
+    tester,
+  ) async {
+    useView(tester);
+    await tester.pumpWidget(const _Harness());
+    final result = openPanel(tester);
+    await tester.pumpAndSettle();
+    final p = panel(tester);
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.text('Second')),
+    );
+    final step = p.dragSpan * 0.7 / 6;
+    for (var i = 0; i < 6; i++) {
+      await gesture.moveBy(Offset(0, step));
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    expect(
+      (ModalRoute.of(tester.element(find.byType(PanelBox)))! as BarPanelRoute)
+          .animation!
+          .value,
+      lessThan(0.5),
+    );
+    await gesture.cancel();
+    await tester.pumpAndSettle();
+    expect(p.currentRect, p.panelRect);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
+    expect(await result, isNull);
+  });
+
+  testWidgets('disposing a predictive gesture route stops the gesture', (
+    tester,
+  ) async {
+    useView(tester);
+    await tester.pumpWidget(const _Harness());
+    final result = openPanel(tester);
+    await tester.pumpAndSettle();
+    final context = tester.element(find.byType(PanelBox));
+    final navigator = Navigator.of(context);
+    final route = ModalRoute.of(context)!;
+    await backGesture(tester, 'startBackGesture');
+    await backGesture(tester, 'updateBackGestureProgress', 0.4);
+    await tester.pump();
+    expect(navigator.userGestureInProgress, isTrue);
+    navigator.removeRoute(route);
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
+    await backGesture(tester, 'commitBackGesture');
+    await tester.pump();
+    expect(navigator.userGestureInProgress, isFalse);
+    expect(await result, isNull);
+  });
+
+  testWidgets('local history keeps the panel visible and focused', (
+    tester,
+  ) async {
+    useView(tester);
+    FocusManager.instance.highlightStrategy =
+        FocusHighlightStrategy.alwaysTraditional;
+    addTearDown(
+      () => FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.automatic,
+    );
+    final opener = FocusNode();
+    addTearDown(opener.dispose);
+    await tester.pumpWidget(
+      _Harness(
+        body: Center(
+          child: TextButton(
+            focusNode: opener,
+            onPressed: () {},
+            child: const Text('Opener'),
+          ),
+        ),
+      ),
+    );
+    opener.requestFocus();
+    await tester.pump();
+    final result = openPanel(tester);
+    await tester.pumpAndSettle();
+    final panelContext = tester.element(find.byType(PanelBox));
+    ModalRoute.of(panelContext)!.addLocalHistoryEntry(LocalHistoryEntry());
+    Navigator.of(panelContext).pop();
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsOneWidget);
+    expect(panel(tester).currentRect, panel(tester).panelRect);
+    expect(
+      FocusManager.instance.primaryFocus!.context!
+          .findAncestorWidgetOfExactType<PanelBox>(),
+      isNotNull,
+    );
+    Navigator.of(tester.element(find.byType(PanelBox))).pop();
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
+    expect(await result, isNull);
+  });
+
+  testWidgets('drag veto dialog restores the panel before another drag', (
+    tester,
+  ) async {
+    useView(tester);
+    final canPop = ValueNotifier(false);
+    addTearDown(canPop.dispose);
+    var popAttempted = false;
+    var didPop = true;
+    await tester.pumpWidget(const _Harness());
+    final result = openPanel(
+      tester,
+      builder: (context) => ValueListenableBuilder<bool>(
+        valueListenable: canPop,
+        builder: (context, allowed, child) => PopScope<String>(
+          canPop: allowed,
+          onPopInvokedWithResult: (popped, _) {
+            popAttempted = true;
+            didPop = popped;
+            if (!popped) {
+              showDialog<void>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  content: const Text('Keep editing?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Dismiss dialog'),
+                    ),
+                  ],
+                ),
+              );
+            }
+          },
+          child: child!,
+        ),
+        child: defaultPanel(context),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final p = panel(tester);
+    await tester.timedDrag(
+      find.text('Second'),
+      Offset(0, p.dragSpan * 0.7),
+      const Duration(seconds: 1),
+    );
+    await tester.pumpAndSettle();
+    expect(popAttempted, isTrue);
+    expect(didPop, isFalse);
+    expect(find.text('Keep editing?'), findsOneWidget);
+    await tester.tap(find.text('Dismiss dialog'));
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsOneWidget);
+    expect(p.currentRect, p.panelRect);
+    canPop.value = true;
+    await tester.pump();
+    await tester.timedDrag(
+      find.text('Second'),
+      Offset(0, p.dragSpan * 0.7),
+      const Duration(seconds: 1),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
+    expect(await result, isNull);
+  });
+
   testWidgets('focus moves into the panel, stays trapped and returns', (
     tester,
   ) async {
@@ -442,6 +884,59 @@ void main() {
     expect(await result, isNull);
   });
 
+  testWidgets('focus falls back when the opener is unmounted', (tester) async {
+    useView(tester);
+    FocusManager.instance.highlightStrategy =
+        FocusHighlightStrategy.alwaysTraditional;
+    addTearDown(
+      () => FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.automatic,
+    );
+    final showOpener = ValueNotifier(true);
+    addTearDown(showOpener.dispose);
+    final opener = FocusNode();
+    final fallback = FocusNode();
+    addTearDown(opener.dispose);
+    addTearDown(fallback.dispose);
+    await tester.pumpWidget(
+      _Harness(
+        body: ValueListenableBuilder<bool>(
+          valueListenable: showOpener,
+          builder: (context, visible, _) => Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (visible)
+                  TextButton(
+                    focusNode: opener,
+                    onPressed: () {},
+                    child: const Text('Opener'),
+                  ),
+                TextButton(
+                  focusNode: fallback,
+                  autofocus: true,
+                  onPressed: () {},
+                  child: const Text('Fallback'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    opener.requestFocus();
+    await tester.pump();
+    final result = openPanel(tester);
+    await tester.pumpAndSettle();
+    showOpener.value = false;
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
+    expect(fallback.hasFocus, isTrue);
+    expect(await result, isNull);
+  });
+
   testWidgets('semantics name the panel and the scrim, and hide the bar', (
     tester,
   ) async {
@@ -456,6 +951,7 @@ void main() {
     expect(labels.where((label) => label.contains('Behind')), isEmpty);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
     expect(await result, isNull);
     handle.dispose();
   });
@@ -477,6 +973,7 @@ void main() {
 
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
     expect(await result, isNull);
   });
 
@@ -497,6 +994,27 @@ void main() {
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
     expect(await result, 'done');
+  });
+
+  testWidgets('docked panel without safe area keeps content height', (
+    tester,
+  ) async {
+    useView(tester);
+    tester.view.viewPadding = const FakeViewPadding(bottom: 30);
+    addTearDown(tester.view.resetViewPadding);
+    await tester.pumpWidget(
+      const _Harness(layout: BottomBarLayout.docked(respectSafeArea: false)),
+    );
+    final result = openPanel(
+      tester,
+      builder: (_) => const SizedBox(height: 300),
+    );
+    await tester.pumpAndSettle();
+    expect(panel(tester).panelRect.height, 300);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
+    expect(await result, isNull);
   });
 
   testWidgets('RTL settles to the same panel rect as LTR', (tester) async {
@@ -549,6 +1067,175 @@ void main() {
     expect(await result, 'done');
   });
 
+  testWidgets('ancestor-opened narrow adaptive panel follows the bar', (
+    tester,
+  ) async {
+    useView(tester);
+    late BuildContext outsideAdaptive;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            outsideAdaptive = context;
+            return BottomBarAdaptive(
+              layout: const BottomBarLayout.adaptive(maxWidth: 560),
+              items: const BottomBarItems(
+                selectedIndex: 0,
+                onSelected: _ignoreIndex,
+                children: [
+                  BottomBarItem(icon: Icon(Icons.home), label: Text('Home')),
+                  BottomBarItem(
+                    icon: Icon(Icons.search),
+                    label: Text('Search'),
+                  ),
+                ],
+              ),
+              body: const Center(child: Text('Adaptive body')),
+            );
+          },
+        ),
+      ),
+    );
+    final barRect = outlineOf(tester, source(tester));
+    final result = openPanel(tester, context: outsideAdaptive);
+    await tester.pump();
+    expect(panel(tester).currentRect, barRect);
+    await tester.pumpAndSettle();
+    expect(panel(tester).panelRect.width, closeTo(barRect.width, 0.5));
+    expect(panel(tester).panelRect.left, closeTo(barRect.left, 0.5));
+    expect(panel(tester).panelRect.bottom, closeTo(barRect.bottom, 0.5));
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
+    expect(await result, isNull);
+  });
+
+  testWidgets('adaptive panel follows a rail when the window widens', (
+    tester,
+  ) async {
+    useView(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BottomBarAdaptive(
+          layout: const BottomBarLayout.adaptive(maxWidth: 560),
+          theme: BottomBarThemeData.glass(),
+          items: const BottomBarItems(
+            selectedIndex: 0,
+            onSelected: _ignoreIndex,
+            children: [
+              BottomBarItem(icon: Icon(Icons.home), label: Text('Home')),
+              BottomBarItem(icon: Icon(Icons.search), label: Text('Search')),
+            ],
+          ),
+          body: const Center(child: Text('Adaptive body')),
+        ),
+      ),
+    );
+    final result = openPanel(
+      tester,
+      context: tester.element(find.byType(BottomBarItems)),
+    );
+    await tester.pumpAndSettle();
+    expect(panel(tester).panelRect.center.dx, closeTo(200, 1));
+
+    tester.view.physicalSize = const Size(1000, 800);
+    await tester.pump();
+    await tester.pumpAndSettle();
+    final railSurfaces = tester.renderObjectList<RenderBarSurface>(
+      find.byType(BarSurface),
+    );
+    expect(railSurfaces, hasLength(1));
+    final railSurface = railSurfaces.single;
+    expect(panel(tester).panelRect.center.dx, closeTo(500, 1));
+    expect(panel(tester).panelRect.width, lessThanOrEqualTo(560));
+    expect(railSurface.lift, isNotNull);
+
+    tester.view.physicalSize = const Size(400, 800);
+    await tester.pump();
+    await tester.pumpAndSettle();
+    final compactSurface = source(tester);
+    expect(panel(tester).panelRect.center.dx, closeTo(200, 1));
+    expect(railSurface.lift, isNull);
+    expect(compactSurface.lift, isNotNull);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
+    expect(compactSurface.lift, isNull);
+    expect(railSurface.lift, isNull);
+    expect(tester.layers.whereType<BackdropFilterLayer>(), hasLength(1));
+    expect(await result, isNull);
+  });
+
+  testWidgets('outer opener ignores a nested BottomBar in its body', (
+    tester,
+  ) async {
+    useView(tester);
+    const outerTrigger = ValueKey<String>('outer trigger');
+    late BuildContext outerContext;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BottomBar(
+          layout: const BottomBarLayout(width: 320),
+          trailing: Builder(
+            builder: (context) {
+              outerContext = context;
+              return const SizedBox(
+                key: outerTrigger,
+                width: 40,
+                height: 40,
+                child: Text('Open outer'),
+              );
+            },
+          ),
+          body: BottomBar(
+            layout: const BottomBarLayout(width: 180),
+            body: const Center(child: Text('Nested bar body')),
+            child: const BottomBarItems(
+              selectedIndex: 0,
+              onSelected: _ignoreIndex,
+              children: [
+                BottomBarItem(
+                  icon: Icon(Icons.home),
+                  label: Text('Inner home'),
+                ),
+                BottomBarItem(
+                  icon: Icon(Icons.search),
+                  label: Text('Inner search'),
+                ),
+              ],
+            ),
+          ),
+          child: const BottomBarItems(
+            selectedIndex: 0,
+            onSelected: _ignoreIndex,
+            children: [
+              BottomBarItem(icon: Icon(Icons.home), label: Text('Outer home')),
+              BottomBarItem(
+                icon: Icon(Icons.search),
+                label: Text('Outer search'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    final outerSurface = surfaceFor(tester, find.byKey(outerTrigger));
+    final outerRect = outlineOf(tester, outerSurface);
+    final outerGroupRect = rectOf(groupFor(outerSurface));
+    final result = openPanel(tester, context: outerContext);
+    await tester.pump();
+    expectRect(panel(tester).currentRect, outerRect);
+    await tester.pumpAndSettle();
+    expect(panel(tester).panelRect.width, closeTo(outerGroupRect.width, 0.5));
+    expect(panel(tester).panelRect.left, closeTo(outerGroupRect.left, 0.5));
+    expect(panel(tester).panelRect.bottom, closeTo(outerGroupRect.bottom, 0.5));
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
+    expect(await result, isNull);
+  });
+
   testWidgets('reduced motion: no size morph, no glass lift, fades in place', (
     tester,
   ) async {
@@ -572,6 +1259,7 @@ void main() {
     expect(p.currentRect, p.panelRect);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
     expect(await result, isNull);
   });
 
@@ -589,6 +1277,55 @@ void main() {
     expect(tester.layers.whereType<BackdropFilterLayer>().length, 1);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
+    expect(await result, isNull);
+  });
+
+  testWidgets('removing the source bar releases its lift layer', (
+    tester,
+  ) async {
+    useView(tester);
+    final showBar = ValueNotifier(true);
+    addTearDown(showBar.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ValueListenableBuilder<bool>(
+          valueListenable: showBar,
+          builder: (context, visible, _) => visible
+              ? BottomBar(
+                  body: const Center(child: Text('Behind')),
+                  child: BottomBarItems(
+                    selectedIndex: 0,
+                    onSelected: (_) {},
+                    children: const [
+                      BottomBarItem(
+                        icon: Icon(Icons.home),
+                        label: Text('Home'),
+                      ),
+                      BottomBarItem(
+                        icon: Icon(Icons.search),
+                        label: Text('Search'),
+                      ),
+                    ],
+                  ),
+                )
+              : const Center(child: Text('Bar removed')),
+        ),
+      ),
+    );
+    final oldSurface = source(tester);
+    final result = openPanel(tester);
+    await tester.pumpAndSettle();
+    expect(oldSurface.lift, isNotNull);
+    showBar.value = false;
+    await tester.pump();
+    expect(oldSurface.attached, isFalse);
+    expect(oldSurface.lift, isNull);
+    oldSurface.lift = OffsetLayer();
+    expect(oldSurface.lift, isNull);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
     expect(await result, isNull);
   });
 
@@ -597,10 +1334,38 @@ void main() {
   ) async {
     useView(tester);
     await tester.pumpWidget(const _Harness());
+    final initialBackdrops = tester.layers
+        .whereType<BackdropFilterLayer>()
+        .toList();
+    expect(initialBackdrops, hasLength(1));
     final result = openPanel(tester);
     await tester.pumpAndSettle();
+    final openBackdrops = tester.layers
+        .whereType<BackdropFilterLayer>()
+        .toList();
+    final panelBackdrop = openBackdrops.firstWhere(
+      (layer) => !initialBackdrops.contains(layer),
+    );
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    for (
+      var frame = 0;
+      frame < 100 && find.byType(PanelBox).evaluate().isNotEmpty;
+      frame++
+    ) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    expect(find.byType(PanelBox), findsNothing);
+    final backdropsOnRemovalFrame = tester.layers
+        .whereType<BackdropFilterLayer>()
+        .toList();
+    expect(backdropsOnRemovalFrame, hasLength(1));
+    expect(panelBackdrop.attached, isFalse);
+    final baseBackdrop = backdropsOnRemovalFrame.single;
     await tester.pumpAndSettle();
+    expect(
+      tester.layers.whereType<BackdropFilterLayer>().single,
+      same(baseBackdrop),
+    );
     expect(await result, isNull);
     expect(tester.layers.whereType<BackdropFilterLayer>().length, 1);
     expect(source(tester).lift, isNull);
@@ -618,7 +1383,61 @@ void main() {
     expect(tester.layers.whereType<BackdropFilterLayer>(), isEmpty);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
     expect(await result, isNull);
+  });
+
+  testWidgets('an unlaid bar reports a useful error then opens after layout', (
+    tester,
+  ) async {
+    useView(tester);
+    late BuildContext bodyContext;
+    FlutterError? earlyError;
+    var attemptedDuringBuild = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BottomBar(
+          body: Builder(
+            builder: (context) {
+              bodyContext = context;
+              if (!attemptedDuringBuild) {
+                attemptedDuringBuild = true;
+                try {
+                  showBottomBarPanel<void>(
+                    context,
+                    builder: (_) => const SizedBox(height: 100),
+                  );
+                } on FlutterError catch (error) {
+                  earlyError = error;
+                }
+              }
+              return const Center(child: Text('First layout'));
+            },
+          ),
+          child: const BottomBarItems(
+            selectedIndex: 0,
+            onSelected: _ignoreIndex,
+            children: [
+              BottomBarItem(icon: Icon(Icons.home), label: Text('Home')),
+            ],
+          ),
+        ),
+      ),
+    );
+    expect(earlyError, isNotNull);
+    expect(earlyError!.message, contains('before its BottomBar was laid out'));
+    final result = showBottomBarPanel<void>(
+      bodyContext,
+      builder: (_) => const SizedBox(height: 100),
+    );
+    var completed = false;
+    result.then((_) => completed = true);
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsOneWidget);
+    Navigator.of(bodyContext).pop();
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
+    expect(completed, isTrue);
   });
 
   testWidgets('throws when there is no BottomBar above or below the context', (

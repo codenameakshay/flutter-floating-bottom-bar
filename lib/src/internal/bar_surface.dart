@@ -110,6 +110,8 @@ class RenderBarSurface extends RenderShiftedBox {
     required this._configuration,
   }) : super(null);
 
+  bool _disposed = false;
+
   @override
   set child(RenderBox? value) {
     if (identical(value, child)) return;
@@ -256,6 +258,7 @@ class RenderBarSurface extends RenderShiftedBox {
   OffsetLayer? get lift => _lift;
   OffsetLayer? _lift;
   set lift(OffsetLayer? value) {
+    if (_disposed) return;
     if (identical(value, _lift)) return;
     _lift?.removeAllChildren();
     _lift = value;
@@ -445,15 +448,23 @@ class RenderBarSurface extends RenderShiftedBox {
     _painter = null;
     _paintedDecoration = null;
     super.detach();
+    _releaseLift();
   }
 
   @override
   void dispose() {
+    _disposed = true;
+    _releaseLift();
     _painter?.dispose();
     _surfacePainter.release();
     _childClipLayer.layer = null;
     _opacityLayer.layer = null;
     super.dispose();
+  }
+
+  void _releaseLift() {
+    _lift?.removeAllChildren();
+    _lift = null;
   }
 
   @override

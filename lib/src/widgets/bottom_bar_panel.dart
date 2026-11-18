@@ -10,6 +10,7 @@ import '../bottom_bar.dart';
 import '../bottom_bar_controller.dart';
 import '../bottom_bar_theme.dart';
 import '../config/bottom_bar_layout.dart';
+import '../config/bottom_bar_motion.dart';
 import '../internal/bar_group.dart';
 import '../internal/bar_outline.dart';
 import '../internal/bar_surface.dart';
@@ -79,7 +80,7 @@ import 'bottom_bar_surface.dart';
 /// The panel closes on [Navigator.pop], the system back gesture (with
 /// Android's predictive back, the panel follows the gesture), the Escape
 /// key, and, when [dismissible], a tap on the scrim or a drag down on the
-/// panel. Wrap the content in a [PopScope] to stop it closing.
+/// panel. Wrap the content in a [PopScope] to stop user-initiated dismissal.
 ///
 /// ## Accessibility
 ///
@@ -112,18 +113,28 @@ Future<T?> showBottomBarPanel<T>(
     reduceMotion: reduceMotion(context),
     opener: FocusManager.instance.primaryFocus,
   );
-  return Navigator.of(anchor.context).push(route);
+  final navigator = Navigator.of(anchor.context);
+  final previous = BarPanelRoute._routesBySource[anchor.source];
+  final handoff = previous?._finishForHandoff(navigator);
+  if (handoff != null) {
+    route
+      .._handoffValue = handoff.$1
+      .._handoffVelocity = handoff.$2;
+  }
+  return navigator.push(route);
 }
 
 /// The bar a panel grows out of and back into.
 class PanelAnchor {
   PanelAnchor._({
     required this.context,
+    this.adaptiveContext,
     required this.root,
     required this.source,
     required this.group,
     required this.hidden,
     required this.docked,
+    required this.respectSafeArea,
     required this.offset,
     required this.maxWidth,
     required this.motion,
@@ -137,11 +148,14 @@ class PanelAnchor {
         (element.state is State<BottomBar> ||
             element.state is State<BottomBarAdaptive>);
     Element? host;
-    context.visitAncestorElements((element) {
-      if (!isHost(element)) return true;
-      host = element;
-      return false;
-    });
+    if (context is Element && isHost(context)) host = context;
+    if (host == null) {
+      context.visitAncestorElements((element) {
+        if (!isHost(element)) return true;
+        host = element;
+        return false;
+      });
+    }
     if (host == null) {
       void visit(Element element) {
         if (host != null) return;
@@ -154,7 +168,7 @@ class PanelAnchor {
 
       context.visitChildElements(visit);
     }
-    final found = (host as StatefulElement?)?.state;
+    var found = (host as StatefulElement?)?.state;
     if (found == null) {
       throw FlutterError.fromParts([
         ErrorSummary(
@@ -168,8 +182,59 @@ class PanelAnchor {
         context.describeElement('The context used was'),
       ]);
     }
-    final theme = Theme.of(context).extension<BottomBarThemeData>();
-    final root = found.context.findRenderObject()! as RenderBox;
+    BuildContext? adaptiveContext;
+    if (found is State<BottomBarAdaptive>) {
+      adaptiveContext = found.context;
+      final adaptiveElement = found.context as Element;
+      final adaptive = found.widget;
+      final renderObject = found.context.findRenderObject();
+      final width = renderObject is RenderBox && renderObject.hasSize
+          ? renderObject.size.width
+          : MediaQuery.sizeOf(found.context).width;
+      if (width < adaptive.breakpoint) {
+        State<BottomBar>? compactBar;
+        void findCompactBar(Element element) {
+          if (compactBar != null) return;
+          if (element is StatefulElement && element.state is State<BottomBar>) {
+            compactBar = element.state as State<BottomBar>;
+            return;
+          }
+          element.visitChildren(findCompactBar);
+        }
+
+        adaptiveElement.visitChildren(findCompactBar);
+        if (compactBar != null) found = compactBar;
+      }
+    }
+    final selected = found!;
+    if (adaptiveContext == null && selected is State<BottomBar>) {
+      final adaptiveElement = selected.context as Element;
+      adaptiveElement.visitAncestorElements((element) {
+        if (element is! StatefulElement ||
+            element.state is! State<BottomBarAdaptive>) {
+          return true;
+        }
+        final adaptiveState = element.state as State<BottomBarAdaptive>;
+        final adaptive = adaptiveState.widget;
+        final renderObject = adaptiveState.context.findRenderObject();
+        final width = renderObject is RenderBox && renderObject.hasSize
+            ? renderObject.size.width
+            : MediaQuery.sizeOf(adaptiveState.context).width;
+        if (width < adaptive.breakpoint &&
+            identical(adaptive.items, selected.widget.child)) {
+          adaptiveContext = adaptiveState.context;
+        }
+        return false;
+      });
+    }
+    final theme = Theme.of(selected.context).extension<BottomBarThemeData>();
+    final rootObject = selected.context.findRenderObject();
+    if (rootObject is! RenderBox ||
+        !rootObject.attached ||
+        !rootObject.hasSize) {
+      throw _unlaidPanelAnchor(context);
+    }
+    final root = rootObject;
     final opener = context.findRenderObject();
     RenderBarSurface? enclosing;
     for (RenderObject? o = opener; o != null; o = o.parent) {
@@ -178,60 +243,99 @@ class PanelAnchor {
         break;
       }
     }
-    if (found is State<BottomBar>) {
-      final bar = found.widget;
+    if (selected is State<BottomBar>) {
+      final bar = selected.widget;
       final layout =
           bar.layout ??
           bar.theme?.layout ??
           theme?.layout ??
           const BottomBarLayout();
-      final group = _descendant<RenderBarGroup>(root);
+      final group = _barGroup(selected);
       final pieces = <RenderBarSurface>[];
       group?.visitChildren((child) {
         if (child is RenderBarSurface) pieces.add(child);
       });
+      if (group == null ||
+          !group.attached ||
+          !group.hasSize ||
+          pieces.isEmpty) {
+        throw _unlaidPanelAnchor(context);
+      }
       final source = pieces.contains(enclosing)
           ? enclosing!
           : pieces.firstWhere(
               (piece) => piece.minimizeHost != null,
               orElse: () => pieces.first,
             );
+      if (!source.attached || !source.hasSize) {
+        throw _unlaidPanelAnchor(context);
+      }
       return PanelAnchor._(
-        context: found.context,
+        context: selected.context,
+        adaptiveContext: adaptiveContext,
         root: root,
         source: source,
         group: group,
         hidden:
-            (found as BottomBarVisibilityBinding).visibility ==
+            (selected as BottomBarVisibilityBinding).visibility ==
             BottomBarVisibility.hidden,
         docked: layout.docked,
+        respectSafeArea: layout.respectSafeArea,
         offset: layout.offset,
         maxWidth: null,
-        motion: (bar.motion ?? bar.theme?.motion ?? theme?.motion)
-            ?.resolveMotion(),
+        motion:
+            (bar.motion ??
+                    bar.theme?.motion ??
+                    theme?.motion ??
+                    const BottomBarMotion())
+                .resolveMotion(),
       );
     }
-    final adaptive = (found as State<BottomBarAdaptive>).widget;
+    final adaptive = (selected as State<BottomBarAdaptive>).widget;
     final layout =
         adaptive.layout ??
         adaptive.theme?.layout ??
         theme?.layout ??
         const BottomBarLayout();
+    final source = enclosing ?? _descendant<RenderBarSurface>(root);
+    if (source == null || !source.attached || !source.hasSize) {
+      throw _unlaidPanelAnchor(context);
+    }
     return PanelAnchor._(
-      context: found.context,
+      context: selected.context,
+      adaptiveContext: adaptiveContext,
       root: root,
-      source: enclosing ?? _descendant<RenderBarSurface>(root)!,
+      source: source,
       group: null,
       hidden: false,
       docked: false,
+      respectSafeArea: layout.respectSafeArea,
       offset: layout.offset,
       maxWidth: math.min(layout.maxWidth ?? _railPanelWidth, _railPanelWidth),
-      motion: (adaptive.motion ?? adaptive.theme?.motion ?? theme?.motion)
-          ?.resolveMotion(),
+      motion:
+          (adaptive.motion ??
+                  adaptive.theme?.motion ??
+                  theme?.motion ??
+                  const BottomBarMotion())
+              .resolveMotion(),
     );
   }
 
   static const _railPanelWidth = 560.0;
+
+  static RenderBarGroup? _barGroup(State<BottomBar> state) {
+    RenderStack? stack;
+    state.context.visitChildElements((element) {
+      if (element is RenderObjectElement &&
+          element.renderObject is RenderStack) {
+        stack = element.renderObject as RenderStack;
+      }
+    });
+    final bar = stack?.lastChild;
+    if (bar == null) return null;
+    if (bar is RenderBarGroup) return bar;
+    return _descendant<RenderBarGroup>(bar);
+  }
 
   static T? _descendant<T extends RenderObject>(RenderObject from) {
     T? found;
@@ -252,6 +356,9 @@ class PanelAnchor {
   /// opens in.
   final BuildContext context;
 
+  /// The adaptive widget that owns a responsive rail/bar branch, if any.
+  final BuildContext? adaptiveContext;
+
   /// The [BottomBar] or [BottomBarAdaptive] box.
   final RenderBox root;
 
@@ -264,6 +371,7 @@ class PanelAnchor {
 
   final bool hidden;
   final bool docked;
+  final bool respectSafeArea;
   final double offset;
 
   /// The width of a centred panel. Null when the panel takes the bar's.
@@ -275,10 +383,24 @@ class PanelAnchor {
   bool get centred => group == null;
 }
 
+FlutterError _unlaidPanelAnchor(
+  BuildContext context,
+) => FlutterError.fromParts([
+  ErrorSummary(
+    'showBottomBarPanel() was called before its BottomBar was laid out.',
+  ),
+  ErrorDescription(
+    'Call it after the BottomBar or BottomBarAdaptive has completed its first layout.',
+  ),
+  context.describeElement('The context used was'),
+]);
+
 /// The route [showBottomBarPanel] pushes. Its animation is the morph: 0 is
 /// the bar, 1 the open panel. It runs on the bar's spring, from wherever it
 /// is, so open and close can interrupt each other.
 class BarPanelRoute<T> extends PopupRoute<T> {
+  static final _routesBySource = Expando<BarPanelRoute<dynamic>>();
+
   BarPanelRoute({
     required this.anchor,
     required this.builder,
@@ -289,9 +411,9 @@ class BarPanelRoute<T> extends PopupRoute<T> {
     required this.semanticLabel,
     required this.reduceMotion,
     this.opener,
-  });
+  }) : super(requestFocus: true);
 
-  final PanelAnchor anchor;
+  PanelAnchor anchor;
   final WidgetBuilder builder;
   final double maxHeight;
   final bool dismissible;
@@ -336,9 +458,7 @@ class BarPanelRoute<T> extends PopupRoute<T> {
     Duration(milliseconds: 150),
     Curves.easeOut,
   );
-  static const _fallbackMotion = CupertinoMotion.snappy();
-
-  Motion get _motion => reduceMotion ? _fade : anchor.motion ?? _fallbackMotion;
+  Motion get _motion => reduceMotion ? _fade : anchor.motion!;
 
   AnimationController get _controller => controller!;
 
@@ -357,39 +477,114 @@ class BarPanelRoute<T> extends PopupRoute<T> {
   }
 
   double? _releaseVelocity;
+  bool _didExit = false;
+  double? _handoffValue;
+  double? _handoffVelocity;
 
   @override
-  TickerFuture didPush() {
-    super.didPush();
-    return _springTo(1);
+  void install() {
+    super.install();
+    _routesBySource[anchor.source] = this;
+    if (_handoffValue != null) controller!.value = _handoffValue!;
+  }
+
+  (double, double)? _finishForHandoff(NavigatorState owner) {
+    if (!_didExit || !identical(navigator, owner)) return null;
+    final c = controller;
+    if (c == null || c.isDismissed) return null;
+    final handoff = (c.value, c.velocity);
+    c.value = c.lowerBound;
+    return handoff;
+  }
+
+  @override
+  void dispose() {
+    if (identical(_routesBySource[anchor.source], this)) {
+      _routesBySource[anchor.source] = null;
+    }
+    super.dispose();
+  }
+
+  void rebindAnchor(PanelAnchor next) {
+    if (identical(anchor.source, next.source) &&
+        identical(anchor.group, next.group)) {
+      anchor = next;
+      return;
+    }
+    if (identical(_routesBySource[anchor.source], this)) {
+      _routesBySource[anchor.source] = null;
+    }
+    anchor = next;
+    _routesBySource[anchor.source] = this;
+  }
+
+  @override
+  Simulation? createSimulation({required bool forward}) {
+    final c = controller;
+    if (c == null) return null;
+    final handlesPopInternally = !forward && willHandlePopInternally;
+    final target = forward || handlesPopInternally ? 1.0 : 0.0;
+    final velocity = handlesPopInternally
+        ? 0.0
+        : forward
+        ? _handoffVelocity ?? c.velocity
+        : _releaseVelocity ?? c.velocity;
+    final simulation = _motion.createSimulation(
+      start: c.value,
+      end: target,
+      velocity: velocity,
+    );
+    if (forward) _handoffVelocity = null;
+    return simulation;
   }
 
   @override
   bool didPop(T? result) {
     final popped = super.didPop(result);
-    _springTo(0, velocity: _releaseVelocity);
     _releaseVelocity = null;
+    if (!popped) return false;
+    _didExit = true;
     final opener = this.opener;
-    if (opener != null && opener.context != null && opener.canRequestFocus) {
+    final openerRoute = opener?.context == null
+        ? null
+        : ModalRoute.of(opener!.context!);
+    if (opener != null &&
+        opener.context != null &&
+        opener.canRequestFocus &&
+        (openerRoute == null || openerRoute.isCurrent)) {
       opener.requestFocus();
     }
-    return popped;
+    return true;
   }
 
   @override
   void handleCancelBackGesture() {
     navigator?.didStopUserGesture();
-    _springTo(1);
+    _springBackIfActive();
   }
 
   @override
   void handleCommitBackGesture() {
     navigator?.didStopUserGesture();
-    navigator?.pop();
+    if (!isCurrent) {
+      _springBackIfActive();
+      return;
+    }
+    navigator?.maybePop().then((_) {
+      _springBackIfActive();
+    });
+  }
+
+  void _springBackIfActive() {
+    if (isActive && !_didExit) _springTo(1);
   }
 
   /// Stops the morph where it is, for a drag to take over.
   void holdMorph() => _controller.stop();
+
+  void cancelDrag() {
+    _springBackIfActive();
+  }
 
   /// Moves the morph by a drag of [delta] morph units.
   void dragBy(double delta) {
@@ -409,15 +604,39 @@ class BarPanelRoute<T> extends PopupRoute<T> {
     }
     _releaseVelocity = -velocity;
     navigator?.maybePop().then((_) {
-      if (!isCurrent) return;
       _releaseVelocity = null;
-      _springTo(1);
+      _springBackIfActive();
     });
   }
 
   /// A fling faster than this, in morph units per second, settles the panel
   /// in its direction.
   static const _flingVelocity = 2.0;
+
+  @override
+  bool get popGestureEnabled =>
+      !isFirst &&
+      !willHandlePopInternally &&
+      // ignore: deprecated_member_use
+      !hasScopedWillPopCallback &&
+      popDisposition != RoutePopDisposition.doNotPop &&
+      navigator?.userGestureInProgress != true;
+
+  double _gestureStartValue = 1;
+
+  @override
+  void handleStartBackGesture({double progress = 0}) {
+    assert(isCurrent);
+    _gestureStartValue = _controller.value;
+    _controller.value = _gestureStartValue * progress;
+    navigator?.didStartUserGesture();
+  }
+
+  @override
+  void handleUpdateBackGestureProgress({required double progress}) {
+    if (!isCurrent) return;
+    _controller.value = _gestureStartValue * progress;
+  }
 
   @override
   Widget buildPage(
@@ -446,6 +665,7 @@ class _BarPanel extends StatefulWidget {
 
 class _BarPanelState extends State<_BarPanel> with WidgetsBindingObserver {
   final _panelKey = GlobalKey();
+  bool _anchorRebindScheduled = false;
 
   BarPanelRoute get _route => widget.route;
 
@@ -465,46 +685,106 @@ class _BarPanelState extends State<_BarPanel> with WidgetsBindingObserver {
   }
 
   @override
+  void didChangeMetrics() {
+    if (_route.anchor.adaptiveContext == null || _anchorRebindScheduled) return;
+    _anchorRebindScheduled = true;
+    SchedulerBinding.instance
+      ..addPostFrameCallback((_) {
+        _anchorRebindScheduled = false;
+        if (!mounted || !_route.isActive) return;
+        final context = _route.anchor.adaptiveContext;
+        if (context == null || !context.mounted) return;
+        final current = _route.anchor;
+        if (current.source.attached && current.source.hasSize) return;
+        final next = PanelAnchor.of(context);
+        if (identical(current.source, next.source)) return;
+        _route.rebindAnchor(next);
+        setState(() {});
+      })
+      ..ensureVisualUpdate();
+  }
+
+  @override
   void dispose() {
+    if (_backGestureInProgress) {
+      _backGestureInProgress = false;
+      final navigator = _route.navigator;
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (navigator?.mounted == true && navigator!.userGestureInProgress) {
+          navigator.didStopUserGesture();
+        }
+      });
+    }
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   @override
   bool handleStartBackGesture(PredictiveBackEvent backEvent) {
-    if (!_route.isCurrent || !_route.popGestureEnabled) return false;
+    if (backEvent.isButtonEvent ||
+        _dragInProgress ||
+        !_route.isCurrent ||
+        !_route.popGestureEnabled) {
+      return false;
+    }
     _gestureFocus = FocusManager.instance.primaryFocus;
     _route.handleStartBackGesture(progress: 1 - backEvent.progress);
+    _backGestureInProgress = true;
     return true;
   }
 
   /// Where focus was when a back gesture started. The route drops focus
   /// while the gesture runs, so a cancelled gesture puts it back.
   FocusNode? _gestureFocus;
+  bool _backGestureInProgress = false;
+  bool _dragInProgress = false;
+  bool _dragCancelled = false;
 
   @override
-  void handleUpdateBackGestureProgress(PredictiveBackEvent backEvent) =>
-      _route.handleUpdateBackGestureProgress(progress: 1 - backEvent.progress);
+  void handleUpdateBackGestureProgress(PredictiveBackEvent backEvent) {
+    if (!_backGestureInProgress) return;
+    _route.handleUpdateBackGestureProgress(progress: 1 - backEvent.progress);
+  }
 
   @override
   void handleCancelBackGesture() {
+    if (!_backGestureInProgress) return;
+    _backGestureInProgress = false;
     _route.handleCancelBackGesture();
+    _restoreGestureFocus();
+  }
+
+  void _restoreGestureFocus() {
     final focus = _gestureFocus;
     _gestureFocus = null;
     SchedulerBinding.instance
       ..addPostFrameCallback((_) {
-        if (!mounted) return;
-        if (focus != null && focus.context != null && focus.canRequestFocus) {
+        if (!mounted || !_route.isCurrent) return;
+        final scope = FocusScope.of(context);
+        final primary = FocusManager.instance.primaryFocus;
+        final primaryInScope =
+            primary != null &&
+            (identical(primary, scope) || primary.ancestors.contains(scope));
+        if (primaryInScope && primary != focus) return;
+        final focusInScope =
+            focus != null &&
+            (identical(focus, scope) || focus.ancestors.contains(scope));
+        if (focusInScope && focus.context != null && focus.canRequestFocus) {
           focus.requestFocus();
         } else {
-          FocusScope.of(context).requestFocus();
+          scope.requestFocus();
         }
       })
       ..ensureVisualUpdate();
   }
 
   @override
-  void handleCommitBackGesture() => _route.handleCommitBackGesture();
+  void handleCommitBackGesture() {
+    if (!_backGestureInProgress) return;
+    _backGestureInProgress = false;
+    _route.handleCommitBackGesture();
+    _restoreGestureFocus();
+  }
 
   /// How far a drag of one pixel moves the morph.
   double get _dragScale {
@@ -513,13 +793,42 @@ class _BarPanelState extends State<_BarPanel> with WidgetsBindingObserver {
     return span > 0 ? 1 / span : 0;
   }
 
-  void _dragStart(DragStartDetails details) => _route.holdMorph();
+  void _dragStart(DragStartDetails details) {
+    if (_backGestureInProgress) return;
+    _dragInProgress = true;
+    _dragCancelled = false;
+    _route.holdMorph();
+  }
 
-  void _dragUpdate(DragUpdateDetails details) =>
-      _route.dragBy(details.primaryDelta! * _dragScale);
+  void _dragUpdate(DragUpdateDetails details) {
+    if (!_dragInProgress || _backGestureInProgress) {
+      return;
+    }
+    _route.dragBy(details.primaryDelta! * _dragScale);
+  }
 
-  void _dragEnd(DragEndDetails details) =>
-      _route.endDrag(details.primaryVelocity! * _dragScale);
+  void _dragEnd(DragEndDetails details) {
+    if (!_dragInProgress) return;
+    _dragInProgress = false;
+    if (_dragCancelled) {
+      _dragCancelled = false;
+      _route.cancelDrag();
+      return;
+    }
+    _route.endDrag(details.primaryVelocity! * _dragScale);
+  }
+
+  void _dragCancel() {
+    if (!_dragInProgress) return;
+    _dragInProgress = false;
+    _dragCancelled = false;
+    _route.cancelDrag();
+  }
+
+  void _pointerCancel(PointerCancelEvent _) {
+    if (!_dragInProgress) return;
+    _dragCancelled = true;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -527,7 +836,7 @@ class _BarPanelState extends State<_BarPanel> with WidgetsBindingObserver {
     final media = MediaQuery.of(context);
     final keyboard = media.viewInsets.bottom;
     Widget content = Builder(builder: route.builder);
-    if (route.anchor.docked && keyboard == 0) {
+    if (route.anchor.docked && route.anchor.respectSafeArea && keyboard == 0) {
       content = Padding(
         padding: EdgeInsets.only(bottom: media.padding.bottom),
         child: content,
@@ -547,8 +856,10 @@ class _BarPanelState extends State<_BarPanel> with WidgetsBindingObserver {
         onVerticalDragStart: _dragStart,
         onVerticalDragUpdate: _dragUpdate,
         onVerticalDragEnd: _dragEnd,
+        onVerticalDragCancel: _dragCancel,
         child: content,
       );
+      content = Listener(onPointerCancel: _pointerCancel, child: content);
     }
     return PanelBox(
       key: _panelKey,
@@ -603,6 +914,7 @@ class PanelBox extends SingleChildRenderObjectWidget {
   @override
   void updateRenderObject(BuildContext context, RenderBarPanel renderObject) {
     renderObject
+      ..anchor = anchor
       ..maxHeight = maxHeight
       ..padding = padding
       ..keyboard = keyboard
@@ -663,7 +975,7 @@ class RenderBarPanel extends RenderBox
     required this._textDirection,
   }) : _place = _BarPlace.of(_anchor);
 
-  final PanelAnchor _anchor;
+  PanelAnchor _anchor;
   final Animation<double> _progress;
   final bool _reduceMotion;
 
@@ -722,6 +1034,20 @@ class RenderBarPanel extends RenderBox
 
   RenderBarSurface get _source => _anchor.source;
   bool get _sourceLive => _source.attached && _source.hasSize;
+
+  set anchor(PanelAnchor value) {
+    if (identical(_anchor, value)) return;
+    final oldSource = _source;
+    if (!identical(oldSource, value.source) &&
+        identical(oldSource.lift, _lift.layer)) {
+      oldSource.lift = null;
+    }
+    _anchor = value;
+    _lastSurface = null;
+    _place = _BarPlace.of(value);
+    markNeedsLayout();
+    markNeedsPaint();
+  }
 
   /// Whether the bar's content fades out inside the panel. A hidden bar
   /// shows nothing to fade, and reduced motion leaves the bar where it is.
@@ -877,19 +1203,25 @@ class RenderBarPanel extends RenderBox
         root.width - 2 * _anchor.offset,
       );
       left = root.center.dx - width / 2;
-      top = math.max(root.top, _padding.top) + _anchor.offset;
+      top =
+          math.max(root.top, _anchor.respectSafeArea ? _padding.top : 0) +
+          _anchor.offset;
       bottom =
-          math.min(root.bottom - _padding.bottom, keyboardTop) - _anchor.offset;
+          math.min(
+            root.bottom - (_anchor.respectSafeArea ? _padding.bottom : 0),
+            keyboardTop,
+          ) -
+          _anchor.offset;
     } else if (_anchor.docked) {
       width = root.width;
       left = root.left;
-      top = _padding.top + _anchor.offset;
+      top = (_anchor.respectSafeArea ? _padding.top : 0) + _anchor.offset;
       bottom = math.min(root.bottom, keyboardTop);
     } else {
       final group = place?.group?.shift(-_origin) ?? root;
       width = group.width;
       left = group.left;
-      top = _padding.top + _anchor.offset;
+      top = (_anchor.respectSafeArea ? _padding.top : 0) + _anchor.offset;
       bottom = math.min(group.bottom, keyboardTop - _anchor.offset);
     }
     width = math.max(0, width);
@@ -909,9 +1241,11 @@ class RenderBarPanel extends RenderBox
     } else {
       _end = Rect.fromLTWH(left, bottom - height, width, height);
     }
-    if (_lifts && _lift.layer == null && !_offstage) {
-      _lift.layer = OffsetLayer();
-      _source.lift = _lift.layer;
+    if (_lifts && !_offstage) {
+      _lift.layer ??= OffsetLayer();
+      if (_source.lift == null || identical(_source.lift, _lift.layer)) {
+        _source.lift = _lift.layer;
+      }
     }
   }
 
