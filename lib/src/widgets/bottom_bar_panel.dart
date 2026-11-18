@@ -853,6 +853,7 @@ class _BarPanelState extends State<_BarPanel> with WidgetsBindingObserver {
     if (route.dismissible) {
       content = GestureDetector(
         behavior: HitTestBehavior.translucent,
+        excludeFromSemantics: true,
         onVerticalDragStart: _dragStart,
         onVerticalDragUpdate: _dragUpdate,
         onVerticalDragEnd: _dragEnd,

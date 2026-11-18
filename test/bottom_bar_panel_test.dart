@@ -978,6 +978,72 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('a text field in the panel keeps its own label and bounds', (
+    tester,
+  ) async {
+    useView(tester);
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(const _Harness());
+    final result = openPanel(
+      tester,
+      semanticLabel: 'More',
+      builder: (context) => Column(
+        children: [
+          IconButton(
+            tooltip: 'Close',
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context),
+          ),
+          const TextField(decoration: InputDecoration(hintText: 'Search')),
+          Expanded(
+            child: ListView(
+              children: [
+                for (var i = 0; i < 20; i++) ListTile(title: Text('Row $i')),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+    SemanticsNode? field;
+    var fieldRect = Rect.zero;
+    void visit(SemanticsNode node, Matrix4 toRoot) {
+      final transform = node.transform == null
+          ? toRoot
+          : (toRoot.clone()..multiply(node.transform!));
+      if (node.getSemanticsData().flagsCollection.isTextField) {
+        field = node;
+        fieldRect = MatrixUtils.transformRect(transform, node.rect);
+      }
+      node.visitChildren((child) {
+        visit(child, transform);
+        return true;
+      });
+    }
+
+    visit(
+      tester
+          .binding
+          .renderViews
+          .first
+          .owner!
+          .semanticsOwner!
+          .rootSemanticsNode!,
+      Matrix4.identity(),
+    );
+    expect(field, isNotNull);
+    expect(field!.label, 'Search');
+    expect(
+      tester.getRect(find.byType(TextField)).contains(fieldRect.center),
+      isTrue,
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(await result, isNull);
+    handle.dispose();
+  });
+
   testWidgets('keyboard lifts the panel above the inset', (tester) async {
     useView(tester);
     addTearDown(tester.view.resetViewInsets);
