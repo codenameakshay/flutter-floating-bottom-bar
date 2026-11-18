@@ -82,6 +82,22 @@ void useView(WidgetTester tester, [Size size = const Size(400, 800)]) {
   addTearDown(tester.view.reset);
 }
 
+Future<Duration> moveDownSlowly(
+  WidgetTester tester,
+  TestGesture gesture,
+  double distance, {
+  Duration elapsed = Duration.zero,
+}) async {
+  while (distance > 0) {
+    final step = math.min(1.0, distance);
+    elapsed += const Duration(milliseconds: 20);
+    await gesture.moveBy(Offset(0, step), timeStamp: elapsed);
+    distance -= step;
+  }
+  await tester.pump();
+  return elapsed;
+}
+
 Widget defaultPanel(BuildContext context) => SizedBox(
   height: 300,
   child: Column(
@@ -97,6 +113,9 @@ Widget defaultPanel(BuildContext context) => SizedBox(
 
 Widget fieldPanel(BuildContext context) =>
     const SizedBox(height: 200, child: TextField());
+
+Widget shortPanel(BuildContext context) =>
+    const SizedBox(height: 40, child: Center(child: Text('Short')));
 
 Future<String?> openPanel(
   WidgetTester tester, {
@@ -663,25 +682,139 @@ void main() {
     expect(await result, isNull);
   });
 
-  testWidgets('a panel as short as the bar still closes on a drag down', (
+  testWidgets('a short panel moves down and reopens after a cancelled drag', (
     tester,
   ) async {
     useView(tester);
     await tester.pumpWidget(const _Harness());
-    final result = openPanel(
-      tester,
-      builder: (context) =>
-          const SizedBox(height: 40, child: Center(child: Text('Short'))),
-    );
+    final result = openPanel(tester, builder: shortPanel);
     await tester.pumpAndSettle();
-    expect(panel(tester).dragSpan, 120);
-    await tester.timedDrag(
-      find.text('Short'),
-      const Offset(0, 100),
-      const Duration(seconds: 1),
+    final p = panel(tester);
+    final open = p.currentRect;
+    final gesture = await tester.startGesture(
+      Offset(open.center.dx, open.top + 2),
     );
+    final elapsed = await moveDownSlowly(tester, gesture, 27);
+    final draggedTop = p.currentRect.top;
+    await gesture.cancel(timeStamp: elapsed);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 320));
+    final settlingTop = p.currentRect.top;
     await tester.pumpAndSettle();
-    expect(find.byType(PanelBox), findsNothing);
+
+    expect(draggedTop, greaterThan(open.top));
+    expect(find.text('Short'), findsOneWidget);
+    expect(settlingTop, inInclusiveRange(open.top, draggedTop));
+    expectRect(p.currentRect, open);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(await result, isNull);
+  });
+
+  testWidgets(
+    'a replacement short panel starts from the drag interrupted by Escape',
+    (tester) async {
+      useView(tester);
+      await tester.pumpWidget(const _Harness());
+      final result = openPanel(tester, builder: shortPanel);
+      await tester.pumpAndSettle();
+      final first = panel(tester);
+      final open = first.currentRect;
+      final gesture = await tester.startGesture(
+        Offset(open.center.dx, open.top + 2),
+      );
+      final elapsed = await moveDownSlowly(tester, gesture, 27);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(await result, isNull);
+      final closing = first.currentRect;
+      final replacement = openPanel(tester, builder: shortPanel);
+      await tester.pump();
+      expectRect(panel(tester).currentRect, closing);
+      await gesture.up(timeStamp: elapsed);
+      await tester.pumpAndSettle();
+      expectRect(panel(tester).currentRect, open);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(await replacement, isNull);
+    },
+  );
+
+  for (final hidden in [false, true]) {
+    final source = hidden ? 'hidden' : 'shown';
+    testWidgets(
+      'a short panel closes with a slow onscreen drag from a $source bar',
+      (tester) async {
+        useView(tester);
+        final controller = BottomBarController();
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(_Harness(controller: controller));
+        if (hidden) {
+          controller.hide();
+          await tester.pumpAndSettle();
+        }
+        final result = openPanel(tester, builder: shortPanel);
+        await tester.pumpAndSettle();
+        final p = panel(tester);
+        final open = p.currentRect;
+        final start = Offset(open.center.dx, open.top + 2);
+        final lastOnscreenY =
+            tester.view.physicalSize.height / tester.view.devicePixelRatio - 1;
+
+        final short = await tester.startGesture(start);
+        final shortElapsed = await moveDownSlowly(tester, short, 21);
+        await short.up(timeStamp: shortElapsed);
+        await tester.pumpAndSettle();
+        expect(find.text('Short'), findsOneWidget);
+        expectRect(p.currentRect, open);
+
+        await tester.flingFrom(start, const Offset(0, 21), 225);
+        await tester.pumpAndSettle();
+        expect(find.text('Short'), findsOneWidget);
+        expectRect(p.currentRect, open);
+
+        final long = await tester.startGesture(start);
+        final longElapsed = await moveDownSlowly(
+          tester,
+          long,
+          lastOnscreenY - start.dy,
+        );
+        await long.up(timeStamp: longElapsed);
+        await tester.pumpAndSettle();
+        expect(find.text('Short'), findsNothing);
+        expect(await result, isNull);
+      },
+    );
+  }
+
+  testWidgets('a tall panel from a hidden bar tracks the finger and closes', (
+    tester,
+  ) async {
+    useView(tester);
+    final controller = BottomBarController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(_Harness(controller: controller));
+    controller.hide();
+    await tester.pumpAndSettle();
+    final result = openPanel(tester);
+    await tester.pump();
+    final p = panel(tester);
+    expect(p.currentRect.top, closeTo(p.panelRect.bottom, 0.5));
+    await tester.pumpAndSettle();
+    final open = p.currentRect;
+    final gesture = await tester.startGesture(
+      Offset(open.center.dx, open.top + 8),
+    );
+    var elapsed = await moveDownSlowly(tester, gesture, 30);
+    final topAfterSlop = p.currentRect.top;
+    elapsed = await moveDownSlowly(tester, gesture, 40, elapsed: elapsed);
+    final heldDisplacement = p.currentRect.top - topAfterSlop;
+    elapsed = await moveDownSlowly(tester, gesture, 135, elapsed: elapsed);
+    await gesture.up(timeStamp: elapsed);
+    await tester.pumpAndSettle();
+    expect(heldDisplacement, closeTo(40, 0.5));
+    expect(find.text('Second'), findsNothing);
     expect(await result, isNull);
   });
 
@@ -978,71 +1111,105 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('a text field in the panel keeps its own label and bounds', (
-    tester,
-  ) async {
-    useView(tester);
-    final handle = tester.ensureSemantics();
-    await tester.pumpWidget(const _Harness());
-    final result = openPanel(
-      tester,
-      semanticLabel: 'More',
-      builder: (context) => Column(
-        children: [
-          IconButton(
-            tooltip: 'Close',
-            icon: const Icon(Icons.close),
-            onPressed: () => Navigator.pop(context),
-          ),
-          const TextField(decoration: InputDecoration(hintText: 'Search')),
-          Expanded(
-            child: ListView(
-              children: [
-                for (var i = 0; i < 20; i++) ListTile(title: Text('Row $i')),
-              ],
+  testWidgets(
+    'panel controls keep their own semantics and the scrim can dismiss',
+    (tester) async {
+      useView(tester);
+      await tester.pumpWidget(const _Harness());
+      final result = openPanel(
+        tester,
+        semanticLabel: 'More',
+        builder: (context) => Column(
+          children: [
+            IconButton(
+              tooltip: 'Close',
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.pop(context),
             ),
-          ),
-        ],
-      ),
-    );
-    await tester.pumpAndSettle();
-    SemanticsNode? field;
-    var fieldRect = Rect.zero;
-    void visit(SemanticsNode node, Matrix4 toRoot) {
-      final transform = node.transform == null
-          ? toRoot
-          : (toRoot.clone()..multiply(node.transform!));
-      if (node.getSemanticsData().flagsCollection.isTextField) {
-        field = node;
-        fieldRect = MatrixUtils.transformRect(transform, node.rect);
+            const TextField(decoration: InputDecoration(hintText: 'Search')),
+            Expanded(
+              child: ListView(
+                children: [
+                  for (var i = 0; i < 20; i++)
+                    ListTile(title: Text('Row $i'), onTap: () {}),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      final owner = tester.binding.renderViews.first.owner!.semanticsOwner!;
+      final nodes = <({SemanticsNode node, Rect rect})>[];
+      void visit(SemanticsNode node, Matrix4 toRoot) {
+        final transform = node.transform == null
+            ? toRoot
+            : (toRoot.clone()..multiply(node.transform!));
+        nodes.add((
+          node: node,
+          rect: MatrixUtils.transformRect(transform, node.rect),
+        ));
+        node.visitChildren((child) {
+          visit(child, transform);
+          return true;
+        });
       }
-      node.visitChildren((child) {
-        visit(child, transform);
-        return true;
-      });
-    }
 
-    visit(
-      tester
-          .binding
-          .renderViews
-          .first
-          .owner!
-          .semanticsOwner!
-          .rootSemanticsNode!,
-      Matrix4.identity(),
-    );
-    expect(field, isNotNull);
-    expect(field!.label, 'Search');
-    expect(
-      tester.getRect(find.byType(TextField)).contains(fieldRect.center),
-      isTrue,
-    );
-    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-    await tester.pumpAndSettle();
-    expect(await result, isNull);
-    handle.dispose();
-  });
+      visit(owner.rootSemanticsNode!, Matrix4.identity());
+
+      final field = nodes.singleWhere(
+        (entry) => entry.node.getSemanticsData().flagsCollection.isTextField,
+      );
+      expect(field.node.label, 'Search');
+      final fieldBounds = tester.getRect(find.byType(TextField)).inflate(0.5);
+      expect(fieldBounds.contains(field.rect.topLeft), isTrue);
+      expect(fieldBounds.contains(field.rect.bottomRight), isTrue);
+
+      final close = nodes.singleWhere((entry) {
+        final data = entry.node.getSemanticsData();
+        return data.label == 'Close' || data.tooltip == 'Close';
+      });
+      final row = nodes.singleWhere((entry) => entry.node.label == 'Row 0');
+      for (final entry in [close, row]) {
+        expect(entry.node.isMergedIntoParent, isFalse);
+        expect(
+          entry.node.getSemanticsData().hasAction(SemanticsAction.tap),
+          isTrue,
+        );
+      }
+      expect(
+        tester.getRect(find.byTooltip('Close')).contains(close.rect.center),
+        isTrue,
+      );
+      expect(
+        tester
+            .getRect(find.widgetWithText(ListTile, 'Row 0'))
+            .contains(row.rect.center),
+        isTrue,
+      );
+
+      final scrolling = nodes.where((entry) {
+        final data = entry.node.getSemanticsData();
+        return data.hasAction(SemanticsAction.scrollUp) ||
+            data.hasAction(SemanticsAction.scrollDown);
+      });
+      expect(scrolling, hasLength(1));
+      expectRect(scrolling.single.rect, tester.getRect(find.byType(ListView)));
+
+      final dismiss = nodes.singleWhere(
+        (entry) => entry.node.label == 'Dismiss',
+      );
+      expect(
+        dismiss.node.getSemanticsData().hasAction(SemanticsAction.dismiss),
+        isTrue,
+      );
+      owner.performAction(dismiss.node.id, SemanticsAction.dismiss);
+      await tester.pumpAndSettle();
+      expect(find.byType(TextField), findsNothing);
+      expect(await result, isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+  );
 
   testWidgets('keyboard lifts the panel above the inset', (tester) async {
     useView(tester);

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart' show PredictiveBackEvent;
@@ -118,8 +119,9 @@ Future<T?> showBottomBarPanel<T>(
   final handoff = previous?._finishForHandoff(navigator);
   if (handoff != null) {
     route
-      .._handoffValue = handoff.$1
-      .._handoffVelocity = handoff.$2;
+      .._handoffValue = handoff.progress
+      .._handoffVelocity = handoff.velocity
+      .._dragWaypoint = (progress: handoff.progress, offset: handoff.offset);
   }
   return navigator.push(route);
 }
@@ -480,19 +482,34 @@ class BarPanelRoute<T> extends PopupRoute<T> {
   bool _didExit = false;
   double? _handoffValue;
   double? _handoffVelocity;
+  ({double progress, double offset})? _dragWaypoint;
 
   @override
   void install() {
     super.install();
     _routesBySource[anchor.source] = this;
     if (_handoffValue != null) controller!.value = _handoffValue!;
+    _controller.addStatusListener(_clearDragWaypoint);
   }
 
-  (double, double)? _finishForHandoff(NavigatorState owner) {
+  void _clearDragWaypoint(AnimationStatus status) {
+    if (status == AnimationStatus.completed ||
+        status == AnimationStatus.dismissed) {
+      _dragWaypoint = null;
+    }
+  }
+
+  ({double progress, double velocity, double offset})? _finishForHandoff(
+    NavigatorState owner,
+  ) {
     if (!_didExit || !identical(navigator, owner)) return null;
     final c = controller;
     if (c == null || c.isDismissed) return null;
-    final handoff = (c.value, c.velocity);
+    final handoff = (
+      progress: c.value,
+      velocity: c.velocity,
+      offset: _dragOffsetAt(c.value),
+    );
     c.value = c.lowerBound;
     return handoff;
   }
@@ -586,9 +603,30 @@ class BarPanelRoute<T> extends PopupRoute<T> {
     _springBackIfActive();
   }
 
+  double _dragOffsetAt(double progress) {
+    final waypoint = _dragWaypoint;
+    if (waypoint == null || progress <= 0 || progress >= 1) return 0;
+    final weight = progress <= waypoint.progress
+        ? progress / waypoint.progress
+        : (1 - progress) / (1 - waypoint.progress);
+    return waypoint.offset * weight;
+  }
+
   /// Moves the morph by a drag of [delta] morph units.
-  void dragBy(double delta) {
-    _controller.value = (_controller.value - delta).clamp(0.0, 1.0);
+  void dragBy(double delta, {required double topCorrection}) {
+    final current = _controller.value;
+    var next = (current - delta).clamp(0.0, 1.0);
+    final offset = _dragOffsetAt(current);
+    if (topCorrection != 0 || offset != 0) {
+      if (current == next) return;
+      const edgeSlack = 0.001;
+      next = next.clamp(edgeSlack, 1 - edgeSlack);
+      _dragWaypoint = (
+        progress: next,
+        offset: offset + (current - next) * topCorrection,
+      );
+    }
+    _controller.value = next;
   }
 
   /// Ends a drag at [velocity] morph units per second, positive toward
@@ -722,7 +760,7 @@ class _BarPanelState extends State<_BarPanel> with WidgetsBindingObserver {
   @override
   bool handleStartBackGesture(PredictiveBackEvent backEvent) {
     if (backEvent.isButtonEvent ||
-        _dragInProgress ||
+        _drag != null ||
         !_route.isCurrent ||
         !_route.popGestureEnabled) {
       return false;
@@ -737,7 +775,7 @@ class _BarPanelState extends State<_BarPanel> with WidgetsBindingObserver {
   /// while the gesture runs, so a cancelled gesture puts it back.
   FocusNode? _gestureFocus;
   bool _backGestureInProgress = false;
-  bool _dragInProgress = false;
+  ({double span, double flingSpan, double topCorrection})? _drag;
   bool _dragCancelled = false;
 
   @override
@@ -786,47 +824,69 @@ class _BarPanelState extends State<_BarPanel> with WidgetsBindingObserver {
     _restoreGestureFocus();
   }
 
-  /// How far a drag of one pixel moves the morph.
-  double get _dragScale {
-    final box = _panelKey.currentContext?.findRenderObject();
-    final span = box is RenderBarPanel ? box.dragSpan : 0.0;
-    return span > 0 ? 1 / span : 0;
-  }
-
   void _dragStart(DragStartDetails details) {
     if (_backGestureInProgress) return;
-    _dragInProgress = true;
+    final box = _panelKey.currentContext?.findRenderObject();
+    if (box is! RenderBarPanel) return;
+    final topTravel = box._signedTopTravel;
+    final nominalSpan = box.dragSpan;
+    var span = nominalSpan;
+    final directTouch = switch (details.kind) {
+      PointerDeviceKind.touch ||
+      PointerDeviceKind.stylus ||
+      PointerDeviceKind.invertedStylus => true,
+      _ => false,
+    };
+    if (directTouch && topTravel < RenderBarPanel._minDragSpan) {
+      final view = View.of(context);
+      final viewportHeight = view.physicalSize.height / view.devicePixelRatio;
+      final remaining = math.max(
+        1.0,
+        viewportHeight - details.globalPosition.dy,
+      );
+      span = math.min(nominalSpan, remaining);
+    }
+    _drag = (
+      span: span,
+      flingSpan: nominalSpan,
+      topCorrection: _route.reduceMotion
+          ? 0
+          : math.min(topTravel.abs(), span) - topTravel,
+    );
     _dragCancelled = false;
     _route.holdMorph();
   }
 
   void _dragUpdate(DragUpdateDetails details) {
-    if (!_dragInProgress || _backGestureInProgress) {
-      return;
-    }
-    _route.dragBy(details.primaryDelta! * _dragScale);
+    final drag = _drag;
+    if (drag == null || _backGestureInProgress) return;
+    _route.dragBy(
+      details.primaryDelta! / drag.span,
+      topCorrection: drag.topCorrection,
+    );
   }
 
   void _dragEnd(DragEndDetails details) {
-    if (!_dragInProgress) return;
-    _dragInProgress = false;
+    final drag = _drag;
+    if (drag == null) return;
+    _drag = null;
     if (_dragCancelled) {
       _dragCancelled = false;
       _route.cancelDrag();
       return;
     }
-    _route.endDrag(details.primaryVelocity! * _dragScale);
+    _route.endDrag(details.primaryVelocity! / drag.flingSpan);
   }
 
   void _dragCancel() {
-    if (!_dragInProgress) return;
-    _dragInProgress = false;
+    if (_drag == null) return;
+    _drag = null;
     _dragCancelled = false;
     _route.cancelDrag();
   }
 
   void _pointerCancel(PointerCancelEvent _) {
-    if (!_dragInProgress) return;
+    if (_drag == null) return;
     _dragCancelled = true;
   }
 
@@ -860,12 +920,17 @@ class _BarPanelState extends State<_BarPanel> with WidgetsBindingObserver {
         onVerticalDragCancel: _dragCancel,
         child: content,
       );
-      content = Listener(onPointerCancel: _pointerCancel, child: content);
+      content = Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerCancel: _pointerCancel,
+        child: content,
+      );
     }
     return PanelBox(
       key: _panelKey,
       anchor: route.anchor,
       progress: route.animation!,
+      dragOffsetAt: route._dragOffsetAt,
       reduceMotion: route.reduceMotion,
       maxHeight: route.maxHeight,
       padding: media.padding,
@@ -887,6 +952,7 @@ class PanelBox extends SingleChildRenderObjectWidget {
     super.key,
     required this.anchor,
     required this.progress,
+    required this.dragOffsetAt,
     required this.reduceMotion,
     required this.maxHeight,
     required this.padding,
@@ -896,6 +962,7 @@ class PanelBox extends SingleChildRenderObjectWidget {
 
   final PanelAnchor anchor;
   final Animation<double> progress;
+  final double Function(double) dragOffsetAt;
   final bool reduceMotion;
   final double maxHeight;
   final EdgeInsets padding;
@@ -905,6 +972,7 @@ class PanelBox extends SingleChildRenderObjectWidget {
   RenderBarPanel createRenderObject(BuildContext context) => RenderBarPanel(
     anchor: anchor,
     progress: progress,
+    dragOffsetAt: dragOffsetAt,
     reduceMotion: reduceMotion,
     maxHeight: maxHeight,
     padding: padding,
@@ -969,6 +1037,7 @@ class RenderBarPanel extends RenderBox
   RenderBarPanel({
     required this._anchor,
     required this._progress,
+    required this._dragOffsetAt,
     required this._reduceMotion,
     required this._maxHeight,
     required this._padding,
@@ -978,6 +1047,7 @@ class RenderBarPanel extends RenderBox
 
   PanelAnchor _anchor;
   final Animation<double> _progress;
+  final double Function(double) _dragOffsetAt;
   final bool _reduceMotion;
 
   /// The panel's radius when the bar's is smaller.
@@ -1022,10 +1092,10 @@ class RenderBarPanel extends RenderBox
   @visibleForTesting
   Rect get panelRect => _end;
 
-  /// How far the panel's top edge moves between the bar and the open panel,
-  /// so a drag can follow the finger. A panel little taller than the bar
-  /// still takes [_minDragSpan] of drag to close.
-  double get dragSpan => math.max(_minDragSpan, _start.top - _end.top);
+  /// Nominal distance used to normalize drag travel and fling velocity.
+  double get dragSpan => math.max(_minDragSpan, _signedTopTravel);
+
+  double get _signedTopTravel => _start.top - _end.top;
 
   static const _minDragSpan = 120.0;
 
@@ -1072,7 +1142,7 @@ class RenderBarPanel extends RenderBox
     final rect = Rect.lerp(_start, _end, t)!;
     return Rect.fromLTWH(
       rect.left,
-      rect.top,
+      rect.top + _dragOffsetAt(t),
       math.max(0, rect.width),
       math.max(0, rect.height),
     );
