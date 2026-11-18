@@ -27,6 +27,7 @@ export 'src/widgets/bottom_bar_item.dart';
 export 'src/widgets/bottom_bar_item_theme.dart'
     show BottomBarHaptics, BottomBarItemThemeData;
 export 'src/widgets/bottom_bar_body_padding.dart';
+export 'src/widgets/bottom_bar_panel.dart' show showBottomBarPanel;
 export 'src/widgets/bottom_bar_surface.dart';
 export 'src/widgets/bottom_bar_switcher.dart' show BottomBarSwitcher;
 export 'src/widgets/bottom_bar_indicator.dart'
