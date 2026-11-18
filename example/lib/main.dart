@@ -19,6 +19,7 @@ import 'demos/item_theme_demo.dart';
 import 'demos/minimize_demo.dart';
 import 'demos/nested_scroll_demo.dart';
 import 'demos/presets_demo.dart';
+import 'demos/switcher_demo.dart';
 import 'demos/tabs_demo.dart';
 
 void main() {
@@ -115,6 +116,11 @@ final demos = <({String slug, String title, WidgetBuilder builder})>[
     slug: 'accessory',
     title: 'Accessory',
     builder: (_) => const AccessoryDemoPage(),
+  ),
+  (
+    slug: 'switcher',
+    title: 'Morph between bars',
+    builder: (_) => const SwitcherDemoPage(),
   ),
 ];
 
