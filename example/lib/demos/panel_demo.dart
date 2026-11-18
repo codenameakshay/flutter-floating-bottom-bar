@@ -46,19 +46,22 @@ class _PanelDemoPageState extends State<PanelDemoPage> {
             onPressed: () => _openMore(context),
           ),
         ),
-        body: BottomBarBodyPadding(
-          child: GridView.builder(
-            padding: const EdgeInsets.all(12),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-            ),
-            itemCount: 40,
-            itemBuilder: (context, i) => DecoratedBox(
-              decoration: BoxDecoration(
-                color: colors[i % colors.length].shade300,
-                borderRadius: BorderRadius.circular(20),
+        body: Builder(
+          builder: (context) => ValueListenableBuilder<double>(
+            valueListenable: BottomBarScope.of(context).barHeight,
+            builder: (context, barHeight, _) => GridView.builder(
+              padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + barHeight),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+              ),
+              itemCount: 40,
+              itemBuilder: (context, i) => DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colors[i % colors.length].shade300,
+                  borderRadius: BorderRadius.circular(20),
+                ),
               ),
             ),
           ),
