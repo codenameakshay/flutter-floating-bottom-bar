@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:material_ui/material_ui.dart' show Theme;
@@ -139,11 +140,26 @@ class _Entry {
   }
 }
 
+class _SwitcherFocusScope extends FocusScopeNode {
+  _SwitcherFocusScope()
+    : super(
+        debugLabel: 'BottomBarSwitcher',
+        traversalEdgeBehavior: TraversalEdgeBehavior.parentScope,
+        directionalTraversalEdgeBehavior: TraversalEdgeBehavior.parentScope,
+      );
+
+  @override
+  void autofocus(FocusNode node) {
+    if (hasFocus || enclosingScope?.focusedChild == null) super.autofocus(node);
+  }
+}
+
 class _BottomBarSwitcherState extends State<BottomBarSwitcher>
     with TickerProviderStateMixin {
   static const _fallbackMotion = CupertinoMotion.snappy();
 
   final List<_Entry> _entries = [];
+  final _focusScope = _SwitcherFocusScope();
   late Motion _motion;
   Listenable _presences = const _NoListenable();
   bool _switching = false;
@@ -194,11 +210,15 @@ class _BottomBarSwitcherState extends State<BottomBarSwitcher>
     return itemThemeOf(context).indicatorMotion ?? _fallbackMotion;
   }
 
+  bool get _prefersReducedMotion =>
+      MediaQuery.maybeDisableAnimationsOf(context) == true ||
+      reduceMotion(context);
+
   /// Whether a switch should land without a morph: reduced motion, or a
   /// minimized bar whose full content is out of sight.
   bool get _snaps {
     final box = context.findRenderObject();
-    return reduceMotion(context) ||
+    return _prefersReducedMotion ||
         (box is RenderBottomBarSwitcher && box.hiddenByMinimize);
   }
 
@@ -219,7 +239,11 @@ class _BottomBarSwitcherState extends State<BottomBarSwitcher>
   void _switchTo(Widget child, {required _Entry from}) {
     _switching = true;
     final hadFocus = from.focusNode.hasFocus;
-    final index = _entries.indexWhere((e) => Widget.canUpdate(e.widget, child));
+    final index = _entries.indexWhere(
+      (e) =>
+          Widget.canUpdate(e.widget, child) ||
+          (child.key is GlobalKey && e.widget.key == child.key),
+    );
     final _Entry next;
     if (index == -1) {
       next = _createEntry(child, present: false);
@@ -231,21 +255,33 @@ class _BottomBarSwitcherState extends State<BottomBarSwitcher>
     _entries.add(next);
 
     if (_snaps) {
-      for (final entry in _entries) {
-        entry.presence.stop(canceled: true);
-        entry.presence.value = identical(entry, next) ? 1 : 0;
-      }
-      _entries.removeWhere((entry) => !identical(entry, next) && _drop(entry));
+      _snapEntries();
     } else {
-      for (final entry in _entries) {
-        final target = identical(entry, next) ? 1.0 : 0.0;
-        if (entry.parked || entry.presence.value == target) continue;
-        entry.presence.animateTo(target);
-      }
+      if (!identical(from, next)) _retarget(from, 0);
+      _retarget(next, 1);
     }
     _presences = Listenable.merge([for (final e in _entries) e.presence]);
     _switching = false;
     if (hadFocus) _focusAfterSwitch(next);
+  }
+
+  void _retarget(_Entry entry, double target) {
+    if (entry.presence.isAnimating || entry.presence.value != target) {
+      entry.presence.animateTo(target);
+    } else if (target == 0 && _drop(entry)) {
+      _entries.remove(entry);
+    }
+  }
+
+  void _snapEntries() {
+    final current = _current;
+    _entries.removeWhere((entry) {
+      if (entry.parked) return false;
+      final active = identical(entry, current);
+      entry.presence.stop(canceled: true);
+      entry.presence.value = active ? 1 : 0;
+      return !active && _drop(entry);
+    });
   }
 
   /// Ends [entry]'s exit: parks it when it keeps its state, or disposes it.
@@ -278,17 +314,16 @@ class _BottomBarSwitcherState extends State<BottomBarSwitcher>
   /// or an `autofocus` already put it there.
   void _focusAfterSwitch(_Entry entry) {
     SchedulerBinding.instance.addPostFrameCallback((_) {
-      // The focus manager applies this frame's requests in a microtask that
-      // was scheduled while building, so this one runs after it.
       scheduleMicrotask(() {
         if (!mounted || !identical(entry, _current)) return;
-        if (entry.focusNode.hasFocus) return;
-        for (final node in entry.focusNode.traversalDescendants) {
-          if (node.canRequestFocus) {
-            node.requestFocus();
-            return;
-          }
-        }
+        context.owner!.focusManager.applyFocusChangesIfNeeded();
+        if (!_focusScope.hasPrimaryFocus) return;
+        final node = entry.focusNode;
+        final policy = FocusTraversalGroup.maybeOfNode(node);
+        final first = policy == null
+            ? node.traversalDescendants.firstOrNull
+            : policy.findFirstFocus(node, ignoreCurrentFocus: true);
+        first?.requestFocus();
       });
     });
   }
@@ -298,41 +333,53 @@ class _BottomBarSwitcherState extends State<BottomBarSwitcher>
     for (final entry in _entries) {
       entry.dispose();
     }
+    _focusScope.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final snap = _prefersReducedMotion;
+    if (snap && _entries.any((entry) => entry.presence.isAnimating)) {
+      _switching = true;
+      _snapEntries();
+      _presences = Listenable.merge([for (final e in _entries) e.presence]);
+      _switching = false;
+    }
     final current = _current;
-    return _SwitcherBox(
-      vsync: this,
-      motion: _motion,
-      snap: reduceMotion(context),
-      alignment: widget.alignment,
-      textDirection: Directionality.maybeOf(context),
-      repaint: _presences,
-      children: [
-        for (final entry in _entries)
-          _SwitcherSlot(
-            key: ObjectKey(entry),
-            presence: entry.presence,
-            current: identical(entry, current),
-            child: TickerMode(
-              enabled: !entry.parked,
-              child: Offstage(
-                offstage: entry.parked,
-                child: ExcludeFocus(
-                  excluding: !identical(entry, current),
-                  child: Focus(
-                    focusNode: entry.focusNode,
-                    includeSemantics: false,
-                    child: entry.widget,
+    return FocusScope.withExternalFocusNode(
+      focusScopeNode: _focusScope,
+      includeSemantics: false,
+      child: _SwitcherBox(
+        vsync: this,
+        motion: _motion,
+        snap: snap,
+        alignment: widget.alignment,
+        textDirection: Directionality.maybeOf(context),
+        repaint: _presences,
+        children: [
+          for (final entry in _entries)
+            _SwitcherSlot(
+              key: ObjectKey(entry),
+              presence: entry.presence,
+              current: identical(entry, current),
+              child: TickerMode(
+                enabled: !entry.parked,
+                child: Offstage(
+                  offstage: entry.parked,
+                  child: ExcludeFocus(
+                    excluding: !identical(entry, current),
+                    child: Focus(
+                      focusNode: entry.focusNode,
+                      includeSemantics: false,
+                      child: entry.widget,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -357,6 +404,12 @@ class _SwitcherParentData extends ContainerBoxParentData<RenderBox> {
     opacityLayer.layer = null;
     transformLayer.layer = null;
   }
+
+  @override
+  void detach() {
+    dropLayers();
+    super.detach();
+  }
 }
 
 class _SwitcherSlot extends ParentDataWidget<_SwitcherParentData> {
@@ -374,11 +427,13 @@ class _SwitcherSlot extends ParentDataWidget<_SwitcherParentData> {
   void applyParentData(RenderObject renderObject) {
     final data = renderObject.parentData! as _SwitcherParentData;
     if (identical(data.presence, presence) && data.current == current) return;
+    final outgoing = data.current && !current;
     data
       ..presence = presence
       ..current = current;
     final parent = renderObject.parent;
     if (parent is RenderBottomBarSwitcher) {
+      if (outgoing) parent._cancelPointers();
       parent
         ..markNeedsLayout()
         ..markNeedsSemanticsUpdate();
@@ -470,6 +525,7 @@ class RenderBottomBarSwitcher extends RenderBox
 
   Size? _target;
   final LayerHandle<ClipRectLayer> _clipLayer = LayerHandle();
+  final Set<int> _pointers = {};
 
   set motion(Motion value) {
     if (_size.motion == value) return;
@@ -536,6 +592,13 @@ class RenderBottomBarSwitcher extends RenderBox
   }
 
   @override
+  void dropChild(RenderObject child) {
+    final data = child.parentData! as _SwitcherParentData;
+    if (data.current) _cancelPointers();
+    super.dropChild(child);
+  }
+
+  @override
   void dispose() {
     _size.dispose();
     _clipLayer.layer = null;
@@ -547,6 +610,9 @@ class RenderBottomBarSwitcher extends RenderBox
     }
     super.dispose();
   }
+
+  @override
+  bool get alwaysNeedsCompositing => true;
 
   RenderBox? get _currentChild {
     var child = lastChild;
@@ -632,7 +698,21 @@ class RenderBottomBarSwitcher extends RenderBox
 
   /// [child]'s opacity from its presence.
   @visibleForTesting
-  double opacityOf(RenderBox child) => _fade.transform(_presenceOf(child));
+  double opacityOf(RenderBox child) =>
+      _opacityOf(_presenceOf(child), _opacityGap);
+
+  double get _opacityGap {
+    var gap = 1.0;
+    var child = firstChild;
+    while (child != null && gap > 0) {
+      gap -= _fade.transform(_presenceOf(child));
+      child = childAfter(child);
+    }
+    return math.max(0, gap);
+  }
+
+  double _opacityOf(double presence, double gap) =>
+      _fade.transform(presence) + presence * gap;
 
   /// The child's scale: the bar's size over the child's, on the axis that
   /// differs most, so a child scales toward the size the bar is heading for
@@ -645,9 +725,9 @@ class RenderBottomBarSwitcher extends RenderBox
     return scale.clamp(1 / _maxScale, _maxScale);
   }
 
-  Matrix4 _transformOf(RenderBox child) {
+  Matrix4 _transformOf(RenderBox child, [double? childScale]) {
     final offset = (child.parentData! as BoxParentData).offset;
-    final scale = _scaleOf(child);
+    final scale = childScale ?? _scaleOf(child);
     final transform = Matrix4.translationValues(offset.dx, offset.dy, 0);
     if (scale == 1) return transform;
     final anchor = _resolvedAlignment.alongSize(child.size);
@@ -657,44 +737,54 @@ class RenderBottomBarSwitcher extends RenderBox
       ..translateByDouble(-anchor.dx, -anchor.dy, 0, 1);
   }
 
-  bool get _overflows {
+  bool _overflows(double gap) {
     var child = firstChild;
     while (child != null) {
-      final data = child.parentData! as _SwitcherParentData;
-      final rect = data.offset & child.size;
-      if (opacityOf(child) > 0 &&
-          (rect.left < 0 ||
-              rect.top < 0 ||
-              rect.right > size.width ||
-              rect.bottom > size.height)) {
-        return true;
+      if (_opacityOf(_presenceOf(child), gap) > 0) {
+        final rect = MatrixUtils.transformRect(
+          _transformOf(child),
+          Offset.zero & child.size,
+        );
+        if (rect.left < 0 ||
+            rect.top < 0 ||
+            rect.right > size.width ||
+            rect.bottom > size.height) {
+          return true;
+        }
       }
-      child = data.nextSibling;
+      child = childAfter(child);
     }
     return false;
   }
 
   @override
   void paint(PaintingContext context, Offset offset) {
-    if (_overflows) {
+    final gap = _opacityGap;
+    if (_overflows(gap)) {
       _clipLayer.layer = context.pushClipRect(
         needsCompositing,
         offset,
         Offset.zero & size,
-        _paintChildren,
+        (context, offset) => _paintChildren(context, offset, gap),
         oldLayer: _clipLayer.layer,
       );
     } else {
       _clipLayer.layer = null;
-      _paintChildren(context, offset);
+      _paintChildren(context, offset, gap);
     }
   }
 
-  void _paintChildren(PaintingContext context, Offset offset) {
+  void _paintChildren(PaintingContext context, Offset offset, double gap) {
     var child = firstChild;
     while (child != null) {
       final data = child.parentData! as _SwitcherParentData;
-      _paintChild(context, offset, child, data);
+      _paintChild(
+        context,
+        offset,
+        child,
+        data,
+        _opacityOf(_presenceOf(child), gap),
+      );
       child = data.nextSibling;
     }
   }
@@ -704,17 +794,23 @@ class RenderBottomBarSwitcher extends RenderBox
     Offset offset,
     RenderBox child,
     _SwitcherParentData data,
+    double opacity,
   ) {
-    final opacity = opacityOf(child);
     if (opacity == 0) {
       data.dropLayers();
       return;
     }
     void paintChild(PaintingContext context, Offset offset) {
+      final scale = _scaleOf(child);
+      if (scale == 1) {
+        data.transformLayer.layer = null;
+        context.paintChild(child, offset + data.offset);
+        return;
+      }
       data.transformLayer.layer = context.pushTransform(
         needsCompositing,
         offset,
-        _transformOf(child),
+        _transformOf(child, scale),
         (context, offset) => context.paintChild(child, offset),
         oldLayer: data.transformLayer.layer,
       );
@@ -750,6 +846,22 @@ class RenderBottomBarSwitcher extends RenderBox
   }
 
   @override
+  void handleEvent(PointerEvent event, BoxHitTestEntry entry) {
+    if (event is PointerDownEvent) {
+      _pointers.add(event.pointer);
+    } else if (event is PointerUpEvent || event is PointerCancelEvent) {
+      _pointers.remove(event.pointer);
+    }
+  }
+
+  void _cancelPointers() {
+    for (final pointer in _pointers) {
+      GestureBinding.instance.cancelPointer(pointer);
+    }
+    _pointers.clear();
+  }
+
+  @override
   void visitChildrenForSemantics(RenderObjectVisitor visitor) {
     final child = _currentChild;
     if (child != null) visitor(child);
@@ -757,5 +869,5 @@ class RenderBottomBarSwitcher extends RenderBox
 
   @override
   Rect? describeApproximatePaintClip(RenderObject child) =>
-      _overflows ? Offset.zero & size : null;
+      _overflows(_opacityGap) ? Offset.zero & size : null;
 }
