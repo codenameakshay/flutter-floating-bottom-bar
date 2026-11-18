@@ -463,7 +463,6 @@ void main() {
       final rect = surface.outlineRect;
       final path = surface.outline.getOuterPath(rect);
       final r = rect.height / 2;
-      // The end caps are half circles of the current height.
       expect(path.contains(Offset(rect.left + r, rect.center.dy)), isTrue);
       expect(path.contains(rect.topLeft + Offset(r * 0.25, r * 0.25)), isFalse);
       expect(path.contains(Offset(rect.left + 1, rect.center.dy)), isTrue);
@@ -1320,7 +1319,6 @@ void main() {
       seen.add(padding());
     }
     await tester.pumpAndSettle();
-    // It changes on many frames of the morph, not once.
     expect(seen.toSet().length, greaterThan(10));
     for (var i = 1; i < seen.length; i++) {
       expect(seen[i], greaterThanOrEqualTo(seen[i - 1]));
