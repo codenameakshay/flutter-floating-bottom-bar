@@ -1,0 +1,893 @@
+import 'package:flutter/rendering.dart';
+import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+import 'package:flutter_floating_bottom_bar/src/internal/bar_surface.dart';
+import 'package:flutter_floating_bottom_bar/src/widgets/bottom_bar_switcher.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
+
+const _linear = BottomBarMotion.curved(
+  duration: Duration(milliseconds: 400),
+  curve: Curves.linear,
+);
+
+enum _Mode { nav, actions, composer }
+
+class _Counter extends StatefulWidget {
+  const _Counter({super.key});
+
+  @override
+  State<_Counter> createState() => _CounterState();
+}
+
+class _CounterState extends State<_Counter> {
+  int count = 0;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 64,
+    child: TextButton(
+      onPressed: () => setState(() => count++),
+      child: Text('Count $count'),
+    ),
+  );
+}
+
+Widget _nav({Key key = const ValueKey('nav'), VoidCallback? onTap}) => SizedBox(
+  key: key,
+  height: 64,
+  child: Row(
+    children: [
+      Expanded(
+        child: TextButton(onPressed: onTap ?? () {}, child: const Text('Home')),
+      ),
+      Expanded(
+        child: TextButton(onPressed: () {}, child: const Text('Search')),
+      ),
+    ],
+  ),
+);
+
+Widget _actions({FocusNode? first}) => SizedBox(
+  key: const ValueKey('actions'),
+  height: 80,
+  child: Row(
+    children: [
+      Expanded(
+        child: TextButton(
+          focusNode: first,
+          onPressed: () {},
+          child: const Text('Share'),
+        ),
+      ),
+      Expanded(
+        child: TextButton(onPressed: () {}, child: const Text('Delete')),
+      ),
+    ],
+  ),
+);
+
+Widget _composer({FocusNode? field, bool autofocus = false}) => SizedBox(
+  key: const ValueKey('composer'),
+  height: 120,
+  child: Row(
+    children: [
+      IconButton(onPressed: () {}, icon: const Icon(Icons.add)),
+      Expanded(
+        child: TextField(
+          focusNode: field,
+          autofocus: autofocus,
+          decoration: const InputDecoration(hintText: 'Message'),
+        ),
+      ),
+    ],
+  ),
+);
+
+class _Harness extends StatefulWidget {
+  const _Harness({
+    required this.builder,
+    this.layout,
+    this.motion = _linear,
+    this.surface,
+    this.controller,
+    this.compactChild,
+    this.body,
+  });
+
+  final Widget Function(_Mode mode) builder;
+  final BottomBarLayout? layout;
+  final BottomBarMotion? motion;
+  final BottomBarSurface? surface;
+  final BottomBarController? controller;
+  final Widget? compactChild;
+  final Widget? body;
+
+  @override
+  State<_Harness> createState() => _HarnessState();
+}
+
+class _HarnessState extends State<_Harness> {
+  _Mode mode = _Mode.nav;
+
+  void go(_Mode next) => setState(() => mode = next);
+
+  @override
+  Widget build(BuildContext context) => BottomBar(
+    layout: widget.layout,
+    motion: widget.motion,
+    controller: widget.controller,
+    compactChild: widget.compactChild,
+    theme: widget.surface == null
+        ? null
+        : BottomBarThemeData(surface: widget.surface),
+    body:
+        widget.body ??
+        ListView.builder(
+          itemCount: 60,
+          itemBuilder: (_, i) => SizedBox(height: 50, child: Text('Row $i')),
+        ),
+    child: BottomBarSwitcher(child: widget.builder(mode)),
+  );
+}
+
+Widget _byMode(_Mode mode) => switch (mode) {
+  _Mode.nav => _nav(),
+  _Mode.actions => _actions(),
+  _Mode.composer => _composer(),
+};
+
+Future<_HarnessState> _pump(
+  WidgetTester tester, {
+  Widget Function(_Mode)? builder,
+  BottomBarLayout? layout,
+  BottomBarMotion? motion = _linear,
+  BottomBarSurface? surface,
+  BottomBarController? controller,
+  Widget? compactChild,
+  Widget? body,
+  TextDirection direction = TextDirection.ltr,
+  bool reduceMotion = false,
+  ThemeData? theme,
+}) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: theme,
+      home: Directionality(
+        textDirection: direction,
+        child: Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(disableAnimations: reduceMotion),
+            child: Scaffold(
+              body: _Harness(
+                builder: builder ?? _byMode,
+                layout: layout,
+                motion: motion,
+                surface: surface,
+                controller: controller,
+                compactChild: compactChild,
+                body: body,
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  return tester.state<_HarnessState>(find.byType(_Harness));
+}
+
+RenderBottomBarSwitcher _switcher(WidgetTester tester) =>
+    tester.renderObject<RenderBottomBarSwitcher>(
+      find.byWidgetPredicate((w) => w.runtimeType.toString() == '_SwitcherBox'),
+    );
+
+RenderBarSurface _surface(WidgetTester tester) =>
+    tester.renderObject<RenderBarSurface>(find.byType(BarSurface));
+
+List<String> _labels(WidgetTester tester) {
+  final labels = <String>[];
+  bool visit(SemanticsNode node) {
+    if (node.label.isNotEmpty) labels.add(node.label);
+    node.visitChildren(visit);
+    return true;
+  }
+
+  visit(
+    tester.binding.renderViews.first.owner!.semanticsOwner!.rootSemanticsNode!,
+  );
+  return labels;
+}
+
+void main() {
+  group('size', () {
+    testWidgets('springs the height at 0, 0.5 and 1 of a linear morph', (
+      tester,
+    ) async {
+      final state = await _pump(tester);
+      expect(_switcher(tester).size.height, 64);
+
+      state.go(_Mode.composer);
+      await tester.pump();
+      expect(_switcher(tester).size.height, 64);
+      expect(_switcher(tester).targetSize!.height, 120);
+
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(_switcher(tester).size.height, moreOrLessEquals(92, epsilon: 0.5));
+
+      await tester.pumpAndSettle();
+      expect(_switcher(tester).size.height, 120);
+      expect(_switcher(tester).isMorphing, isFalse);
+    });
+
+    testWidgets('keeps the bar width: only the height morphs inside a bar', (
+      tester,
+    ) async {
+      final state = await _pump(
+        tester,
+        layout: const BottomBarLayout(width: 320),
+      );
+      expect(_switcher(tester).size.width, 320);
+      state.go(_Mode.composer);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(_switcher(tester).size.width, 320);
+    });
+
+    testWidgets('morphs the width too where the constraints leave it loose', (
+      tester,
+    ) async {
+      var wide = false;
+      late StateSetter set;
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Center(
+            child: StatefulBuilder(
+              builder: (context, setState) {
+                set = setState;
+                return BottomBarSwitcher(
+                  motion: const LinearMotion(Duration(milliseconds: 400)),
+                  child: wide
+                      ? const SizedBox(
+                          key: ValueKey('w'),
+                          width: 300,
+                          height: 40,
+                        )
+                      : const SizedBox(
+                          key: ValueKey('n'),
+                          width: 100,
+                          height: 60,
+                        ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      set(() => wide = true);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(_switcher(tester).size, const Size(200, 50));
+      await tester.pumpAndSettle();
+      expect(_switcher(tester).size, const Size(300, 40));
+    });
+
+    testWidgets('retargets mid-flight from the current height and velocity', (
+      tester,
+    ) async {
+      final state = await _pump(tester, motion: const BottomBarMotion());
+      state.go(_Mode.composer);
+      await tester.pump();
+      final heights = <double>[];
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        heights.add(_switcher(tester).size.height);
+      }
+      final before = heights.last;
+      final speed = heights.last - heights[heights.length - 2];
+      expect(speed, greaterThan(0));
+
+      state.go(_Mode.nav);
+      await tester.pump(const Duration(milliseconds: 16));
+      final after = _switcher(tester).size.height;
+      // The bar keeps moving up for a moment instead of snapping back.
+      expect(after, greaterThan(before));
+      expect(after - before, lessThan(speed * 1.5));
+      expect(_switcher(tester).targetSize!.height, 64);
+
+      var last = after;
+      var maxStep = 0.0;
+      for (var i = 0; i < 80; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        final h = _switcher(tester).size.height;
+        maxStep = (h - last).abs() > maxStep ? (h - last).abs() : maxStep;
+        last = h;
+      }
+      expect(maxStep, lessThan(12));
+      await tester.pumpAndSettle();
+      expect(_switcher(tester).size.height, 64);
+    });
+
+    testWidgets('reduced motion swaps at once with no size animation', (
+      tester,
+    ) async {
+      final state = await _pump(tester, reduceMotion: true);
+      state.go(_Mode.composer);
+      await tester.pump();
+      expect(_switcher(tester).size.height, 120);
+      expect(_switcher(tester).isMorphing, isFalse);
+      expect(find.text('Home'), findsNothing);
+      expect(find.byType(TextField), findsOneWidget);
+    });
+  });
+
+  group('outline', () {
+    testWidgets('the bar outline and glass follow the size every frame', (
+      tester,
+    ) async {
+      final state = await _pump(
+        tester,
+        surface: const BottomBarSurface.glass(),
+      );
+      state.go(_Mode.composer);
+      await tester.pump();
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 80));
+        final switcher = _switcher(tester);
+        final outline = _surface(tester).outlineRect;
+        expect(outline.height, switcher.size.height);
+        expect(outline.width, switcher.size.width);
+      }
+    });
+
+    testWidgets('a capsule stays a capsule as the height changes', (
+      tester,
+    ) async {
+      final state = await _pump(
+        tester,
+        layout: const BottomBarLayout(
+          borderRadius: BorderRadius.all(Radius.circular(999)),
+        ),
+      );
+      state.go(_Mode.composer);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      final surface = _surface(tester);
+      final rect = surface.outlineRect;
+      final path = surface.outline.getOuterPath(rect);
+      final r = rect.height / 2;
+      // The end caps are half circles of the current height.
+      expect(path.contains(Offset(rect.left + r, rect.center.dy)), isTrue);
+      expect(path.contains(rect.topLeft + Offset(r * 0.25, r * 0.25)), isFalse);
+      expect(path.contains(Offset(rect.left + 1, rect.center.dy)), isTrue);
+    });
+  });
+
+  group('outgoing child', () {
+    testWidgets('is out of pointer, focus and semantics from the first frame', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      var taps = 0;
+      final homeFocus = FocusNode();
+      addTearDown(homeFocus.dispose);
+      final state = await _pump(
+        tester,
+        builder: (mode) => switch (mode) {
+          _Mode.nav => SizedBox(
+            key: const ValueKey('nav'),
+            height: 64,
+            child: TextButton(
+              focusNode: homeFocus,
+              onPressed: () => taps++,
+              child: const Text('Home'),
+            ),
+          ),
+          _ => _composer(),
+        },
+      );
+      expect(_labels(tester), contains('Home'));
+      final homeCenter = tester.getCenter(find.text('Home'));
+
+      state.go(_Mode.composer);
+      await tester.pump();
+      expect(find.text('Home'), findsOneWidget);
+      expect(homeFocus.canRequestFocus, isFalse);
+      expect(_labels(tester), isNot(contains('Home')));
+      await tester.tapAt(homeCenter);
+      await tester.pump();
+      expect(taps, 0);
+
+      await tester.pumpAndSettle();
+      expect(find.text('Home'), findsNothing);
+      handle.dispose();
+    });
+
+    testWidgets('paints with no gap: the bar is never empty mid-morph', (
+      tester,
+    ) async {
+      final state = await _pump(tester);
+      state.go(_Mode.composer);
+      await tester.pump();
+      for (var i = 0; i <= 25; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        final switcher = _switcher(tester);
+        var total = 0.0;
+        switcher.visitChildren((child) {
+          total += switcher.opacityOf(child as RenderBox);
+        });
+        expect(total, greaterThan(0.99), reason: 'frame $i');
+      }
+    });
+  });
+
+  group('state', () {
+    testWidgets('a GlobalKey child keeps its state across a full round trip', (
+      tester,
+    ) async {
+      final key = GlobalKey<_CounterState>();
+      final state = await _pump(
+        tester,
+        builder: (mode) => switch (mode) {
+          _Mode.nav => _Counter(key: key),
+          _ => _actions(),
+        },
+      );
+      await tester.tap(find.text('Count 0'));
+      await tester.pump();
+      expect(find.text('Count 1'), findsOneWidget);
+
+      state.go(_Mode.actions);
+      await tester.pumpAndSettle();
+      expect(find.text('Count 1'), findsNothing);
+      expect(find.text('Count 1', skipOffstage: false), findsOneWidget);
+
+      state.go(_Mode.nav);
+      await tester.pumpAndSettle();
+      expect(find.text('Count 1'), findsOneWidget);
+      expect(key.currentState!.count, 1);
+    });
+
+    testWidgets('a local key keeps state only when it returns mid-exit', (
+      tester,
+    ) async {
+      final state = await _pump(
+        tester,
+        builder: (mode) => switch (mode) {
+          _Mode.nav => const _Counter(key: ValueKey('nav')),
+          _ => _actions(),
+        },
+      );
+      await tester.tap(find.text('Count 0'));
+      await tester.pump();
+
+      state.go(_Mode.actions);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      state.go(_Mode.nav);
+      await tester.pumpAndSettle();
+      expect(find.text('Count 1'), findsOneWidget);
+
+      state.go(_Mode.actions);
+      await tester.pumpAndSettle();
+      state.go(_Mode.nav);
+      await tester.pumpAndSettle();
+      expect(find.text('Count 0'), findsOneWidget);
+    });
+
+    testWidgets('BottomBarItems comes back on the app-held selection', (
+      tester,
+    ) async {
+      var selected = 2;
+      final state = await _pump(
+        tester,
+        builder: (mode) => switch (mode) {
+          _Mode.nav => BottomBarItems(
+            key: const ValueKey('items'),
+            selectedIndex: selected,
+            onSelected: (i) => selected = i,
+            children: const [
+              BottomBarItem(icon: Icon(Icons.home), label: Text('Home')),
+              BottomBarItem(icon: Icon(Icons.search), label: Text('Search')),
+              BottomBarItem(icon: Icon(Icons.inbox), label: Text('Inbox')),
+            ],
+          ),
+          _ => _actions(),
+        },
+      );
+      state.go(_Mode.actions);
+      await tester.pumpAndSettle();
+      state.go(_Mode.nav);
+      await tester.pumpAndSettle();
+      final items = tester.widget<BottomBarItems>(find.byType(BottomBarItems));
+      expect(items.selectedIndex, 2);
+    });
+  });
+
+  group('focus', () {
+    testWidgets('moves from the old child to the new child first focusable', (
+      tester,
+    ) async {
+      final homeFocus = FocusNode();
+      final share = FocusNode();
+      addTearDown(homeFocus.dispose);
+      addTearDown(share.dispose);
+      final state = await _pump(
+        tester,
+        builder: (mode) => switch (mode) {
+          _Mode.nav => SizedBox(
+            key: const ValueKey('nav'),
+            height: 64,
+            child: TextButton(
+              focusNode: homeFocus,
+              onPressed: () {},
+              child: const Text('Home'),
+            ),
+          ),
+          _ => _actions(first: share),
+        },
+      );
+      homeFocus.requestFocus();
+      await tester.pump();
+      expect(homeFocus.hasPrimaryFocus, isTrue);
+
+      state.go(_Mode.actions);
+      await tester.pump();
+      await tester.pump();
+      expect(share.hasPrimaryFocus, isTrue);
+    });
+
+    testWidgets('leaves focus where the app puts it in the new child', (
+      tester,
+    ) async {
+      final homeFocus = FocusNode();
+      final field = FocusNode();
+      addTearDown(homeFocus.dispose);
+      addTearDown(field.dispose);
+      final state = await _pump(
+        tester,
+        builder: (mode) => switch (mode) {
+          _Mode.nav => SizedBox(
+            key: const ValueKey('nav'),
+            height: 64,
+            child: TextButton(
+              focusNode: homeFocus,
+              onPressed: () {},
+              child: const Text('Home'),
+            ),
+          ),
+          _ => _composer(field: field),
+        },
+      );
+      homeFocus.requestFocus();
+      await tester.pump();
+
+      state.go(_Mode.composer);
+      field.requestFocus();
+      await tester.pump();
+      await tester.pump();
+      expect(field.hasPrimaryFocus, isTrue);
+    });
+
+    testWidgets('an autofocus text field gets focus after a touch switch', (
+      tester,
+    ) async {
+      final state = await _pump(
+        tester,
+        builder: (mode) => switch (mode) {
+          _Mode.composer => _composer(autofocus: true),
+          _ => _nav(),
+        },
+      );
+      state.go(_Mode.composer);
+      await tester.pump();
+      await tester.pump();
+      final editable = tester.state<EditableTextState>(
+        find.byType(EditableText),
+      );
+      expect(editable.widget.focusNode.hasPrimaryFocus, isTrue);
+    });
+
+    testWidgets('does not take focus when it was elsewhere', (tester) async {
+      final outside = FocusNode();
+      addTearDown(outside.dispose);
+      final state = await _pump(
+        tester,
+        body: Focus(focusNode: outside, child: const SizedBox.expand()),
+      );
+      outside.requestFocus();
+      await tester.pump();
+      state.go(_Mode.actions);
+      await tester.pump();
+      await tester.pump();
+      expect(outside.hasPrimaryFocus, isTrue);
+    });
+  });
+
+  testWidgets('keyboard: the composer rides the keyboard with avoidKeyboard', (
+    tester,
+  ) async {
+    final field = FocusNode();
+    addTearDown(field.dispose);
+    final state = await _pump(
+      tester,
+      builder: (mode) => switch (mode) {
+        _Mode.composer => _composer(field: field),
+        _ => _nav(),
+      },
+    );
+    state.go(_Mode.composer);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(TextField));
+    await tester.enterText(find.byType(TextField), 'hello');
+    await tester.pump();
+    final restBottom = _surface(tester).localToGlobal(Offset.zero).dy;
+
+    tester.view.viewInsets = const FakeViewPadding(bottom: 900);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpAndSettle();
+
+    final lifted = _surface(tester).localToGlobal(Offset.zero).dy;
+    expect(
+      restBottom - lifted,
+      moreOrLessEquals(900 / tester.view.devicePixelRatio, epsilon: 1),
+    );
+    expect(field.hasPrimaryFocus, isTrue);
+    expect(find.text('hello'), findsOneWidget);
+    expect(_switcher(tester).size.height, 120);
+  });
+
+  testWidgets('docked: the docked bar morphs its height at full width', (
+    tester,
+  ) async {
+    final state = await _pump(tester, layout: const BottomBarLayout.docked());
+    final width = tester.getSize(find.byType(Scaffold)).width;
+    expect(_switcher(tester).size.width, width);
+    state.go(_Mode.composer);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(_switcher(tester).size.height, moreOrLessEquals(92, epsilon: 0.5));
+    expect(_surface(tester).outlineRect.width, width);
+  });
+
+  testWidgets('RTL: focus lands on the first focusable in reading order', (
+    tester,
+  ) async {
+    final homeFocus = FocusNode();
+    final share = FocusNode();
+    addTearDown(homeFocus.dispose);
+    addTearDown(share.dispose);
+    final state = await _pump(
+      tester,
+      direction: TextDirection.rtl,
+      builder: (mode) => switch (mode) {
+        _Mode.nav => SizedBox(
+          key: const ValueKey('nav'),
+          height: 64,
+          child: TextButton(
+            focusNode: homeFocus,
+            onPressed: () {},
+            child: const Text('Home'),
+          ),
+        ),
+        _ => _actions(first: share),
+      },
+    );
+    homeFocus.requestFocus();
+    await tester.pump();
+    state.go(_Mode.actions);
+    await tester.pump();
+    await tester.pump();
+    expect(share.hasPrimaryFocus, isTrue);
+    await tester.pumpAndSettle();
+    expect(
+      tester.getCenter(find.text('Share')).dx,
+      greaterThan(tester.getCenter(find.text('Delete')).dx),
+    );
+  });
+
+  testWidgets('RTL: a start alignment sits the children on the right', (
+    tester,
+  ) async {
+    var wide = false;
+    late StateSetter set;
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.rtl,
+        child: Center(
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              set = setState;
+              return BottomBarSwitcher(
+                alignment: AlignmentDirectional.centerStart,
+                motion: const LinearMotion(Duration(milliseconds: 400)),
+                child: wide
+                    ? const SizedBox(key: ValueKey('w'), width: 300, height: 40)
+                    : const SizedBox(
+                        key: ValueKey('n'),
+                        width: 100,
+                        height: 40,
+                      ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    set(() => wide = true);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    final box = tester.getRect(
+      find.byWidgetPredicate((w) => w.runtimeType.toString() == '_SwitcherBox'),
+    );
+    final narrow = tester.getRect(find.byKey(const ValueKey('n')));
+    expect(narrow.right, moreOrLessEquals(box.right, epsilon: 0.01));
+  });
+
+  group('minimize', () {
+    testWidgets('a switch while minimized lands at once, shown on expand', (
+      tester,
+    ) async {
+      final controller = BottomBarController();
+      addTearDown(controller.dispose);
+      final state = await _pump(
+        tester,
+        controller: controller,
+        compactChild: const Icon(Icons.home),
+      );
+      controller.minimize();
+      await tester.pumpAndSettle();
+
+      state.go(_Mode.composer);
+      await tester.pump();
+      expect(_switcher(tester).size.height, 120);
+      expect(_switcher(tester).isMorphing, isFalse);
+      await tester.pump();
+      expect(find.text('Home'), findsNothing);
+
+      controller.show();
+      await tester.pumpAndSettle();
+      expect(find.byType(TextField), findsOneWidget);
+      expect(_switcher(tester).size.height, 120);
+    });
+
+    testWidgets('a switcher in the visible pill still morphs', (tester) async {
+      final controller = BottomBarController();
+      addTearDown(controller.dispose);
+      var big = false;
+      late StateSetter set;
+      await _pump(
+        tester,
+        controller: controller,
+        compactChild: StatefulBuilder(
+          builder: (context, setState) {
+            set = setState;
+            return BottomBarSwitcher(
+              child: big
+                  ? const SizedBox(key: ValueKey('big'), width: 48, height: 60)
+                  : const SizedBox(
+                      key: ValueKey('small'),
+                      width: 48,
+                      height: 40,
+                    ),
+            );
+          },
+        ),
+      );
+      controller.minimize();
+      await tester.pumpAndSettle();
+      set(() => big = true);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      final pill = tester.renderObject<RenderBottomBarSwitcher>(
+        find
+            .byWidgetPredicate(
+              (w) => w.runtimeType.toString() == '_SwitcherBox',
+            )
+            .last,
+      );
+      expect(pill.isMorphing, isTrue);
+    });
+
+    testWidgets('a switch while expanding still morphs', (tester) async {
+      final controller = BottomBarController();
+      addTearDown(controller.dispose);
+      final state = await _pump(
+        tester,
+        controller: controller,
+        compactChild: const Icon(Icons.home),
+      );
+      controller.minimize();
+      await tester.pumpAndSettle();
+      controller.show();
+      await tester.pump();
+      state.go(_Mode.composer);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(_switcher(tester).isMorphing, isTrue);
+    });
+  });
+
+  testWidgets('body padding follows the morph one frame behind, as is', (
+    tester,
+  ) async {
+    final state = await _pump(
+      tester,
+      body: const BottomBarBodyPadding(child: SizedBox.expand()),
+    );
+    await tester.pump();
+    double padding() => tester
+        .widget<Padding>(
+          find
+              .descendant(
+                of: find.byType(BottomBarBodyPadding),
+                matching: find.byType(Padding),
+              )
+              .first,
+        )
+        .padding
+        .resolve(TextDirection.ltr)
+        .bottom;
+    final rest = padding();
+
+    state.go(_Mode.composer);
+    await tester.pump();
+    final seen = <double>[];
+    for (var i = 0; i < 30; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+      seen.add(padding());
+    }
+    await tester.pumpAndSettle();
+    // It changes on many frames of the morph, not once.
+    expect(seen.toSet().length, greaterThan(10));
+    for (var i = 1; i < seen.length; i++) {
+      expect(seen[i], greaterThanOrEqualTo(seen[i - 1]));
+    }
+    expect(padding(), rest + 56);
+  });
+
+  testWidgets('inherits the bar motion, then the item theme outside a bar', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(
+          extensions: const [
+            BottomBarThemeData(
+              items: BottomBarItemThemeData(
+                indicatorMotion: LinearMotion(Duration(milliseconds: 400)),
+              ),
+            ),
+          ],
+        ),
+        home: const Center(
+          child: BottomBarSwitcher(
+            child: SizedBox(key: ValueKey('a'), width: 100, height: 40),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(
+          extensions: const [
+            BottomBarThemeData(
+              items: BottomBarItemThemeData(
+                indicatorMotion: LinearMotion(Duration(milliseconds: 400)),
+              ),
+            ),
+          ],
+        ),
+        home: const Center(
+          child: BottomBarSwitcher(
+            child: SizedBox(key: ValueKey('b'), width: 100, height: 80),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(_switcher(tester).size.height, moreOrLessEquals(60, epsilon: 0.5));
+  });
+}
