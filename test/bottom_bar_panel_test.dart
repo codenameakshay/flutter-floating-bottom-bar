@@ -663,6 +663,28 @@ void main() {
     expect(await result, isNull);
   });
 
+  testWidgets('a panel as short as the bar still closes on a drag down', (
+    tester,
+  ) async {
+    useView(tester);
+    await tester.pumpWidget(const _Harness());
+    final result = openPanel(
+      tester,
+      builder: (context) =>
+          const SizedBox(height: 40, child: Center(child: Text('Short'))),
+    );
+    await tester.pumpAndSettle();
+    expect(panel(tester).dragSpan, 120);
+    await tester.timedDrag(
+      find.text('Short'),
+      const Offset(0, 100),
+      const Duration(seconds: 1),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(PanelBox), findsNothing);
+    expect(await result, isNull);
+  });
+
   testWidgets('fast fling down closes the panel', (tester) async {
     useView(tester);
     await tester.pumpWidget(const _Harness());

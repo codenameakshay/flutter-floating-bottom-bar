@@ -1022,8 +1022,11 @@ class RenderBarPanel extends RenderBox
   Rect get panelRect => _end;
 
   /// How far the panel's top edge moves between the bar and the open panel,
-  /// so a drag can follow the finger.
-  double get dragSpan => math.max(0, _start.top - _end.top);
+  /// so a drag can follow the finger. A panel little taller than the bar
+  /// still takes [_minDragSpan] of drag to close.
+  double get dragSpan => math.max(_minDragSpan, _start.top - _end.top);
+
+  static const _minDragSpan = 120.0;
 
   final _lift = LayerHandle<OffsetLayer>();
   final _surfacePainter = SurfacePainter();
