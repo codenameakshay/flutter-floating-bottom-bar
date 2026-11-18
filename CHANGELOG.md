@@ -1,5 +1,10 @@
 ## Unreleased
 
+- Add `BottomBarSwitcher`, which swaps the bar's content with a morph of the
+  bar itself. The height springs from the old child's size to the new one's
+  and retargets mid-flight, and the outline, glass and shadows follow. The old
+  and new children cross-fade and scale with an overlap. Add a switcher demo
+  in `example/lib/demos/switcher_demo.dart`.
 - Add `BottomBar.accessory`, a mini player or dock above the bar, like the
   iOS 26 tab view bottom accessory. It moves inline beside the minimized
   pill on the morph's spring. `BottomBarAccessoryPlacement.of` tells it

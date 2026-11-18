@@ -516,6 +516,88 @@ final router = GoRouter(
 );
 ```
 
+## Contextual dock with BottomBarSwitcher
+
+The bar shows a navigation row until something is selected. Then it morphs
+into a selection row. Clearing the selection brings the navigation row back.
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+
+class ContextualDockExample extends StatefulWidget {
+  const ContextualDockExample({super.key});
+
+  @override
+  State<ContextualDockExample> createState() => _ContextualDockExampleState();
+}
+
+class _ContextualDockExampleState extends State<ContextualDockExample> {
+  int index = 0;
+  final selected = <int>{};
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: BottomBar(
+        body: BottomBarBodyPadding(
+          child: ListView.builder(
+            itemCount: 30,
+            itemBuilder: (_, row) => CheckboxListTile(
+              value: selected.contains(row),
+              title: Text('Row $row'),
+              onChanged: (on) => setState(() {
+                if (on ?? false) {
+                  selected.add(row);
+                } else {
+                  selected.remove(row);
+                }
+              }),
+            ),
+          ),
+        ),
+        child: BottomBarSwitcher(
+          child: selected.isEmpty
+              ? BottomBarItems(
+                  key: const ValueKey('nav'),
+                  selectedIndex: index,
+                  onSelected: (i) => setState(() => index = i),
+                  children: [
+                    BottomBarItem(
+                      icon: const Icon(Icons.home_outlined),
+                      label: const Text('Home'),
+                    ),
+                    BottomBarItem(
+                      icon: const Icon(Icons.inbox_outlined),
+                      label: const Text('Inbox'),
+                    ),
+                  ],
+                )
+              : Padding(
+                  key: const ValueKey('selection'),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('${selected.length} selected'),
+                      const SizedBox(width: 12),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: () => setState(selected.clear),
+                      ),
+                    ],
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+}
+```
+
+The switcher morphs the bar between the two rows. The bar's height and shape
+spring from one to the other, so neither row jumps.
+
 ## Demo index
 
 - `example/lib/demos/basic_demo.dart`
@@ -528,6 +610,7 @@ final router = GoRouter(
 - `example/lib/demos/go_router_shell_demo.dart`
 - `example/lib/demos/tabs_demo.dart`
 - `example/lib/demos/adaptive_rail_demo.dart`
+- `example/lib/demos/switcher_demo.dart`
 
 The adaptive rail demo is live at `#/adaptive-rail`.
 
