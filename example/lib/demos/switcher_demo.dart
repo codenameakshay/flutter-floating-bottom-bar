@@ -31,6 +31,7 @@ class _SwitcherDemoPageState extends State<SwitcherDemoPage> {
   void _toggle(int index) {
     setState(() {
       if (!_selected.remove(index)) _selected.add(index);
+      if (_selected.isEmpty) _composing = false;
     });
   }
 

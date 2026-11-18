@@ -82,4 +82,20 @@ void main() {
 
     expect(find.text('Library'), findsOneWidget);
   });
+
+  testWidgets('deselecting the last photo while composing returns to nav', (
+    tester,
+  ) async {
+    await _openSwitcher(tester);
+    await tester.longPress(_tile(0));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Compose'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(_tile(0));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('Library'), findsOneWidget);
+  });
 }
