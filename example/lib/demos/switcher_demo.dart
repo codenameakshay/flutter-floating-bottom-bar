@@ -157,19 +157,23 @@ class _SwitcherDemoPageState extends State<SwitcherDemoPage> {
             edgeHighlight: const Color(0x59FFFFFF),
           ),
         ),
-        body: BottomBarBodyPadding(
-          child: GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: 2,
-              crossAxisSpacing: 2,
-            ),
-            itemCount: 60,
-            itemBuilder: (context, index) => _Tile(
-              index: index,
-              selected: _selected.contains(index),
-              onTap: _selected.isEmpty ? null : () => _toggle(index),
-              onLongPress: () => _toggle(index),
+        body: Builder(
+          builder: (context) => ValueListenableBuilder<double>(
+            valueListenable: BottomBarScope.of(context).barHeight,
+            builder: (context, barHeight, _) => GridView.builder(
+              padding: EdgeInsets.only(bottom: barHeight),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 2,
+                crossAxisSpacing: 2,
+              ),
+              itemCount: 60,
+              itemBuilder: (context, index) => _Tile(
+                index: index,
+                selected: _selected.contains(index),
+                onTap: _selected.isEmpty ? null : () => _toggle(index),
+                onLongPress: () => _toggle(index),
+              ),
             ),
           ),
         ),
