@@ -1202,6 +1202,57 @@ column taller than its space scrolls, and `dragToSelect` has no effect then.
 
 Try the [adaptive rail demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/adaptive-rail) live.
 
+### Morph between bars
+
+`BottomBarSwitcher` swaps the bar's content with a morph of the bar itself. It
+suits a contextual dock, such as a nav row that becomes a "3 selected" action
+row, and then a composer. The bar springs to the new size and shape. It does
+not just cross-fade.
+
+```dart
+BottomBar(
+  child: BottomBarSwitcher(
+    child: switch (dock) {
+      Dock.nav => BottomBarItems(key: const ValueKey('nav'), ...),
+      Dock.selection => SelectionDock(
+          key: const ValueKey('selection'),
+          count: selected.length,
+        ),
+      Dock.composer => Composer(key: const ValueKey('composer')),
+    },
+  ),
+  body: ...,
+)
+```
+
+- Give each child a distinct key. A child with a new key or type starts a
+  morph. A child with the same key and type updates in place.
+- The height always morphs. The width morphs only where the constraints are
+  loose. Inside a `BottomBar` the width is the bar's resolved width, so it
+  does not change.
+- The outline, glass, shadows and notch follow the morph on every frame. A
+  capsule stays a capsule as the height changes.
+- A switch mid-flight retargets from the current size and velocity, so it
+  never jumps.
+- With reduced motion, the size snaps and the children swap at once.
+- From the first frame of a switch, only the new child takes pointers, focus
+  and semantics.
+- If focus was in the old child, it moves into the new child once the switch
+  is built. It goes to a node the app focuses, such as a `TextField` with
+  `autofocus`. Otherwise it goes to the new child's first focusable widget.
+- A child that leaves is disposed when its fade ends. To keep its state while
+  it is away, give it a `GlobalKey`.
+- Body padding follows the live height, one frame behind. A list scrolled away
+  from its end does not move. A list scrolled to its end, or content pinned to
+  the bottom of the body, moves with the bar's top edge.
+- While the bar is minimized, a switch lands at once with no morph, and the new
+  child shows when the bar expands. Set `compactChild` on the bar when its child
+  is a switcher, because the default pill only reads a `BottomBarItems` child.
+- `motion` defaults to the bar's `motion`. Pass one to tune the morph on its
+  own.
+
+The switcher demo is in `example/lib/demos/switcher_demo.dart`.
+
 ## Migrating from another bar
 
 The [migration guides](./docs/migrate/README.md) move an existing bottom bar
