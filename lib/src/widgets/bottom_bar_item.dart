@@ -4,9 +4,13 @@ import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:motor/motor.dart';
 
+import '../bottom_bar_localizations.dart';
 import '../internal/bottom_bar_item_height.dart';
+import '../internal/focus_ring.dart';
 import '../internal/item_theme_scope.dart';
+import '../internal/label_text_scale.dart';
 import '../internal/reduce_motion.dart';
+import '../internal/tab_position.dart';
 import 'bottom_bar_badge.dart';
 import 'bottom_bar_indicator.dart';
 import 'bottom_bar_item_theme.dart';
@@ -62,8 +66,12 @@ class BottomBarItem extends StatelessWidget {
   ///
   /// Styled with `textTheme.labelSmall` (or [BottomBarItemThemeData.labelStyle])
   /// tinted to [color] or [selectedColor].
-  /// A `Text` label with non-null `data` is truncated to a single line with
-  /// an ellipsis. Other widgets (including `Text.rich`) are left untouched.
+  /// A `Text` label with non-null `data` stays on one line. It follows the
+  /// text scale up to 1.3x and shrinks back toward 1.0x when that is too wide
+  /// for its slot, so a label that fits at the normal size never truncates.
+  /// A label too long even then ends in an ellipsis.
+  /// `Text.rich` keeps its wrapping and overflow settings, with the same
+  /// text-scale cap. Other widgets are left untouched.
   /// Label visibility is controlled by the enclosing
   /// [BottomBarItems.labelBehavior].
   final Widget? label;
@@ -318,45 +326,87 @@ class _ItemViewState extends State<_ItemView>
         item.selectedColor ??
         selection?.selectedLabelColor ??
         selectedLookColor;
-    final explicitSemanticLabel = item.semanticLabel ?? item.tooltip;
     final minHeight = BottomBarItemHeightScope.maybeOf(context) ?? 48;
 
     final currentLabel = item.label;
     Widget labelChild = currentLabel ?? const SizedBox.shrink();
-    if (currentLabel is Text && currentLabel.data != null) {
-      labelChild = Text(
-        currentLabel.data!,
-        key: currentLabel.key,
-        style: currentLabel.style,
-        strutStyle: currentLabel.strutStyle,
-        textAlign: currentLabel.textAlign ?? TextAlign.center,
-        textDirection: currentLabel.textDirection,
-        locale: currentLabel.locale,
-        softWrap: currentLabel.softWrap,
-        textScaler: currentLabel.textScaler,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        semanticsLabel: currentLabel.semanticsLabel,
-        semanticsIdentifier: currentLabel.semanticsIdentifier,
-        textWidthBasis: currentLabel.textWidthBasis,
-        textHeightBehavior: currentLabel.textHeightBehavior,
-        selectionColor: currentLabel.selectionColor,
-      );
+    if (currentLabel is Text) {
+      final textScaler = (currentLabel.textScaler ?? labelTextScalerOf(context))
+          .clamp(maxScaleFactor: maxLabelTextScale);
+      labelChild = currentLabel.data == null
+          ? Text.rich(
+              currentLabel.textSpan!,
+              key: currentLabel.key,
+              style: currentLabel.style,
+              strutStyle: currentLabel.strutStyle,
+              textAlign: currentLabel.textAlign,
+              textDirection: currentLabel.textDirection,
+              locale: currentLabel.locale,
+              softWrap: currentLabel.softWrap,
+              textScaler: textScaler,
+              maxLines: currentLabel.maxLines,
+              overflow: currentLabel.overflow,
+              semanticsLabel: currentLabel.semanticsLabel,
+              semanticsIdentifier: currentLabel.semanticsIdentifier,
+              textWidthBasis: currentLabel.textWidthBasis,
+              textHeightBehavior: currentLabel.textHeightBehavior,
+              selectionColor: currentLabel.selectionColor,
+            )
+          : Text(
+              currentLabel.data!,
+              key: currentLabel.key,
+              style: currentLabel.style,
+              strutStyle: currentLabel.strutStyle,
+              textAlign: currentLabel.textAlign ?? TextAlign.center,
+              textDirection: currentLabel.textDirection,
+              locale: currentLabel.locale,
+              softWrap: currentLabel.softWrap,
+              textScaler: textScaler,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              semanticsLabel: currentLabel.semanticsLabel,
+              semanticsIdentifier: currentLabel.semanticsIdentifier,
+              textWidthBasis: currentLabel.textWidthBasis,
+              textHeightBehavior: currentLabel.textHeightBehavior,
+              selectionColor: currentLabel.selectionColor,
+            );
+      final scale = textScaler.scale(100) / 100;
+      if (currentLabel.data != null && scale > 1) {
+        labelChild = _FitLabel(scale: scale, child: labelChild);
+      }
     }
 
-    final badgeLabel = badge is BottomBarBadge
-        ? badgeSemanticsLabel(badge)
+    final textLabel = currentLabel is Text
+        ? currentLabel.semanticsLabel ??
+              currentLabel.data ??
+              currentLabel.textSpan?.toPlainText()
         : null;
-    final baseLabel =
-        explicitSemanticLabel ??
-        ((!showLabel || badgeLabel != null) &&
-                currentLabel is Text &&
-                currentLabel.data != null
-            ? currentLabel.semanticsLabel ?? currentLabel.data
+    final name = item.semanticLabel ?? item.tooltip ?? textLabel;
+    final badgeLabel = badge is BottomBarBadge
+        ? badgeSemanticsLabel(badge, BottomBarLocalizations.of(context))
+        : null;
+    final position = TabPosition.maybeOf(context);
+    final tabLabel = position == null
+        ? null
+        : (Localizations.of<MaterialLocalizations>(
+                    context,
+                    MaterialLocalizations,
+                  ) ??
+                  const DefaultMaterialLocalizations())
+              .tabLabel(tabIndex: position.index + 1, tabCount: position.count);
+    final accessibleLabel = name == null
+        ? null
+        : [name, ?badgeLabel, ?tabLabel].join(', ');
+    final tooltip =
+        item.tooltip ??
+        (showLabel &&
+                (labelTextCapped(context) ||
+                    (currentLabel is Text &&
+                        currentLabel.textScaler != null &&
+                        currentLabel.textScaler!.scale(100) / 100 >
+                            maxLabelTextScale))
+            ? textLabel
             : null);
-    final accessibleLabel = baseLabel == null || badgeLabel == null
-        ? baseLabel
-        : '$baseLabel, $badgeLabel';
 
     // The reveal mounts the icon and label twice, which a GlobalKey forbids.
     final ink =
@@ -431,8 +481,14 @@ class _ItemViewState extends State<_ItemView>
       return Stack(
         alignment: Alignment.center,
         children: [
-          Opacity(opacity: 1 - t, child: icon),
-          Opacity(opacity: t, child: selectedIcon),
+          ExcludeSemantics(
+            excluding: selected,
+            child: Opacity(opacity: 1 - t, child: icon),
+          ),
+          ExcludeSemantics(
+            excluding: !selected,
+            child: Opacity(opacity: t, child: selectedIcon),
+          ),
         ],
       );
     }
@@ -497,23 +553,26 @@ class _ItemViewState extends State<_ItemView>
         if (currentLabel != null && labelShown > 0) ...[
           SizedBox(height: (theme.iconLabelGap ?? 2) * labelShown),
           _FillBoundedWidth(
-            child: DefaultTextStyle(
-              style: lerpLabelStyle(
-                labelBase,
-                labelBase.merge(theme.selectedLabelStyle),
-                t,
-              )!.copyWith(color: labelColor),
-              child: selection == null
-                  ? grown(label)
-                  : Center(
-                      heightFactor: 1,
-                      child: anchors
-                          ? IndicatorAnchor(
-                              role: IndicatorAnchorRole.label,
-                              child: grown(label),
-                            )
-                          : grown(label),
-                    ),
+            child: MediaQuery.withClampedTextScaling(
+              maxScaleFactor: maxLabelTextScale,
+              child: DefaultTextStyle(
+                style: lerpLabelStyle(
+                  labelBase,
+                  labelBase.merge(theme.selectedLabelStyle),
+                  t,
+                )!.copyWith(color: labelColor),
+                child: selection == null
+                    ? grown(label)
+                    : Center(
+                        heightFactor: 1,
+                        child: anchors
+                            ? IndicatorAnchor(
+                                role: IndicatorAnchorRole.label,
+                                child: grown(label),
+                              )
+                            : grown(label),
+                      ),
+              ),
             ),
           ),
         ],
@@ -540,9 +599,16 @@ class _ItemViewState extends State<_ItemView>
       ),
     );
 
-    if (item.tooltip != null) {
+    child = FocusRing(
+      shape: RoundedRectangleBorder(
+        borderRadius: theme.inkBorderRadius ?? BorderRadius.circular(8),
+      ),
+      child: child,
+    );
+
+    if (tooltip != null) {
       child = Tooltip(
-        message: item.tooltip!,
+        message: tooltip,
         excludeFromSemantics: true,
         triggerMode: onLongPress == null ? null : TooltipTriggerMode.manual,
         child: child,
@@ -551,15 +617,29 @@ class _ItemViewState extends State<_ItemView>
 
     // Always present so a badge or label toggling the name keeps the subtree.
     child = ExcludeSemantics(excluding: accessibleLabel != null, child: child);
+    if (accessibleLabel == null && tabLabel != null) {
+      child = Stack(
+        fit: StackFit.passthrough,
+        clipBehavior: Clip.none,
+        children: [
+          child,
+          Semantics(label: tabLabel),
+        ],
+      );
+    }
 
-    return Semantics(
-      button: true,
-      enabled: onTap != null || onLongPress != null,
-      selected: selected,
-      label: accessibleLabel,
-      onTap: accessibleLabel != null ? onTap : null,
-      onLongPress: accessibleLabel != null ? onLongPress : null,
-      child: child,
+    // One node per item, like NavigationBar: the selected flag is the only
+    // selection announcement.
+    return MergeSemantics(
+      child: Semantics(
+        button: true,
+        enabled: onTap != null || onLongPress != null,
+        selected: selected,
+        label: accessibleLabel,
+        onTap: accessibleLabel != null ? onTap : null,
+        onLongPress: accessibleLabel != null ? onLongPress : null,
+        child: child,
+      ),
     );
   }
 }
@@ -591,4 +671,91 @@ class _RenderFillBoundedWidth extends RenderProxyBox {
   @override
   Size computeDryLayout(BoxConstraints constraints) =>
       constraints.constrain(child!.getDryLayout(_fill(constraints)));
+}
+
+/// Lays a label out with up to [scale] times its slot's width, then shrinks
+/// it to fit the slot. A label that fits at the normal text size never
+/// truncates at a larger one; one too long even then keeps its ellipsis.
+class _FitLabel extends SingleChildRenderObjectWidget {
+  const _FitLabel({required this.scale, super.child});
+
+  final double scale;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderFitLabel(scale);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderFitLabel renderObject) {
+    renderObject.scale = scale;
+  }
+}
+
+class _RenderFitLabel extends RenderProxyBox {
+  _RenderFitLabel(this._scale);
+
+  double _scale;
+  set scale(double value) {
+    if (value == _scale) return;
+    _scale = value;
+    markNeedsLayout();
+  }
+
+  Matrix4 _transform = Matrix4.identity();
+
+  BoxConstraints _inner(BoxConstraints constraints) => BoxConstraints(
+    maxWidth: constraints.hasBoundedWidth
+        ? constraints.maxWidth * _scale
+        : double.infinity,
+    maxHeight: constraints.maxHeight,
+  );
+
+  double _factor(BoxConstraints constraints, Size child) =>
+      constraints.hasBoundedWidth && child.width > constraints.maxWidth
+      ? constraints.maxWidth / child.width
+      : 1;
+
+  @override
+  void performLayout() {
+    final child = this.child!;
+    child.layout(_inner(constraints), parentUsesSize: true);
+    final factor = _factor(constraints, child.size);
+    size = constraints.constrain(child.size * factor);
+    _transform = Matrix4.translationValues(
+      (size.width - child.size.width * factor) / 2,
+      (size.height - child.size.height * factor) / 2,
+      0,
+    )..scaleByDouble(factor, factor, 1, 1);
+  }
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) {
+    final child = this.child!.getDryLayout(_inner(constraints));
+    return constraints.constrain(child * _factor(constraints, child));
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    layer = context.pushTransform(
+      needsCompositing,
+      offset,
+      _transform,
+      super.paint,
+      oldLayer: layer as TransformLayer?,
+    );
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      result.addWithPaintTransform(
+        transform: _transform,
+        position: position,
+        hitTest: (result, position) =>
+            child!.hitTest(result, position: position),
+      );
+
+  @override
+  void applyPaintTransform(RenderBox child, Matrix4 transform) {
+    transform.multiply(_transform);
+  }
 }

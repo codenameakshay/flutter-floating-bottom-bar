@@ -4,7 +4,9 @@ import 'dart:ui' show lerpDouble;
 import 'package:material_ui/material_ui.dart';
 import 'package:motor/motor.dart';
 
+import '../bottom_bar_localizations.dart';
 import '../internal/item_theme_scope.dart';
+import '../internal/label_text_scale.dart';
 import '../internal/reduce_motion.dart';
 import 'bottom_bar_item_theme.dart';
 
@@ -15,7 +17,7 @@ import 'bottom_bar_item_theme.dart';
 /// BottomBarItem(
 ///   icon: const Icon(Icons.inbox_outlined),
 ///   label: const Text('Inbox'),
-///   badge: BottomBarBadge.count(unread, semanticLabel: '$unread new'),
+///   badge: BottomBarBadge.count(unread),
 /// )
 /// ```
 ///
@@ -28,10 +30,13 @@ import 'bottom_bar_item_theme.dart';
 /// `badge`, so the out animation can play.
 ///
 /// The item adds the badge's [semanticLabel] to its accessible name, as in
-/// "Inbox, 3 new". Without one, a count announces the text it shows ("3",
-/// "99+"), a label announces its text and a dot announces nothing. To
-/// localize, pass a translated [semanticLabel], such as
-/// `AppLocalizations.of(context).unreadMessages(count)`.
+/// "Inbox, 3 new". Without one, a count announces
+/// [BottomBarLocalizations.badgeCount] ("3 new") or, above its max,
+/// [BottomBarLocalizations.badgeCountOverflow] ("More than 99 new"), a dot
+/// announces [BottomBarLocalizations.badgeDot] ("New") and a label announces
+/// its text. Translate those through a [BottomBarLocalizationsDelegate], or
+/// pass a [semanticLabel] for one badge. An empty [semanticLabel] announces
+/// nothing.
 ///
 /// Styled by [BottomBarBadgeThemeData], set as
 /// [BottomBarItemThemeData.badge]. Arguments here win over the theme.
@@ -46,6 +51,7 @@ class BottomBarBadge extends StatefulWidget {
     this.semanticLabel,
   }) : _text = null,
        _count = null,
+       _max = null,
        _visible = show,
        backgroundColor = color,
        textStyle = null;
@@ -65,6 +71,7 @@ class BottomBarBadge extends StatefulWidget {
   }) : assert(count >= 0, 'count must not be negative'),
        assert(max > 0, 'max must be positive'),
        _count = count,
+       _max = max,
        _text = count > max ? '$max+' : '$count',
        _visible = count > 0 || showZero;
 
@@ -79,11 +86,13 @@ class BottomBarBadge extends StatefulWidget {
     this.offset,
     this.semanticLabel,
   }) : _count = null,
+       _max = null,
        _text = text,
        _visible = show && text != '';
 
   final String? _text;
   final int? _count;
+  final int? _max;
   final bool _visible;
 
   /// Fill colour. Defaults to [BottomBarBadgeThemeData.backgroundColor], then
@@ -110,11 +119,21 @@ class BottomBarBadge extends StatefulWidget {
 }
 
 /// What [badge] adds to its item's accessible name, or null for nothing.
-String? badgeSemanticsLabel(BottomBarBadge badge) {
+String? badgeSemanticsLabel(
+  BottomBarBadge badge,
+  BottomBarLocalizations strings,
+) {
   if (!badge._visible) return null;
   final label = badge.semanticLabel;
   if (label != null) return label.isEmpty ? null : label;
-  return badge._text;
+  final count = badge._count;
+  final max = badge._max;
+  if (count != null && max != null) {
+    return count > max
+        ? strings.badgeCountOverflow(max)
+        : strings.badgeCount(count);
+  }
+  return badge._text ?? strings.badgeDot;
 }
 
 /// Defaults for every [BottomBarBadge] below a theme. Set it as
@@ -299,7 +318,7 @@ class _Look {
         .resolve(Directionality.of(context))
         .horizontal;
     motion = theme.motion ?? _defaultMotion;
-    textScaler = MediaQuery.textScalerOf(context);
+    textScaler = labelTextScalerOf(context);
     direction = Directionality.of(context);
   }
 
@@ -491,7 +510,7 @@ class _BottomBarBadgeState extends State<BottomBarBadge>
   Widget build(BuildContext context) {
     final look = _Look(context, widget);
     return Semantics(
-      label: badgeSemanticsLabel(widget),
+      label: badgeSemanticsLabel(widget, BottomBarLocalizations.of(context)),
       child: ExcludeSemantics(
         child: IgnorePointer(
           child: ListenableBuilder(
@@ -519,7 +538,13 @@ class _BottomBarBadgeState extends State<BottomBarBadge>
         opacity: (1 - position.abs()).clamp(0, 1),
         child: OverflowBox(
           maxWidth: double.infinity,
-          child: Text(text, style: look.style, maxLines: 1, softWrap: false),
+          child: Text(
+            text,
+            style: look.style,
+            textScaler: look.textScaler,
+            maxLines: 1,
+            softWrap: false,
+          ),
         ),
       ),
     );

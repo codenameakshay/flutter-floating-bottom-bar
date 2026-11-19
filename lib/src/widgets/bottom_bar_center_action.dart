@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:motor/motor.dart';
 
 import '../internal/bar_surface.dart';
+import '../internal/focus_ring.dart';
 import '../internal/haptics.dart';
 import '../internal/item_theme_scope.dart';
 import '../internal/reduce_motion.dart';
@@ -262,21 +263,26 @@ class _BottomBarCenterActionState extends State<BottomBarCenterAction>
       shape: shape,
       elevation: theme.elevation ?? (lifted ? 3 : 0),
       shadowColor: theme.shadowColor ?? cs.shadow,
-      child: InkWell(
-        customBorder: shape,
-        onTap: onTap,
-        onHighlightChanged: _onHighlightChanged,
-        child: SizedBox.square(
-          dimension: size,
-          child: Center(
-            child: IconTheme.merge(
-              data: IconThemeData(
-                color:
-                    action.foregroundColor ??
-                    theme.foregroundColor ??
-                    cs.onPrimary,
+      child: FocusRing(
+        shape: shape is OutlinedBorder
+            ? shape
+            : RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        child: InkWell(
+          customBorder: shape,
+          onTap: onTap,
+          onHighlightChanged: _onHighlightChanged,
+          child: SizedBox.square(
+            dimension: size,
+            child: Center(
+              child: IconTheme.merge(
+                data: IconThemeData(
+                  color:
+                      action.foregroundColor ??
+                      theme.foregroundColor ??
+                      cs.onPrimary,
+                ),
+                child: action.icon,
               ),
-              child: action.icon,
             ),
           ),
         ),
@@ -301,6 +307,7 @@ class _BottomBarCenterActionState extends State<BottomBarCenterAction>
       );
     }
     button = Semantics(
+      container: true,
       button: true,
       enabled: onTap != null,
       label: label,

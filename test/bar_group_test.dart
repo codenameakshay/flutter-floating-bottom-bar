@@ -357,10 +357,27 @@ void main() {
       await pumpBar(tester);
 
       final texts = _traversalTexts(tester).toList();
-      expect(texts, containsAll(['Profile', 'Home', 'Inbox', 'Search']));
-      expect(texts.indexOf('Profile'), lessThan(texts.indexOf('Home')));
-      expect(texts.indexOf('Home'), lessThan(texts.indexOf('Inbox')));
-      expect(texts.indexOf('Inbox'), lessThan(texts.indexOf('Search')));
+      expect(
+        texts,
+        containsAll([
+          'Profile',
+          'Home, Tab 1 of 2',
+          'Inbox, Tab 2 of 2',
+          'Search',
+        ]),
+      );
+      expect(
+        texts.indexOf('Profile'),
+        lessThan(texts.indexOf('Home, Tab 1 of 2')),
+      );
+      expect(
+        texts.indexOf('Home, Tab 1 of 2'),
+        lessThan(texts.indexOf('Inbox, Tab 2 of 2')),
+      );
+      expect(
+        texts.indexOf('Inbox, Tab 2 of 2'),
+        lessThan(texts.indexOf('Search')),
+      );
       semantics.dispose();
     },
   );
@@ -372,10 +389,27 @@ void main() {
       await pumpBar(tester, direction: TextDirection.rtl);
 
       final texts = _traversalTexts(tester).toList();
-      expect(texts, containsAll(['Profile', 'Home', 'Inbox', 'Search']));
-      expect(texts.indexOf('Profile'), lessThan(texts.indexOf('Home')));
-      expect(texts.indexOf('Home'), lessThan(texts.indexOf('Inbox')));
-      expect(texts.indexOf('Inbox'), lessThan(texts.indexOf('Search')));
+      expect(
+        texts,
+        containsAll([
+          'Profile',
+          'Home, Tab 1 of 2',
+          'Inbox, Tab 2 of 2',
+          'Search',
+        ]),
+      );
+      expect(
+        texts.indexOf('Profile'),
+        lessThan(texts.indexOf('Home, Tab 1 of 2')),
+      );
+      expect(
+        texts.indexOf('Home, Tab 1 of 2'),
+        lessThan(texts.indexOf('Inbox, Tab 2 of 2')),
+      );
+      expect(
+        texts.indexOf('Inbox, Tab 2 of 2'),
+        lessThan(texts.indexOf('Search')),
+      );
       semantics.dispose();
     },
   );

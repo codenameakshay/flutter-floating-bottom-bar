@@ -77,6 +77,108 @@ Set<Color> _colors(WidgetTester tester, Finder finder) => {
     text.text.style!.color!,
 };
 
+const _indicatorStyles = [
+  'pill',
+  'tint',
+  'underline',
+  'dot',
+  'container',
+  'none',
+];
+
+BottomBarIndicator _indicatorNamed(String style) => switch (style) {
+  'pill' => const BottomBarIndicator.pill(),
+  'tint' => const BottomBarIndicator.tint(),
+  'underline' => const BottomBarIndicator.underline(),
+  'dot' => const BottomBarIndicator.dot(),
+  'container' => const BottomBarIndicator.container(),
+  'none' => const BottomBarIndicator.none(),
+  _ => throw StateError('Unexpected indicator $style'),
+};
+
+/// The default fill a covering indicator paints behind selected content, or
+/// null when the indicator paints beneath the content instead.
+Color? _indicatorPaint(String style, ColorScheme cs) => switch (style) {
+  'pill' => cs.primary,
+  'tint' => cs.primary.withValues(alpha: 0.12),
+  'container' => cs.secondaryContainer,
+  _ => null,
+};
+
+Future<ColorScheme> _pumpBar(
+  WidgetTester tester, {
+  required Color seed,
+  required Brightness brightness,
+  required bool highContrast,
+  required BottomBarThemeData theme,
+  BottomBarIndicator? indicator,
+  bool badge = false,
+}) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: ThemeData(colorSchemeSeed: seed, brightness: brightness),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(highContrast: highContrast),
+        child: child!,
+      ),
+      home: Scaffold(
+        body: BottomBar(
+          theme: theme,
+          showIcon: false,
+          body: const SizedBox.expand(),
+          child: BottomBarItems(
+            selectedIndex: 0,
+            indicator: indicator,
+            children: [
+              BottomBarItem(
+                icon: const Icon(Icons.home),
+                label: const Text('On'),
+                badge: badge ? BottomBarBadge.count(3) : null,
+              ),
+              const BottomBarItem(icon: Icon(Icons.search), label: Text('Off')),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  return Theme.of(tester.element(find.byType(BottomBar))).colorScheme;
+}
+
+/// The selected look of an item. Where the indicator reveals it, that is the
+/// copy under [IndicatorInk]; the plain copy outside it sits on the bar. An
+/// item with no reveal has one copy, which is the selected look.
+Set<Color> _selectedColors(WidgetTester tester, Finder finder) {
+  final inked = <Color>{};
+  final all = <Color>{};
+  for (final element
+      in find
+          .descendant(of: finder, matching: find.byType(RichText))
+          .evaluate()) {
+    final color = (element.widget as RichText).text.style!.color!;
+    all.add(color);
+    if (element.findAncestorWidgetOfExactType<IndicatorInk>() != null) {
+      inked.add(color);
+    }
+  }
+  return inked.isEmpty ? all : inked;
+}
+
+({Color? offText, Color offIcon, Set<Color> onText, Set<Color> onIcon})
+_readItems(WidgetTester tester) {
+  final offText = tester.any(find.text('Off'))
+      ? _textColor(tester, find.text('Off'))
+      : null;
+  final offIcon = _textColor(tester, find.byIcon(Icons.search));
+  return (
+    offText: offText,
+    offIcon: offIcon,
+    onText: _selectedColors(tester, find.text('On')),
+    onIcon: _selectedColors(tester, find.byIcon(Icons.home)),
+  );
+}
+
 void main() {
   testWidgets('material3 indicatorColor picks a contrasting icon colour', (
     tester,
@@ -233,4 +335,175 @@ void main() {
       }
     }
   }
+
+  group('indicator styles over presets', () {
+    for (final MapEntry(key: name, value: preset) in _presets.entries) {
+      for (final style in _indicatorStyles) {
+        for (final brightness in Brightness.values) {
+          for (final highContrast in [false, true]) {
+            testWidgets(
+              '$name with $style indicator keeps contrast in $brightness '
+              '(highContrast: $highContrast)',
+              (tester) async {
+                final failures = <String>[];
+                for (final seed in _seeds) {
+                  final cs = await _pumpBar(
+                    tester,
+                    seed: seed,
+                    brightness: brightness,
+                    highContrast: highContrast,
+                    theme: preset.theme(),
+                    indicator: _indicatorNamed(style),
+                  );
+                  final surface = tester
+                      .widget<BarSurface>(find.byType(BarSurface))
+                      .surface!;
+                  final tint = surface.tint!;
+                  final layer = tint.withValues(
+                    alpha: tint.a * surface.fillOpacity,
+                  );
+                  final backdrops = layer.a == 1 ? [_white] : [_white, _black];
+                  final painted = _indicatorPaint(style, cs);
+                  if (painted != null) {
+                    expect(
+                      tester.renderObject(find.byType(IndicatorTrack)),
+                      paints..rrect(color: painted),
+                      reason: '$name $style rendered indicator fill',
+                    );
+                  }
+                  final items = _readItems(tester);
+                  expect(
+                    items.onText,
+                    isNotEmpty,
+                    reason: '$name $style selected label colour',
+                  );
+                  expect(
+                    items.onIcon,
+                    isNotEmpty,
+                    reason: '$name $style selected icon colour',
+                  );
+
+                  for (final backdrop in backdrops) {
+                    final bar = Color.alphaBlend(layer, backdrop);
+                    final fill = painted == null
+                        ? null
+                        : Color.alphaBlend(painted, bar);
+                    final iconBacking = fill ?? bar;
+                    final labelBacking = style == 'container'
+                        ? bar
+                        : fill ?? bar;
+
+                    void check(String what, Color fg, Color bg, double min) {
+                      final r = _ratio(fg, bg);
+                      if (r < min) {
+                        failures.add(
+                          '$what ${r.toStringAsFixed(2)} < $min '
+                          '(seed $seed, backdrop $backdrop, fg $fg, bg $bg)',
+                        );
+                      }
+                    }
+
+                    if (items.offText != null) {
+                      check('unselected label', items.offText!, bar, _textMin);
+                    }
+                    check('unselected icon', items.offIcon, bar, _iconMin);
+                    for (final c in items.onText) {
+                      check('selected label', c, labelBacking, _textMin);
+                    }
+                    for (final c in items.onIcon) {
+                      check('selected icon', c, iconBacking, _iconMin);
+                    }
+                  }
+                }
+                expect(failures, isEmpty, reason: failures.join('\n'));
+              },
+            );
+          }
+        }
+      }
+    }
+  });
+
+  group('badge text over its fill', () {
+    for (final MapEntry(key: name, value: preset) in _presets.entries) {
+      for (final brightness in Brightness.values) {
+        for (final highContrast in [false, true]) {
+          testWidgets('$name badge text keeps contrast in $brightness '
+              '(highContrast: $highContrast)', (tester) async {
+            final failures = <String>[];
+            for (final seed in _seeds) {
+              final theme = preset.theme();
+              final cs = await _pumpBar(
+                tester,
+                seed: seed,
+                brightness: brightness,
+                highContrast: highContrast,
+                theme: theme,
+                badge: true,
+              );
+              expect(find.text('3'), findsOneWidget, reason: '$name badge');
+              final fill = theme.items?.badge?.backgroundColor ?? cs.error;
+              final text = _textColor(tester, find.text('3'));
+              final r = _ratio(text, fill);
+              if (r < _textMin) {
+                failures.add(
+                  'badge text ${r.toStringAsFixed(2)} < $_textMin '
+                  '(seed $seed, fill $fill, text $text)',
+                );
+              }
+            }
+            expect(failures, isEmpty, reason: failures.join('\n'));
+          });
+        }
+      }
+    }
+  });
+
+  group('high-contrast fallback', () {
+    for (final brightness in Brightness.values) {
+      testWidgets('glass bar is opaque and readable in $brightness', (
+        tester,
+      ) async {
+        final failures = <String>[];
+        for (final seed in _seeds) {
+          final cs = await _pumpBar(
+            tester,
+            seed: seed,
+            brightness: brightness,
+            highContrast: true,
+            theme: _presets['glass']!.theme(),
+          );
+          final surface = tester
+              .widget<BarSurface>(find.byType(BarSurface))
+              .surface!;
+          final bar = surface.tint!;
+          expect(bar.a, 1.0, reason: 'seed $seed glass tint is opaque');
+          final fill = _presets['glass']!.selectedFill(cs, bar);
+          final items = _readItems(tester);
+
+          void check(String what, Color fg, Color bg, double min) {
+            final r = _ratio(fg, bg);
+            if (r < min) {
+              failures.add(
+                '$what ${r.toStringAsFixed(2)} < $min '
+                '(seed $seed, fg $fg, bg $bg)',
+              );
+            }
+          }
+
+          if (items.offText != null) {
+            check('unselected label', items.offText!, bar, _textMin);
+          }
+          check('unselected icon', items.offIcon, bar, _iconMin);
+          for (final c in items.onText) {
+            check('selected label', c, fill, _textMin);
+          }
+          for (final c in items.onIcon) {
+            check('selected icon', c, fill, _iconMin);
+          }
+        }
+        expect(failures, isEmpty, reason: failures.join('\n'));
+      });
+    }
+  });
 }

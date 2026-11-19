@@ -326,9 +326,11 @@ with built-in accessibility and RTL-aware badge placement.
 - The item exposes button semantics, selection state, and enabled state.
 - The tappable surface keeps at least a 48x48 target.
 - Accessible naming is deterministic: `semanticLabel` wins, otherwise
-  `tooltip`, otherwise descendant semantics.
-- When `semanticLabel` or `tooltip` provides the explicit accessible name,
-  descendant semantics are excluded to avoid duplicate announcements.
+  `tooltip`, otherwise the `Text` label, otherwise descendant semantics. In a
+  `BottomBarItems` row the item adds its badge and its position, as in
+  "Inbox, 3 new, Tab 2 of 4". See [Accessibility](#accessibility).
+- Each item is one semantics node. Descendant semantics are excluded when the
+  item has a name, so nothing is announced twice.
 - In bounded rows wide enough for each item's 48x48 minimum target,
   `BottomBarItems` wraps every child in `Expanded`, so items share the row's
   width equally. Narrow bounded rows use a horizontal scroll view to preserve
@@ -444,7 +446,7 @@ BottomBarItems(
     BottomBarItem(
       icon: const Icon(Icons.inbox_outlined),
       label: const Text('Inbox'),
-      badge: BottomBarBadge.count(unread, semanticLabel: '$unread new'),
+      badge: BottomBarBadge.count(unread),
     ),
     BottomBarItem(
       icon: const Icon(Icons.person_outline),
@@ -498,11 +500,12 @@ The fields are `backgroundColor`, `textColor`, `textStyle`, `dotSize`,
 `height`, `padding`, `offset`, `outlineColor`, `outlineWidth` and `motion`.
 Every field is optional. Arguments on a badge win over the theme.
 
-The item announces its name and its badge, as in "Inbox, 3 new". A count
-announces the text it shows by default, such as "3" or "99+". A label
-announces its text. A dot is silent unless it has a `semanticLabel`.
+The item announces its name and its badge, as in "Inbox, 3 new". By default a
+count announces "3 new", or "More than 99 new" above its max. A dot announces
+"New". A label announces its text. An empty `semanticLabel` announces nothing.
 
-To localize, pass a translated `semanticLabel`:
+Translate these through `BottomBarLocalizations` (see
+[Accessibility](#accessibility)), or pass a `semanticLabel` for one badge:
 
 ```dart
 BottomBarBadge.count(
@@ -1350,6 +1353,79 @@ A centre action can call `showBottomBarPanel` from its `onPressed` in the same w
 | `semanticLabel` | The localized dialog label | Announced when the panel opens. |
 
 See the `panel` demo in `example/lib/demos/panel_demo.dart`.
+
+## Accessibility
+
+The package guarantees these behaviours. Tests check each one, and every demo
+passes Flutter's `androidTapTargetGuideline`, `iOSTapTargetGuideline`,
+`labeledTapTargetGuideline` and `textContrastGuideline`.
+
+- **Tabs.** In a `BottomBarItems` row or rail, each item is one button node
+  with a selected state. Its name ends with its position from
+  `MaterialLocalizations.tabLabel`, as in "Inbox, 3 new, Tab 2 of 4". The centre
+  action is a separate button and is not counted. A selection change sets the
+  selected state and announces nothing else, like `NavigationBar`.
+- **Large text.** Item labels and badge text follow the system text size up to
+  1.3x, the same cap as `NavigationBar`. A label that fits its slot at the
+  normal size never truncates: when 1.3x is too wide, it shrinks toward 1.0x
+  until it fits. A label too long even at 1.0x keeps its ellipsis. Above
+  1.3x, a long-press shows the label in a tooltip at full size, and the
+  screen reader name keeps the label. The bar
+  grows with its content, and `BottomBarScope.barHeight` and
+  `BottomBarBodyPadding` follow it.
+- **Touch targets.** Items, the centre action, the minimized pill and the hidden
+  action have a hit area of at least 48x48, which also covers iOS's 44x44.
+- **Keyboard.** Tab moves through the bar in reading order, and arrow keys move
+  between items. A 2 px ring in `colorScheme.primary` shows on the focused
+  item, centre action, pill or hidden action when focus comes from a keyboard.
+- **Contrast.** Every preset keeps 4.5:1 for labels and badge text and 3:1 for
+  icons, with every indicator style, in light, dark and high contrast. High
+  contrast swaps the glass for an opaque fill.
+- **Hidden bar.** While the bar is hidden, it takes no focus, taps or
+  semantics.
+
+### Translate the strings
+
+`BottomBarLocalizations` holds every string the package announces, in English.
+Strings that `MaterialLocalizations` already has ("Tab 2 of 4", "Expand") come
+from there. To translate, extend the class and add a
+`BottomBarLocalizationsDelegate`:
+
+```dart
+class GermanBottomBarLocalizations extends BottomBarLocalizations {
+  const GermanBottomBarLocalizations();
+
+  @override
+  String get scrollToTop => 'Nach oben scrollen';
+  @override
+  String get scrollToBottom => 'Nach unten scrollen';
+  @override
+  String badgeCount(int count) => '$count neu';
+  @override
+  String badgeCountOverflow(int max) => 'Mehr als $max neu';
+  @override
+  String get badgeDot => 'Neu';
+}
+
+BottomBarLocalizations bottomBarStrings(Locale locale) =>
+    locale.languageCode == 'de'
+        ? const GermanBottomBarLocalizations()
+        : const BottomBarLocalizations();
+
+MaterialApp(
+  localizationsDelegates: const [
+    BottomBarLocalizationsDelegate(bottomBarStrings),
+    ...GlobalMaterialLocalizations.delegates,
+  ],
+  supportedLocales: const [Locale('en'), Locale('de')],
+  // ...
+)
+```
+
+A per-widget argument wins over these strings: `BottomBar.iconSemanticLabel`,
+`BottomBar.iconTooltip`, `BottomBarItem.semanticLabel` and
+`BottomBarBadge.semanticLabel`. See the `accessibility` demo in
+`example/lib/demos/accessibility_demo.dart`.
 
 ## Migrating from another bar
 

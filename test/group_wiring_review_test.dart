@@ -238,10 +238,22 @@ void main() {
           .expand((node) => [node.label, node.tooltip])
           .where((text) => text.isNotEmpty)
           .toList();
-      expect(texts.indexOf('Leading'), lessThan(texts.indexOf('Home')));
-      expect(texts.indexOf('Home'), lessThan(texts.indexOf('Create')));
-      expect(texts.indexOf('Create'), lessThan(texts.indexOf('Inbox')));
-      expect(texts.indexOf('Inbox'), lessThan(texts.indexOf('Trailing')));
+      expect(
+        texts.indexOf('Leading'),
+        lessThan(texts.indexOf('Home, Tab 1 of 2')),
+      );
+      expect(
+        texts.indexOf('Home, Tab 1 of 2'),
+        lessThan(texts.indexOf('Create')),
+      );
+      expect(
+        texts.indexOf('Create'),
+        lessThan(texts.indexOf('Inbox, Tab 2 of 2')),
+      );
+      expect(
+        texts.indexOf('Inbox, Tab 2 of 2'),
+        lessThan(texts.indexOf('Trailing')),
+      );
       semantics.dispose();
     });
   }

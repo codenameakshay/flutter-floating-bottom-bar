@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import 'focus_ring.dart';
+
 /// Internal back action with a stable hit target and animated visual child.
 class BottomBarAction extends StatefulWidget {
   const BottomBarAction({
@@ -49,29 +51,34 @@ class _BottomBarActionState extends State<BottomBarAction> {
       height: targetExtent,
       child: Material(
         color: Colors.transparent,
-        child: InkWell(
-          onTap: widget.enabled ? widget.onTap : null,
-          child: Center(
-            child: AnimatedBuilder(
-              animation: widget.animation,
-              builder: (context, _) {
-                final progress = widget.animation.value.clamp(0.0, 1.0);
-                final width = widget.visualWidth * progress;
-                final height = widget.visualHeight * progress;
-                return Opacity(
-                  opacity: progress,
-                  child: SizedBox(
-                    width: width,
-                    height: height,
-                    child: ClipOval(
-                      child: DecoratedBox(
-                        decoration: widget.decoration,
-                        child: widget.visualBuilder(width, height),
+        child: FocusRing(
+          shape: const CircleBorder(),
+          child: InkWell(
+            onTap: widget.enabled ? widget.onTap : null,
+            child: Center(
+              child: AnimatedBuilder(
+                animation: widget.animation,
+                builder: (context, _) {
+                  final progress = widget.animation.value.clamp(0.0, 1.0);
+                  final width = widget.visualWidth * progress;
+                  final height = widget.visualHeight * progress;
+                  return Opacity(
+                    opacity: progress,
+                    child: SizedBox(
+                      width: width,
+                      height: height,
+                      child: ClipOval(
+                        child: DecoratedBox(
+                          decoration: widget.decoration,
+                          child: ExcludeSemantics(
+                            child: widget.visualBuilder(width, height),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -85,6 +92,7 @@ class _BottomBarActionState extends State<BottomBarAction> {
         child: ExcludeSemantics(
           excluding: !widget.enabled,
           child: Semantics(
+            container: true,
             button: true,
             label: widget.semanticLabel,
             child: TooltipVisibility(

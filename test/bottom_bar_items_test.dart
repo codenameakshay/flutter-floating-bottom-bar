@@ -836,13 +836,15 @@ void main() {
             );
 
             final data = tester
-                .getSemantics(find.bySemanticsLabel('Home'))
+                .getSemantics(find.bySemanticsLabel('Home, Tab 1 of 1'))
                 .getSemanticsData();
-            expect(data.label, 'Home');
+            expect(data.label, 'Home, Tab 1 of 1');
             expect(data.flagsCollection.isButton, isTrue);
             expect(data.hasAction(SemanticsAction.tap), isTrue);
             expect(
-              semanticsLabels(tester).where((label) => label == 'Home'),
+              semanticsLabels(
+                tester,
+              ).where((label) => label == 'Home, Tab 1 of 1'),
               hasLength(1),
             );
             expect(find.text('Home'), findsNothing);
