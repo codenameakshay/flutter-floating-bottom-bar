@@ -1063,6 +1063,45 @@ Use it for things that float above the bar, like a button.
 
 Try the [minimize demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/minimize) live.
 
+### Follow the finger
+
+Safari's toolbar follows your finger. Set `followScroll` and the bar does the
+same. As the list scrolls, the bar moves with it instead of springing once a
+scroll passes `deltaThreshold`.
+
+```dart
+BottomBar(
+  scrollBehavior: const BottomBarScrollBehavior(followScroll: true),
+  body: const BottomBarBodyPadding(child: Feed()),
+  child: BottomBarItems(
+    selectedIndex: index,
+    onSelected: (i) => setState(() => index = i),
+    children: items,
+  ),
+)
+```
+
+- Each logical pixel of scroll moves the bar one logical pixel. The bar
+  travels its full footprint, the height `BottomBarBodyPadding` reserves. It
+  stops when fully shown or fully hidden. Turning back moves it straight back,
+  with no threshold.
+- Overscroll does not move the bar. A fling keeps moving it until it is fully
+  in or out.
+- When the scroll ends, the bar settles on `BottomBarMotion` to the nearer
+  state. A fling that runs into the end of the list settles the way it was
+  going. Reduced motion still follows the finger, but the settle snaps.
+- Callbacks and `BottomBarController` report the settled state, not each
+  frame. The bar counts as shown, for taps and screen readers, until it is
+  fully hidden.
+- Only hiding follows the finger. With a `minimizeBehavior` on, minimizing
+  still triggers past `deltaThreshold`, because iOS does not track it one to
+  one. `BottomBarController.reportScroll` also keeps the threshold.
+- `show()`, `hide()` and the scroll actions win over a scroll in progress. The
+  bar then stays where it is until the scroll ends.
+
+The Basic TabBar demo has a "Follow the finger" switch in its app bar
+(`example/lib/demos/basic_tab_bar_demo.dart`).
+
 ### Accessory
 
 On iOS 26 a tab view can show a mini player or a dock above the tab bar
@@ -1413,6 +1452,7 @@ animating.
 | `predicate` | `bool Function(ScrollNotification)?` | `null` | Skip notifications entirely when it returns false. |
 | `visibilityOnTabChange` | `BottomBarTabVisibility` | `show` | On a tab change, `show` shows the bar and `restore` gives the tab back the visibility it had when the user left it. See [Tabs and pages](#tabs-and-pages). |
 | `minimizeBehavior` | `BottomBarMinimizeBehavior` | `never` | `onScrollDown` or `onScrollUp` shrinks the bar into a pill instead of hiding it. Takes precedence over `hideOnScroll` and `reverse`. See [Minimize on scroll](#minimize-on-scroll). |
+| `followScroll` | `bool` | `false` | Hiding tracks the finger one to one instead of springing past `deltaThreshold`. See [Follow the finger](#follow-the-finger). |
 
 ### `BottomBarController`
 

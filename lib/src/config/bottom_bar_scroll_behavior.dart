@@ -44,6 +44,7 @@ class BottomBarScrollBehavior {
     this.predicate,
     this.visibilityOnTabChange = BottomBarTabVisibility.show,
     this.minimizeBehavior = BottomBarMinimizeBehavior.never,
+    this.followScroll = false,
   }) : assert(deltaThreshold >= 0, 'deltaThreshold must be >= 0');
 
   /// When false, scroll events never hide the bar (the [BottomBarController]
@@ -130,6 +131,35 @@ class BottomBarScrollBehavior {
   /// hides instead.
   final BottomBarMinimizeBehavior minimizeBehavior;
 
+  /// When true, the bar follows the finger as it hides and shows, like
+  /// Safari's toolbar, instead of springing once a scroll passes
+  /// [deltaThreshold].
+  ///
+  /// While the list scrolls, each logical pixel of scroll moves the bar one
+  /// logical pixel, and turning back moves it straight back. The bar travels
+  /// its full footprint, the height [BottomBarBodyPadding] reserves, and
+  /// stops at shown and at hidden. Overscroll past either end does not move
+  /// it. A fling keeps moving it until it is fully in or out.
+  ///
+  /// When the scroll ends, the bar settles on [BottomBarMotion] to the nearer
+  /// state. A fling that runs into the end of the list settles toward the
+  /// way it was going. Reduced motion snaps the settle, but the bar still
+  /// follows the finger.
+  ///
+  /// The built-in slide moves the bar in pixels. Other transitions and
+  /// [BottomBarMotion.transitionBuilder] get the matching progress. The
+  /// callbacks and [BottomBarController] report the settled state, not each
+  /// frame. The bar counts as shown, for taps and screen readers, until it is
+  /// fully hidden.
+  ///
+  /// Applies to hiding only. Ignored while [hideOnScroll] is false, and while
+  /// [minimizeBehavior] is not [BottomBarMinimizeBehavior.never]: minimizing
+  /// still happens past [deltaThreshold]. [BottomBarController.reportScroll]
+  /// also keeps the threshold. [BottomBarController.show],
+  /// [BottomBarController.hide] and the scroll actions win over a scroll in
+  /// progress, which then leaves the bar alone until it ends.
+  final bool followScroll;
+
   /// Returns a copy of this scroll behaviour with the given fields replaced by
   /// non-null values. Null arguments leave the corresponding field unchanged.
   BottomBarScrollBehavior copyWith({
@@ -143,6 +173,7 @@ class BottomBarScrollBehavior {
     bool Function(ScrollNotification notification)? predicate,
     BottomBarTabVisibility? visibilityOnTabChange,
     BottomBarMinimizeBehavior? minimizeBehavior,
+    bool? followScroll,
   }) {
     return BottomBarScrollBehavior(
       hideOnScroll: hideOnScroll ?? this.hideOnScroll,
@@ -156,6 +187,7 @@ class BottomBarScrollBehavior {
       visibilityOnTabChange:
           visibilityOnTabChange ?? this.visibilityOnTabChange,
       minimizeBehavior: minimizeBehavior ?? this.minimizeBehavior,
+      followScroll: followScroll ?? this.followScroll,
     );
   }
 
@@ -172,7 +204,8 @@ class BottomBarScrollBehavior {
         other.keepVisibleOnFocus == keepVisibleOnFocus &&
         other.predicate == predicate &&
         other.visibilityOnTabChange == visibilityOnTabChange &&
-        other.minimizeBehavior == minimizeBehavior;
+        other.minimizeBehavior == minimizeBehavior &&
+        other.followScroll == followScroll;
   }
 
   @override
@@ -187,5 +220,6 @@ class BottomBarScrollBehavior {
     predicate,
     visibilityOnTabChange,
     minimizeBehavior,
+    followScroll,
   );
 }
