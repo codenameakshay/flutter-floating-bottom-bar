@@ -8,6 +8,7 @@ export 'package:motor/motor.dart'
         MaterialSpringMotion;
 
 export 'src/bottom_bar.dart';
+export 'src/bottom_bar_localizations.dart';
 export 'src/bottom_bar_controller.dart'
     show BottomBarController, BottomBarVisibility;
 export 'src/bottom_bar_scope.dart';

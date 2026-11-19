@@ -157,7 +157,7 @@ void main() {
         );
         final node = tester.getSemantics(find.byType(BottomBarItem));
         final data = node.getSemanticsData();
-        expect(data.label, 'Inbox, 4 unread');
+        expect(data.label, 'Inbox, 4 unread, Tab 1 of 1');
         expect(data.flagsCollection.isButton, isTrue);
         expect(data.hasAction(SemanticsAction.tap), isTrue);
         node.owner!.performAction(node.id, SemanticsAction.tap);
@@ -189,7 +189,7 @@ void main() {
       final data = tester
           .getSemantics(find.byType(BottomBarItem))
           .getSemanticsData();
-      expect(data.label, 'Inbox, 3');
+      expect(data.label, 'Inbox, 3 new, Tab 1 of 1');
       expect(data.flagsCollection.isEnabled, ui.Tristate.isFalse);
       expect(data.hasAction(SemanticsAction.tap), isFalse);
 
@@ -205,7 +205,7 @@ void main() {
       );
       expect(
         tester.getSemantics(find.byType(BottomBarItem)).label,
-        'Open mail, 3',
+        'Open mail, 3 new, Tab 1 of 1',
       );
     } finally {
       semantics.dispose();
@@ -240,7 +240,10 @@ void main() {
       );
       await pumpBadge(const BottomBarBadge.count(3));
       expect(tester.state(find.byType(_StatefulIcon)), same(mounted));
-      expect(tester.getSemantics(find.byType(BottomBarItem)).label, 'Inbox, 3');
+      expect(
+        tester.getSemantics(find.byType(BottomBarItem)).label,
+        'Inbox, 3 new, Tab 1 of 1',
+      );
       await gesture.up();
       await tester.pumpAndSettle();
       expect(taps, 1);
@@ -248,12 +251,18 @@ void main() {
       await pumpBadge(const BottomBarBadge.count(0));
       await tester.pump(const Duration(milliseconds: 30));
       expect(tester.state(find.byType(_StatefulIcon)), same(mounted));
-      expect(tester.getSemantics(find.byType(BottomBarItem)).label, 'Inbox');
+      expect(
+        tester.getSemantics(find.byType(BottomBarItem)).label,
+        'Inbox, Tab 1 of 1',
+      );
       await pumpBadge(null);
       expect(tester.state(find.byType(_StatefulIcon)), same(mounted));
       await pumpBadge(null, labels: BottomBarLabelBehavior.alwaysHide);
       expect(tester.state(find.byType(_StatefulIcon)), same(mounted));
-      expect(tester.getSemantics(find.byType(BottomBarItem)).label, 'Inbox');
+      expect(
+        tester.getSemantics(find.byType(BottomBarItem)).label,
+        'Inbox, Tab 1 of 1',
+      );
       await pumpBadge(null);
       expect(tester.state(find.byType(_StatefulIcon)), same(mounted));
     } finally {

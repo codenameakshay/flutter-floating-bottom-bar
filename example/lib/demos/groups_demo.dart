@@ -218,8 +218,8 @@ class _FeedTile extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  HSLColor.fromAHSL(1, hueA, 0.75, 0.55).toColor(),
-                  HSLColor.fromAHSL(1, hueB, 0.75, 0.55).toColor(),
+                  HSLColor.fromAHSL(1, hueA, 0.75, 0.25).toColor(),
+                  HSLColor.fromAHSL(1, hueB, 0.75, 0.25).toColor(),
                 ],
               ),
         borderRadius: BorderRadius.circular(20),

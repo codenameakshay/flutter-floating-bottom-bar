@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:motor/motor.dart';
 
 import 'bottom_bar_controller.dart';
+import 'bottom_bar_localizations.dart';
 import 'bottom_bar_scope.dart';
 import 'bottom_bar_theme.dart';
 import 'internal/bar_group.dart';
@@ -230,12 +231,14 @@ class BottomBar extends StatefulWidget {
   /// Accessibility label for the hidden action.
   ///
   /// Passed to [Semantics.label]. Defaults to the direction-aware tooltip text:
-  /// `'Scroll to top'` or `'Scroll to bottom'`.
+  /// [BottomBarLocalizations.scrollToTop] or
+  /// [BottomBarLocalizations.scrollToBottom].
   final String? iconSemanticLabel;
 
   /// Tooltip text shown on long-press of the hidden action.
   ///
-  /// Defaults to `'Scroll to top'` or `'Scroll to bottom'`, depending on
+  /// Defaults to [BottomBarLocalizations.scrollToTop] or
+  /// [BottomBarLocalizations.scrollToBottom], depending on
   /// [BottomBarScrollBehavior.scrollOpposite].
   final String? iconTooltip;
 
@@ -627,7 +630,9 @@ class _BottomBarState extends State<BottomBar>
             FocusManager.instance.highlightMode ==
             FocusHighlightMode.traditional,
       ),
-      label: custom == null && item != null ? itemSemanticsLabel(item) : null,
+      label: custom == null && item != null
+          ? itemSemanticsLabel(item, BottomBarLocalizations.of(context))
+          : null,
       child:
           custom ??
           (item == null
@@ -969,8 +974,11 @@ class _BottomBarState extends State<BottomBar>
   }
 
   String get _defaultIconTooltip {
+    final strings = BottomBarLocalizations.of(context);
     return widget.iconTooltip ??
-        (_scrollBehavior.scrollOpposite ? 'Scroll to bottom' : 'Scroll to top');
+        (_scrollBehavior.scrollOpposite
+            ? strings.scrollToBottom
+            : strings.scrollToTop);
   }
 
   String get _defaultIconSemanticLabel {

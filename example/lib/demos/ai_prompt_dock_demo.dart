@@ -138,7 +138,12 @@ class _PromptDock extends StatelessWidget {
             children: [
               const _CircleAction(icon: Icons.attach_file_rounded),
               const SizedBox(width: 8),
-              const _PillAction(icon: Icons.lightbulb_outline, label: 'Expert'),
+              const Flexible(
+                child: _PillAction(
+                  icon: Icons.lightbulb_outline,
+                  label: 'Expert',
+                ),
+              ),
               const Spacer(),
               const _CircleAction(icon: Icons.mic_none_rounded),
               const SizedBox(width: 8),
@@ -251,12 +256,18 @@ class _PillAction extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 18),
           const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),

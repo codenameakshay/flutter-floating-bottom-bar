@@ -41,8 +41,15 @@ List<String> _spokenControls(WidgetTester tester) => tester.semantics
     .simulatedAccessibilityTraversal()
     .expand((node) => [node.label, node.tooltip])
     .where(
-      (label) =>
-          ['accessory', 'leading', 'Home', 'Inbox', 'trailing'].contains(label),
+      (label) => [
+        'accessory',
+        'leading',
+        'Home',
+        'Home, Tab 1 of 2',
+        'Inbox',
+        'Inbox, Tab 2 of 2',
+        'trailing',
+      ].contains(label),
     )
     .toList();
 
@@ -163,12 +170,19 @@ void main() {
                 'Body',
                 'accessory',
                 'leading',
-                'Home',
-                'Inbox',
+                'Home, Tab 1 of 2',
+                'Inbox, Tab 2 of 2',
                 'trailing',
               ].contains(label),
             ),
-        ['Body', 'accessory', 'leading', 'Home', 'Inbox', 'trailing'],
+        [
+          'Body',
+          'accessory',
+          'leading',
+          'Home, Tab 1 of 2',
+          'Inbox, Tab 2 of 2',
+          'trailing',
+        ],
       );
     } finally {
       handle.dispose();
@@ -383,8 +397,8 @@ void main() {
             const expanded = [
               'accessory',
               'leading',
-              'Home',
-              'Inbox',
+              'Home, Tab 1 of 2',
+              'Inbox, Tab 2 of 2',
               'trailing',
             ];
             expect(
@@ -454,8 +468,8 @@ void main() {
       expect(_spokenControls(tester), [
         'accessory',
         'leading',
-        'Home',
-        'Inbox',
+        'Home, Tab 1 of 2',
+        'Inbox, Tab 2 of 2',
         'trailing',
       ]);
       controller.minimize();

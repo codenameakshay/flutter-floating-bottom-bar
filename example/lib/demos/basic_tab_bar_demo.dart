@@ -59,15 +59,17 @@ class _BasicTabBarDemoPageState extends State<BasicTabBarDemoPage>
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Follow the finger'),
-                Switch(
-                  value: _followScroll,
-                  onChanged: (v) => setState(() => _followScroll = v),
-                ),
-              ],
+            child: MergeSemantics(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Follow the finger'),
+                  Switch(
+                    value: _followScroll,
+                    onChanged: (v) => setState(() => _followScroll = v),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -160,9 +162,10 @@ class _BasicTabBarDemoPageState extends State<BasicTabBarDemoPage>
               Positioned(
                 top: -10,
                 child: SizedBox.square(
-                  dimension: 42,
+                  dimension: 48,
                   child: FloatingActionButton.small(
                     heroTag: 'basic-tab-bar-fab',
+                    tooltip: 'Add',
                     elevation: 0,
                     backgroundColor: Colors.white,
                     foregroundColor: activeColor,

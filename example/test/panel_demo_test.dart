@@ -50,7 +50,10 @@ void main() {
     expect(find.text('Search'), findsNothing);
   });
 
-  test('panel demo is registered', () {
-    expect(demos.map((demo) => demo.slug), contains('panel'));
+  test('panel and accessibility demos are registered', () {
+    expect(
+      demos.map((demo) => demo.slug),
+      containsAll(['panel', 'accessibility']),
+    );
   });
 }
