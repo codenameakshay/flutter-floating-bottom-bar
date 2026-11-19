@@ -208,7 +208,7 @@ void main() {
 
     var labels = _spoken(tester).toList();
     final track = _indexWhere(labels, (l) => l == 'Midnight City');
-    final home = _indexWhere(labels, (l) => l == 'Home');
+    final home = _indexWhere(labels, (l) => l == 'Home, Tab 1 of 3');
     final search = _indexWhere(labels, (l) => l == 'Search');
     expect(track, greaterThanOrEqualTo(0), reason: 'expanded: $labels');
     expect(home, greaterThanOrEqualTo(0), reason: 'expanded: $labels');

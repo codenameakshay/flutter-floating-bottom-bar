@@ -605,15 +605,17 @@ void main() {
       final semantics = tester.ensureSemantics();
       await tester.pumpWidget(_badgeApp(const BottomBarBadge.count(150)));
       await tester.pumpAndSettle();
-      expect(_semanticsLabel(tester), 'Inbox, 99+');
+      expect(_semanticsLabel(tester), 'Inbox, More than 99 new');
       semantics.dispose();
     });
 
-    testWidgets('dot is silent unless it has a semanticLabel', (tester) async {
+    testWidgets('dot announces New unless it has a semanticLabel', (
+      tester,
+    ) async {
       final semantics = tester.ensureSemantics();
       await tester.pumpWidget(_badgeApp(const BottomBarBadge.dot()));
       await tester.pumpAndSettle();
-      expect(_semanticsLabel(tester), 'Inbox');
+      expect(_semanticsLabel(tester), 'Inbox, New');
 
       await tester.pumpWidget(
         _badgeApp(const BottomBarBadge.dot(semanticLabel: 'new')),
@@ -629,7 +631,7 @@ void main() {
       final semantics = tester.ensureSemantics();
       await tester.pumpWidget(_badgeApp(const BottomBarBadge.count(3)));
       await tester.pumpAndSettle();
-      expect(_semanticsLabel(tester), 'Inbox, 3');
+      expect(_semanticsLabel(tester), 'Inbox, 3 new');
 
       await tester.pumpWidget(_badgeApp(const BottomBarBadge.count(0)));
       await tester.pump();
@@ -664,7 +666,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(_semanticsLabel(tester), 'Inbox, 3 new');
+      expect(_semanticsLabel(tester), 'Inbox, 3 new, Tab 1 of 1');
       semantics.dispose();
     });
   });

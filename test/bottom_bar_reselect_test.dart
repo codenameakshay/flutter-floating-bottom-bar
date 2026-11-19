@@ -538,7 +538,7 @@ void main() {
         expect(
           tester.getSemantics(find.byKey(const ValueKey(2))),
           isSemantics(
-            label: 'Profile',
+            label: 'Profile, Tab 3 of 4',
             isButton: true,
             hasEnabledState: true,
             isEnabled: true,
@@ -551,7 +551,7 @@ void main() {
         expect(
           tester.getSemantics(find.byKey(const ValueKey(3))),
           isSemantics(
-            label: 'Profile',
+            label: 'Profile, Tab 4 of 4',
             isButton: true,
             hasEnabledState: true,
             isEnabled: true,

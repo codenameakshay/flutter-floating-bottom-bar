@@ -7,6 +7,7 @@ import '../internal/bottom_bar_item_height.dart';
 import '../internal/haptics.dart';
 import '../internal/item_theme_scope.dart';
 import '../internal/reduce_motion.dart';
+import '../internal/tab_position.dart';
 import 'bottom_bar_center_action.dart';
 import 'bottom_bar_indicator.dart';
 import 'bottom_bar_item_theme.dart';
@@ -199,7 +200,15 @@ class BottomBarItems extends StatelessWidget {
       'selectedIndex $index is out of range for ${children.length} children',
     );
     if (index != null) return _SelectableItems(items: this);
-    return _layout(context, children, null);
+    return _layout(context, [
+      for (var i = 0; i < children.length; i++)
+        TabPosition(
+          key: children[i].key == null ? null : ValueKey<Key>(children[i].key!),
+          index: i,
+          count: children.length,
+          child: children[i],
+        ),
+    ], null);
   }
 
   Widget _layout(
@@ -585,7 +594,11 @@ class _SelectableItemsState extends State<_SelectableItems>
             selectedForegroundColor: foreground,
             selectedLabelColor: labelForeground,
             ink: ink,
-            child: items.children[i],
+            child: TabPosition(
+              index: i,
+              count: items.children.length,
+              child: items.children[i],
+            ),
           ),
         ),
     ];

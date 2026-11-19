@@ -3,10 +3,12 @@ import 'dart:math' as math;
 import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../bottom_bar_localizations.dart';
 import '../widgets/bottom_bar_badge.dart';
 import '../widgets/bottom_bar_item.dart';
 import '../widgets/bottom_bar_items.dart';
 import 'bar_surface.dart';
+import 'focus_ring.dart';
 import 'item_theme_scope.dart';
 
 // The full bar holds on while it shrinks and the pill comes in early, so the
@@ -39,7 +41,7 @@ BottomBarItem? selectedItemOf(Widget child) {
 }
 
 /// What a screen reader says for [item], badge included.
-String? itemSemanticsLabel(BottomBarItem item) {
+String? itemSemanticsLabel(BottomBarItem item, BottomBarLocalizations strings) {
   final label = item.label;
   final base =
       item.semanticLabel ??
@@ -47,7 +49,7 @@ String? itemSemanticsLabel(BottomBarItem item) {
       (label is Text ? label.semanticsLabel ?? label.data : null);
   final badge = item.badge;
   final badgeLabel = badge is BottomBarBadge
-      ? badgeSemanticsLabel(badge)
+      ? badgeSemanticsLabel(badge, strings)
       : null;
   if (base == null || badgeLabel == null) return base ?? badgeLabel;
   return '$base, $badgeLabel';
@@ -113,11 +115,12 @@ class CompactPillButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hint =
-        Localizations.of<MaterialLocalizations>(
-          context,
-          MaterialLocalizations,
-        )?.collapsedIconTapHint ??
-        'Expand';
+        (Localizations.of<MaterialLocalizations>(
+                  context,
+                  MaterialLocalizations,
+                ) ??
+                const DefaultMaterialLocalizations())
+            .collapsedIconTapHint;
     return MergeSemantics(
       child: Semantics(
         button: true,
@@ -128,11 +131,14 @@ class CompactPillButton extends StatelessWidget {
         excludeSemantics: label != null,
         child: Semantics(
           blockUserActions: true,
-          child: InkWell(
-            focusNode: focusNode,
-            onTap: onTap,
-            customBorder: const StadiumBorder(),
-            child: child,
+          child: FocusRing(
+            shape: const StadiumBorder(),
+            child: InkWell(
+              focusNode: focusNode,
+              onTap: onTap,
+              customBorder: const StadiumBorder(),
+              child: child,
+            ),
           ),
         ),
       ),
