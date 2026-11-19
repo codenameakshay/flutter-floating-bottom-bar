@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_floating_bottom_bar_example/configurator/bar_code.dart';
 import 'package:flutter_floating_bottom_bar_example/configurator/bar_config.dart';
@@ -117,6 +118,21 @@ void main() {
     });
   }
 
+  for (final (route, expected) in [
+    ('/configurator?c=items:5,blur:%FF', BarConfig.defaults),
+    ('/configurator?c=items%3A5%2Cblur%3A%FF', BarConfig.defaults),
+    ('/configurator?c=items:5&future=%FF', BarConfig.defaults),
+    ('/configurator?c=items:5,blur:%', BarConfig.defaults.set(Knob.items, 5)),
+    ('/configurator?c=items:5,blur:%G0', BarConfig.defaults.set(Knob.items, 5)),
+  ]) {
+    testWidgets('a bad escape never throws: $route', (tester) async {
+      await _open(tester, route, _phone);
+
+      expect(_previewConfig(tester), expected);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('wide layout shows the code panel and copies it', (tester) async {
     String? copied;
     _mockClipboard(tester, (text) => copied = text);
@@ -137,6 +153,41 @@ void main() {
 
     expect(copied, generateCode(solid));
     expect(find.text('Code copied'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('phone sheet and preview stay aligned after resizing', (
+    tester,
+  ) async {
+    await _open(tester, '/configurator', _phone);
+    await tester.dragFrom(const Offset(195, 600), const Offset(0, -400));
+    await tester.pumpAndSettle();
+
+    tester.view.physicalSize = _wide;
+    await tester.pumpAndSettle();
+    tester.view.physicalSize = _phone;
+    await tester.pumpAndSettle();
+
+    final sheet = find
+        .descendant(
+          of: find.byType(DraggableScrollableSheet),
+          matching: find.byType(Material),
+        )
+        .first;
+    expect(
+      tester.getBottomLeft(find.byType(BarPreview)).dy,
+      closeTo(tester.getTopLeft(sheet).dy, 1),
+    );
+    final preset = find.descendant(
+      of: find.byKey(const ValueKey('knob-preset')),
+      matching: find.widgetWithText(ChoiceChip, 'None'),
+    );
+    await _tap(tester, preset);
+    expect(_previewConfig(tester).preset, BarPreset.none);
+    expect(
+      tester.getBottomLeft(find.byType(BarPreview)).dy,
+      closeTo(tester.getTopLeft(sheet).dy, 1),
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -172,12 +223,53 @@ void main() {
 
     expect(
       copied,
-      'https://codenameakshay.github.io/flutter-floating-bottom-bar/'
-      '#/configurator?c=rtl:1',
+      kIsWeb
+          ? Uri.base.replace(fragment: '/configurator?c=rtl:1').toString()
+          : 'https://codenameakshay.github.io/flutter-floating-bottom-bar/'
+                '#/configurator?c=rtl:1',
     );
     expect(find.text('Link copied'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('web knob updates and reset replace the current URL', (
+    tester,
+  ) async {
+    final updates = <Map<Object?, Object?>>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.navigation,
+      (call) async {
+        if (call.method == 'routeInformationUpdated') {
+          updates.add(Map<Object?, Object?>.from(call.arguments as Map));
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.navigation,
+        null,
+      ),
+    );
+    await _open(tester, '/configurator', _wide);
+    updates.clear();
+
+    await _tapKnob(tester, find.widgetWithText(ChoiceChip, 'Docked'));
+    expect(updates.last, {
+      'uri': _previewConfig(tester).location,
+      'state': null,
+      'replace': true,
+    });
+
+    await _scrollToTop(tester);
+    await _tap(tester, find.byTooltip('Reset'));
+    expect(updates.last, {
+      'uri': BarConfig.defaults.location,
+      'state': null,
+      'replace': true,
+    });
+    expect(tester.takeException(), isNull);
+  }, skip: !kIsWeb);
 
   testWidgets('a knob updates the preview and reset restores it', (
     tester,

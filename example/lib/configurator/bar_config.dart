@@ -320,7 +320,9 @@ enum Knob<T extends Object> {
     }
     final (min, max) = range!;
     final parsed = double.tryParse(raw);
-    if (parsed == null || parsed < min || parsed > max) return null;
+    if (parsed == null || !parsed.isFinite || parsed < min || parsed > max) {
+      return null;
+    }
     return parsed as T;
   }
 }

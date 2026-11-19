@@ -8,6 +8,22 @@ final _glass = BarConfig.defaults;
 final snapshotConfigs = <String, BarConfig>{
   for (final preset in BarPreset.values)
     'preset_${preset.name}': _glass.set(Knob.preset, preset),
+  'invalid_ranges_fall_back': BarConfig.decode('blur:NaN,off:NaN'),
+  'minimal_tinted_solid': _glass
+      .set(Knob.preset, BarPreset.minimal)
+      .set(Knob.tint, BarTint.green),
+  'pill_tinted_solid': _glass
+      .set(Knob.preset, BarPreset.pill)
+      .set(Knob.tint, BarTint.blue),
+  'three_inline_badge': _glass
+      .set(Knob.items, 3)
+      .set(Knob.center, CenterStyle.inline)
+      .set(Knob.badge, true),
+  'five_raised_badge': _glass
+      .set(Knob.items, 5)
+      .set(Knob.center, CenterStyle.raised)
+      .set(Knob.badge, true),
+  'glass_pink_tint': _glass.set(Knob.tint, BarTint.pink),
   'docked_glass_minimize': _glass
       .set(Knob.layout, LayoutStyle.docked)
       .set(Knob.minimize, BottomBarMinimizeBehavior.onScrollDown),

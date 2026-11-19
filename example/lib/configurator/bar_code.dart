@@ -373,10 +373,16 @@ Code barCode(BarConfig config) {
 /// A runnable `main.dart` that shows the bar [config] describes.
 String generateCode(BarConfig config) =>
     '''
-import 'package:flutter/material.dart';
+// flutter pub add flutter_floating_bottom_bar material_ui
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
+import 'package:material_ui/material_ui.dart';
 
-void main() => runApp(const MaterialApp(home: BarPage()));
+void main() => runApp(
+  MaterialApp(
+    theme: ThemeData(colorSchemeSeed: const Color(0xFF6750A4)),
+    home: const BarPage(),
+  ),
+);
 
 class BarPage extends StatefulWidget {
   const BarPage({super.key});

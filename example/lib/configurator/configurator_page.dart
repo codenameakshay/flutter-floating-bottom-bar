@@ -11,7 +11,7 @@ const _playgroundUrl =
     'https://codenameakshay.github.io/flutter-floating-bottom-bar/';
 
 /// The configurator for a route such as `/configurator?c=lay:docked`, or
-/// null for any other route. A malformed link opens the defaults.
+/// null for any other route. A link that does not parse opens the defaults.
 Route<void>? configuratorRoute(RouteSettings settings) {
   final uri = Uri.tryParse(settings.name ?? '');
   if (uri?.path != BarConfig.route) return null;
@@ -43,7 +43,13 @@ class _ConfiguratorPageState extends State<ConfiguratorPage> {
   static const _codeBreakpoint = 1320.0;
 
   late BarConfig _config = BarConfig.decode(widget.encoded);
-  double _sheetExtent = _Sheet.initial;
+  final _sheetController = DraggableScrollableController();
+
+  @override
+  void dispose() {
+    _sheetController.dispose();
+    super.dispose();
+  }
 
   void _update(BarConfig config) {
     setState(() => _config = config);
@@ -140,7 +146,10 @@ class _ConfiguratorPageState extends State<ConfiguratorPage> {
   }
 
   Widget _buildPhone(BoxConstraints constraints) {
-    final covered = constraints.maxHeight * _sheetExtent.clamp(0.0, 0.5);
+    final extent = _sheetController.isAttached
+        ? _sheetController.size
+        : _Sheet.initial;
+    final covered = constraints.maxHeight * extent.clamp(0.0, 0.5);
     return Scaffold(
       body: Stack(
         children: [
@@ -154,10 +163,11 @@ class _ConfiguratorPageState extends State<ConfiguratorPage> {
           ),
           NotificationListener<DraggableScrollableNotification>(
             onNotification: (notification) {
-              setState(() => _sheetExtent = notification.extent);
+              setState(() {});
               return false;
             },
             child: _Sheet(
+              controller: _sheetController,
               builder: (controller) => ListView(
                 controller: controller,
                 padding: EdgeInsets.only(
@@ -351,15 +361,17 @@ class _GroupHeader extends StatelessWidget {
 }
 
 class _Sheet extends StatelessWidget {
-  const _Sheet({required this.builder});
+  const _Sheet({required this.controller, required this.builder});
 
   static const initial = 0.45;
 
+  final DraggableScrollableController controller;
   final Widget Function(ScrollController controller) builder;
 
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
+      controller: controller,
       initialChildSize: initial,
       minChildSize: 0.16,
       maxChildSize: 0.92,

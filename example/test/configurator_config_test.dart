@@ -22,6 +22,22 @@ void main() {
       }
     }
 
+    for (final preset in BarPreset.values) {
+      for (final knob in Knob.values) {
+        for (final value in valuesOf(knob)) {
+          test('${preset.name}: ${knob.name} = $value survives location', () {
+            final config = setAny(
+              BarConfig.defaults.withPreset(preset),
+              knob,
+              value,
+            );
+            final encoded = Uri.parse(config.location).queryParameters['c'];
+            expect(BarConfig.decode(encoded), config);
+          });
+        }
+      }
+    }
+
     test('many knobs changed at once survive encode and decode', () {
       final config = BarConfig.defaults
           .set(Knob.preset, BarPreset.pill)
@@ -106,6 +122,25 @@ void main() {
       expect(BarConfig.decode(':::,,,'), BarConfig.defaults);
     });
 
+    test('repeated keys use the last value, even when invalid', () {
+      expect(
+        BarConfig.decode('blur:24,blur:32,rtl:1'),
+        BarConfig.defaults.set(Knob.blur, 32.0).set(Knob.rtl, true),
+      );
+      expect(
+        BarConfig.decode('preset:pill,blur:24,blur:,rtl:1,future:option'),
+        BarConfig.defaults.withPreset(BarPreset.pill).set(Knob.rtl, true),
+      );
+    });
+
+    for (final knob in Knob.values) {
+      for (final value in ['', 'unknown', '-999999999999999999999', '1e999']) {
+        test('${knob.name} rejects invalid value $value', () {
+          expect(BarConfig.decode('${knob.key}:$value'), BarConfig.defaults);
+        });
+      }
+    }
+
     test('unknown preset', () {
       expect(BarConfig.decode('preset:nope'), BarConfig.defaults);
     });
@@ -113,6 +148,14 @@ void main() {
     test('non-numeric slider value', () {
       expect(BarConfig.decode('blur:abc'), BarConfig.defaults);
     });
+
+    for (final value in ['NaN', 'Infinity', '-Infinity', '1e999', '', '-1']) {
+      test('non-finite or invalid slider $value keeps only valid knobs', () {
+        final config = BarConfig.decode('blur:$value,off:$value,rtl:1');
+        expect(config, BarConfig.defaults.set(Knob.rtl, true));
+        expect(config.location, '/configurator?c=rtl:1');
+      });
+    }
 
     test('slider value above its range', () {
       expect(BarConfig.decode('blur:999'), BarConfig.defaults);
