@@ -1,5 +1,16 @@
 ## Unreleased
 
+- Add an accessibility pass. Each `BottomBarItem` in a row or rail is one
+  semantics node named like "Inbox, 3 new, Tab 2 of 4", with the position from
+  `MaterialLocalizations.tabLabel`; the centre action is not counted. Add
+  `BottomBarLocalizations` and `BottomBarLocalizationsDelegate` to translate
+  the hidden action and badge strings. A count badge now announces "3 new"
+  and a dot announces "New". Item labels and badge text follow the text size
+  up to 1.3x, like `NavigationBar`. A label that fits at the normal size
+  never truncates at a larger one, and a long-press shows it at full size
+  above 1.3x. Focused items, the centre action, the pill and the hidden
+  action draw a focus ring. Add an accessibility demo in
+  `example/lib/demos/accessibility_demo.dart`.
 - Add `showBottomBarPanel`, which grows the bar into a panel above a scrim
   and shrinks it back into the bar when it closes. The morph follows the
   bar's motion. It starts from the bar, the pill or the bottom edge, and can
