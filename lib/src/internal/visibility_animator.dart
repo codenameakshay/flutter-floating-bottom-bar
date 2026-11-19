@@ -16,6 +16,7 @@ class VisibilityAnimator extends StatelessWidget {
     required this.motion,
     required this.child,
     this.slideTargetResolver,
+    this.slideTravel,
     this.fade = true,
   });
 
@@ -24,6 +25,9 @@ class VisibilityAnimator extends StatelessWidget {
   final BottomBarMotion motion;
   final Widget child;
   final RenderBox? Function()? slideTargetResolver;
+
+  /// See [EdgeSlide.travel].
+  final double? slideTravel;
 
   /// False when the child fades itself, so the fade transitions keep their
   /// tree shape but hold full opacity.
@@ -65,6 +69,7 @@ class VisibilityAnimator extends StatelessWidget {
               end: slideEnd,
               progress: animation.value,
               targetResolver: slideTargetResolver,
+              travel: slideTravel,
               child: child,
             ),
           ),
@@ -129,6 +134,7 @@ class EdgeSlide extends SingleChildRenderObjectWidget {
     required this.end,
     required this.progress,
     this.targetResolver,
+    this.travel,
     super.child,
   });
 
@@ -140,6 +146,11 @@ class EdgeSlide extends SingleChildRenderObjectWidget {
   /// from the layout child.
   final RenderBox? Function()? targetResolver;
 
+  /// When set, the hidden position is this many logical pixels from the
+  /// shown one, toward the hidden position [start] gives, so the slide moves
+  /// in step with a scroll.
+  final double? travel;
+
   @override
   RenderEdgeSlide createRenderObject(BuildContext context) {
     return RenderEdgeSlide(
@@ -147,6 +158,7 @@ class EdgeSlide extends SingleChildRenderObjectWidget {
       end: end,
       progress: progress,
       targetResolver: targetResolver,
+      travel: travel,
     );
   }
 
@@ -156,7 +168,8 @@ class EdgeSlide extends SingleChildRenderObjectWidget {
       ..start = start
       ..end = end
       ..progress = progress
-      ..targetResolver = targetResolver;
+      ..targetResolver = targetResolver
+      ..travel = travel;
   }
 }
 
@@ -166,6 +179,7 @@ class RenderEdgeSlide extends RenderProxyBox {
     required this._end,
     required this._progress,
     required this._targetResolver,
+    this._travel,
   });
 
   Offset _start;
@@ -200,15 +214,28 @@ class RenderEdgeSlide extends RenderProxyBox {
     markNeedsSemanticsUpdate();
   }
 
+  double? _travel;
+  set travel(double? value) {
+    if (value == _travel) return;
+    _travel = value;
+    markNeedsPaint();
+    markNeedsSemanticsUpdate();
+  }
+
   Offset get translation {
     final targetRect = _targetRect;
-    final hidden =
-        Offset(_start.dx * targetRect.width, _start.dy * targetRect.height) +
-        _gapToHostEdge(_start, targetRect);
     final shown = Offset(
       _end.dx * targetRect.width,
       _end.dy * targetRect.height,
     );
+    var hidden =
+        Offset(_start.dx * targetRect.width, _start.dy * targetRect.height) +
+        _gapToHostEdge(_start, targetRect);
+    final travel = _travel;
+    final away = hidden - shown;
+    if (travel != null && away != Offset.zero) {
+      hidden = shown + away * (travel / away.distance);
+    }
     return hidden + (shown - hidden) * _progress;
   }
 

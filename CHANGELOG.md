@@ -102,6 +102,11 @@
   presets, and the body keeps its state when the window crosses the
   breakpoint. Add `BottomBarItems.direction`, which lays the items out in a
   column when set to `Axis.vertical`.
+- Add `BottomBarScrollBehavior.followScroll`, which tracks the finger 1:1
+  over the bar's full footprint, like Safari's toolbar. A fling keeps it
+  moving until it is fully in or out. On release it settles on its spring to
+  the nearer state, or the fling's direction. Try the switch in the Basic
+  TabBar demo.
 
 ## 3.1.0
 

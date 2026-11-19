@@ -29,6 +29,9 @@ typedef ActiveScrollable = ({
 class ScrollNotificationDispatcher {
   ScrollNotificationDispatcher({
     required this.onShouldHide,
+    this.onFollow,
+    this.onFollowEnd,
+    this.followScroll = false,
     this.deltaThreshold = 8,
     this.reverse = false,
     this.showAtStart = false,
@@ -38,6 +41,30 @@ class ScrollNotificationDispatcher {
   });
 
   final ValueChanged<bool> onShouldHide;
+
+  /// With [followScroll], called with each scroll delta in logical pixels,
+  /// positive toward hiding, in place of the [deltaThreshold] decision.
+  final ValueChanged<double>? onFollow;
+
+  /// With [followScroll], called when a followed scroll ends, or when a fling
+  /// runs into either end of its list, with the fling's velocity in logical
+  /// pixels per second, positive toward hiding.
+  final ValueChanged<double>? onFollowEnd;
+
+  bool followScroll;
+
+  /// A scroll is in progress: between a [ScrollStartNotification] and its
+  /// [ScrollEndNotification].
+  bool _scrolling = false;
+
+  /// [holdFollow] was called during the scroll in progress.
+  bool _held = false;
+
+  Duration? _flingTime;
+  double _flingVelocity = 0;
+
+  /// Stops following the scroll in progress until it ends.
+  void holdFollow() => _held = _scrolling;
   double deltaThreshold;
   bool reverse;
   bool showAtStart;
@@ -361,9 +388,15 @@ class ScrollNotificationDispatcher {
     if (notification is ScrollEndNotification) {
       // Coming to rest at the start shows the bar, unless [reverse] makes
       // scrolling toward the start the hide direction.
-      if (showOnScrollEnd ||
-          (!reverse && metrics.pixels <= metrics.minScrollExtent)) {
+      final show =
+          showOnScrollEnd ||
+          (!reverse && metrics.pixels <= metrics.minScrollExtent);
+      final followed = followScroll && _scrolling && !_held;
+      _scrolling = _held = false;
+      if (show) {
         onShouldHide(false);
+      } else if (followed) {
+        onFollowEnd?.call(0);
       }
       return;
     }
@@ -383,6 +416,10 @@ class ScrollNotificationDispatcher {
 
     if (notification is ScrollStartNotification) {
       _resetState(state, pixels);
+      _scrolling = true;
+      _held = false;
+      _flingTime = null;
+      _flingVelocity = 0;
 
       if (showAtStart && pixels <= notification.metrics.minScrollExtent) {
         onShouldHide(false);
@@ -396,7 +433,41 @@ class ScrollNotificationDispatcher {
       return;
     }
 
-    _handlePixels(state, pixels);
+    if (followScroll) {
+      _follow(notification as ScrollUpdateNotification, state, pixels);
+    } else {
+      _handlePixels(state, pixels);
+    }
+  }
+
+  void _follow(
+    ScrollUpdateNotification notification,
+    _TrackedScrollState state,
+    double pixels,
+  ) {
+    final delta = pixels - state.lastPixels;
+    state.lastPixels = pixels;
+    if (delta == 0 || _held) return;
+    final away = reverse ? -delta : delta;
+    onFollow?.call(away);
+    // A fling: measure its speed frame to frame, from the drag's last frame
+    // on, and hand it to the settle when it reaches an end of the list, where
+    // overscroll stops the follow.
+    final now = SchedulerBinding.instance.currentSystemFrameTimeStamp;
+    final last = _flingTime;
+    _flingTime = now;
+    if (notification.dragDetails != null) return;
+    if (last != null && now > last) {
+      final elapsed = now - last;
+      _flingVelocity = elapsed <= const Duration(milliseconds: 100)
+          ? away * Duration.microsecondsPerSecond / elapsed.inMicroseconds
+          : 0;
+    }
+    final metrics = notification.metrics;
+    if (pixels <= metrics.minScrollExtent ||
+        pixels >= metrics.maxScrollExtent) {
+      onFollowEnd?.call(_flingVelocity);
+    }
   }
 
   /// Tracks the scrollable that sent [notification] without changing the

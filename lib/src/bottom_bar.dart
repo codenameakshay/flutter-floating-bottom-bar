@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart' show kMinFlingVelocity;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/semantics.dart';
 import 'package:material_ui/material_ui.dart';
@@ -280,6 +281,10 @@ class _BottomBarState extends State<BottomBar>
   BottomBarVisibility _visibility = BottomBarVisibility.shown;
   bool get _targetVisible => _visibility != BottomBarVisibility.hidden;
 
+  /// The bar sits where a followed scroll put it, not where [_visibility]
+  /// says, until [_go] settles it.
+  bool _tracking = false;
+
   /// Whether the bar's shape is the pill: true while minimized, and kept
   /// while hidden so a minimized bar hides and comes back as a pill.
   bool _pill = false;
@@ -362,8 +367,11 @@ class _BottomBarState extends State<BottomBar>
       showOnScrollEnd: _scrollBehavior.showOnScrollEnd,
       predicate: _scrollBehavior.predicate,
       restoreTabVisibility: _restoresTabs(_scrollBehavior),
+      followScroll: _follows(_scrollBehavior),
       onShouldHide: (away) =>
           away ? _scrollAway() : _go(BottomBarVisibility.shown),
+      onFollow: _follow,
+      onFollowEnd: _settleFollow,
     );
 
     widget.controller?.attach(this);
@@ -374,7 +382,7 @@ class _BottomBarState extends State<BottomBar>
     super.didChangeDependencies();
     _syncMotionAndScroll(_resolvedTheme(context));
     if (_disableAnimations) {
-      _animate(_motionController, _targetVisible ? 1 : 0);
+      if (!_tracking) _animate(_motionController, _targetVisible ? 1 : 0);
       _animate(_minimizeController, _pill ? 1 : 0);
       _animate(_edgeController, _atEdge ? 1 : 0);
     }
@@ -420,11 +428,21 @@ class _BottomBarState extends State<BottomBar>
       _dispatcher.showOnScrollEnd = newScroll.showOnScrollEnd;
       _dispatcher.predicate = newScroll.predicate;
       _dispatcher.restoreTabVisibility = _restoresTabs(newScroll);
+      _dispatcher.followScroll = _follows(newScroll);
+      if (_tracking && !_follows(newScroll)) {
+        // Not during build: _go notifies listeners outside this widget.
+        SchedulerBinding.instance.addPostFrameCallback((_) => _settleFollow(0));
+      }
     }
 
     _motion = newMotion;
     _scrollBehavior = newScroll;
   }
+
+  static bool _follows(BottomBarScrollBehavior behavior) =>
+      behavior.followScroll &&
+      behavior.hideOnScroll &&
+      behavior.minimizeBehavior == BottomBarMinimizeBehavior.never;
 
   static bool _restoresTabs(BottomBarScrollBehavior behavior) =>
       behavior.visibilityOnTabChange == BottomBarTabVisibility.restore;
@@ -459,17 +477,77 @@ class _BottomBarState extends State<BottomBar>
     _go(minimizes ? BottomBarVisibility.minimized : BottomBarVisibility.hidden);
   }
 
+  /// Moves the bar [delta] logical pixels toward hidden, out of its full
+  /// footprint. A bar that comes out of hiding counts as shown at once.
+  void _follow(double delta) {
+    final travel = _barHeight.value;
+    if (!mounted || travel <= 0) return;
+    if (delta > 0 &&
+        _scrollBehavior.keepVisibleOnFocus &&
+        _barFocusNode.hasFocus) {
+      return;
+    }
+    final from = _motionController.value;
+    final to = (from.clamp(0.0, 1.0) - delta / travel).clamp(0.0, 1.0);
+    if (to == from && !_motionController.isAnimating) return;
+    _tracking = true;
+    _motionController
+      ..stop(canceled: true)
+      ..value = to;
+    if (to > 0 && !_targetVisible) {
+      _go(BottomBarVisibility.shown, tracking: true);
+    }
+  }
+
+  /// Settles a followed bar on the spring: toward [velocity], in logical
+  /// pixels per second toward hidden, when it is a fling, else to the nearer
+  /// state.
+  void _settleFollow(double velocity) {
+    if (!_tracking) return;
+    final hide = velocity.abs() >= kMinFlingVelocity
+        ? velocity > 0
+        : _motionController.value < 0.5;
+    final travel = _barHeight.value;
+    _go(
+      hide ? BottomBarVisibility.hidden : BottomBarVisibility.shown,
+      velocity: travel > 0 ? -velocity / travel : null,
+    );
+  }
+
+  /// [_go] for a call from outside the scroll, such as the controller. It
+  /// wins over a scroll in progress, which leaves the bar alone until it
+  /// ends.
+  void _goHolding(BottomBarVisibility next, {bool focusSelected = false}) {
+    _dispatcher.holdFollow();
+    _go(next, focusSelected: focusSelected);
+  }
+
   /// Moves the bar to [next]. A bar with no pill hides instead of
   /// minimizing. Hiding keeps the bar's shape, so a minimized bar slides out
   /// as a pill. Focus follows: into the pill when the full bar minimizes
   /// around it, and to the selected item when the pill expands while
   /// focused or with [focusSelected].
-  void _go(BottomBarVisibility next, {bool focusSelected = false}) {
+  ///
+  /// With [tracking], a followed scroll keeps the bar where it put it.
+  /// Otherwise the bar settles on the spring, starting at [velocity].
+  void _go(
+    BottomBarVisibility next, {
+    bool focusSelected = false,
+    bool tracking = false,
+    double? velocity,
+  }) {
     if (!mounted) return;
     if (next == BottomBarVisibility.minimized && !_hasPill) {
       next = BottomBarVisibility.hidden;
     }
-    if (next == _visibility) return;
+    final settles = _tracking && !tracking;
+    if (settles) _tracking = false;
+    if (next == _visibility) {
+      if (settles) {
+        _animate(_motionController, _targetVisible ? 1 : 0, velocity: velocity);
+      }
+      return;
+    }
     final transition = ++_visibilityTransition;
     final wasVisible = _targetVisible;
     final focusTarget = switch ((_visibility, next)) {
@@ -499,7 +577,9 @@ class _BottomBarState extends State<BottomBar>
     if (transition != _visibilityTransition) return;
     _isVisibleNotifier.value = _targetVisible;
     if (transition != _visibilityTransition) return;
-    _animate(_motionController, _targetVisible ? 1 : 0);
+    if (!tracking) {
+      _animate(_motionController, _targetVisible ? 1 : 0, velocity: velocity);
+    }
     _animate(_minimizeController, _pill ? 1 : 0);
     _syncVisibleHeight();
     if (transition != _visibilityTransition) return;
@@ -548,7 +628,7 @@ class _BottomBarState extends State<BottomBar>
       focusNode: _pillFocusNode,
       // A touch takes no focus, or keepVisibleOnFocus would stop the next
       // scroll from minimizing the bar.
-      onTap: () => _go(
+      onTap: () => _goHolding(
         BottomBarVisibility.shown,
         focusSelected:
             FocusManager.instance.highlightMode ==
@@ -598,28 +678,34 @@ class _BottomBarState extends State<BottomBar>
   bool get isVisible => _targetVisible;
 
   @override
-  void requestVisible(bool visible) =>
-      _go(visible ? BottomBarVisibility.shown : BottomBarVisibility.hidden);
+  void requestVisible(bool visible) => _goHolding(
+    visible ? BottomBarVisibility.shown : BottomBarVisibility.hidden,
+  );
 
   @override
   BottomBarVisibility get visibility => _visibility;
 
   @override
-  void requestVisibility(BottomBarVisibility visibility) => _go(visibility);
+  void requestVisibility(BottomBarVisibility visibility) =>
+      _goHolding(visibility);
 
   @override
   Future<void> scrollToBoundary({required bool toEnd}) async {
+    // The scroll ends shown, so a bar the finger left midway goes there now.
+    _dispatcher.holdFollow();
+    if (_tracking) _go(BottomBarVisibility.shown);
     if (await _scrollActiveToBoundary(toEnd: toEnd)) {
       _go(BottomBarVisibility.shown);
     }
   }
 
   void _scrollToStartOnReselect() {
-    _go(BottomBarVisibility.shown);
+    _goHolding(BottomBarVisibility.shown);
     _scrollActiveToBoundary(toEnd: false);
   }
 
   Future<void> _handleActionTap() async {
+    _dispatcher.holdFollow();
     await _scrollActiveToBoundary(toEnd: _scrollBehavior.scrollOpposite);
     _go(BottomBarVisibility.shown);
   }
@@ -747,12 +833,18 @@ class _BottomBarState extends State<BottomBar>
       child: _buildBottomBar(theme, l, animate: !slideOutsideLayout),
     );
     if (slideOutsideLayout) {
-      bar = VisibilityAnimator(
-        animation: _motionController,
-        isVisible: _targetVisible,
-        motion: _motion,
-        slideTargetResolver: _resolveBarRenderBox,
+      final follows = _follows(_scrollBehavior);
+      bar = ValueListenableBuilder(
+        valueListenable: _barHeight,
         child: bar,
+        builder: (context, footprint, bar) => VisibilityAnimator(
+          animation: _motionController,
+          isVisible: _targetVisible,
+          motion: _motion,
+          slideTargetResolver: _resolveBarRenderBox,
+          slideTravel: follows && footprint > 0 ? footprint : null,
+          child: bar!,
+        ),
       );
     }
 
@@ -885,14 +977,18 @@ class _BottomBarState extends State<BottomBar>
 
   /// Springs [controller] to [target] from wherever it is, so a change
   /// mid-flight turns around smoothly. Reduced motion snaps.
-  void _animate(BoundedSingleMotionController controller, double target) {
+  void _animate(
+    BoundedSingleMotionController controller,
+    double target, {
+    double? velocity,
+  }) {
     if (controller.value == target && !controller.isAnimating) return;
     if (_disableAnimations) {
       controller.stop(canceled: true);
       controller.value = target;
       return;
     }
-    controller.animateTo(target, forward: target == 1);
+    controller.animateTo(target, forward: target == 1, withVelocity: velocity);
   }
 
   // -- scroll edge -----------------------------------------------------------

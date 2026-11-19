@@ -15,6 +15,7 @@ class _BasicTabBarDemoPageState extends State<BasicTabBarDemoPage>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   int _currentPage = 0;
+  bool _followScroll = false;
 
   static const _colors = [
     Color(0xFFF5D547),
@@ -53,7 +54,24 @@ class _BasicTabBarDemoPageState extends State<BasicTabBarDemoPage>
     final mutedForeground = foreground.withValues(alpha: 0.46);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Basic TabBar bottom bar')),
+      appBar: AppBar(
+        title: const Text('Basic TabBar bottom bar'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Follow the finger'),
+                Switch(
+                  value: _followScroll,
+                  onChanged: (v) => setState(() => _followScroll = v),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
       body: BottomBar(
         layout: const BottomBarLayout.adaptive(
           maxWidth: 420,
@@ -66,9 +84,10 @@ class _BasicTabBarDemoPageState extends State<BasicTabBarDemoPage>
           preset: BottomBarCupertinoMotion.snappy,
           duration: Duration(milliseconds: 500),
         ),
-        scrollBehavior: const BottomBarScrollBehavior(
+        scrollBehavior: BottomBarScrollBehavior(
           hideOnScroll: true,
           scrollOpposite: false,
+          followScroll: _followScroll,
         ),
         theme: BottomBarThemeData(
           barDecoration: BoxDecoration(
