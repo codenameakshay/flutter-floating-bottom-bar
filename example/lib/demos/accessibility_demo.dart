@@ -9,7 +9,7 @@ class AccessibilityDemoPage extends StatefulWidget {
 }
 
 class _AccessibilityDemoPageState extends State<AccessibilityDemoPage> {
-  double _scale = 1;
+  double? _scale;
   bool _highContrast = false;
   bool _rtl = false;
   bool _germanStrings = false;
@@ -18,10 +18,12 @@ class _AccessibilityDemoPageState extends State<AccessibilityDemoPage> {
 
   @override
   Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final scale = _scale;
     final page = MediaQuery(
-      data: MediaQuery.of(context).copyWith(
-        textScaler: TextScaler.linear(_scale),
-        highContrast: _highContrast,
+      data: media.copyWith(
+        textScaler: scale == null ? media.textScaler : TextScaler.linear(scale),
+        highContrast: _highContrast || media.highContrast,
       ),
       child: Directionality(
         textDirection: _rtl ? TextDirection.rtl : TextDirection.ltr,
@@ -97,6 +99,8 @@ class _AccessibilityDemoPageState extends State<AccessibilityDemoPage> {
 
   Widget _buildControls() {
     final textTheme = Theme.of(context).textTheme;
+    final scale = (_scale ?? MediaQuery.textScalerOf(context).scale(10) / 10)
+        .clamp(1.0, 3.0);
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Padding(
@@ -107,11 +111,11 @@ class _AccessibilityDemoPageState extends State<AccessibilityDemoPage> {
           children: [
             Text('Text scale', style: textTheme.titleSmall),
             Slider(
-              value: _scale,
+              value: scale,
               min: 1,
               max: 3,
               divisions: 8,
-              label: '${_scale.toStringAsFixed(1)}x',
+              label: '${scale.toStringAsFixed(1)}x',
               semanticFormatterCallback: (value) =>
                   'Text scale ${value.toStringAsFixed(1)}x',
               onChanged: (value) => setState(() => _scale = value),
