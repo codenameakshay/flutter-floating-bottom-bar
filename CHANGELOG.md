@@ -1,5 +1,11 @@
 ## Unreleased
 
+- Add a playground configurator at `#/configurator`. Knobs set the
+  preset, indicator, surface, layout, motion, scroll rules, items, groups
+  and accessory, and a live preview follows. Copy code gives a runnable
+  `main.dart` with the preset plus `copyWith` for what differs. Share links
+  encode the config in the URL and fall back to defaults when bad. Snapshot
+  tests analyze the generated code. Code in `example/lib/configurator/`.
 - Add `showBottomBarPanel`, which grows the bar into a panel above a scrim
   and shrinks it back into the bar when it closes. The morph follows the
   bar's motion. It starts from the bar, the pill or the bottom edge, and can
