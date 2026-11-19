@@ -18,6 +18,7 @@ import 'demos/issues_dock_demo.dart';
 import 'demos/item_theme_demo.dart';
 import 'demos/minimize_demo.dart';
 import 'demos/nested_scroll_demo.dart';
+import 'demos/panel_demo.dart';
 import 'demos/presets_demo.dart';
 import 'demos/switcher_demo.dart';
 import 'demos/tabs_demo.dart';
@@ -121,6 +122,11 @@ final demos = <({String slug, String title, WidgetBuilder builder})>[
     slug: 'switcher',
     title: 'Morph between bars',
     builder: (_) => const SwitcherDemoPage(),
+  ),
+  (
+    slug: 'panel',
+    title: 'Expand into a panel',
+    builder: (_) => const PanelDemoPage(),
   ),
 ];
 

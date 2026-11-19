@@ -110,6 +110,8 @@ class RenderBarSurface extends RenderShiftedBox {
     required this._configuration,
   }) : super(null);
 
+  bool _disposed = false;
+
   @override
   set child(RenderBox? value) {
     if (identical(value, child)) return;
@@ -245,14 +247,48 @@ class RenderBarSurface extends RenderShiftedBox {
   }
 
   /// The rect the outline is drawn in: the bar, shrinking onto the pill.
-  @visibleForTesting
   Rect get outlineRect => _outlineRect;
+
+  /// The direction the outline's corners resolve in.
+  TextDirection? get textDirection => _configuration.textDirection;
+
+  /// Set by an open panel that has taken the bar's place. The bar then paints
+  /// nothing where it is: its child paints into this layer, which the panel
+  /// composites above its own surface, and its surface and glass are released.
+  OffsetLayer? get lift => _lift;
+  OffsetLayer? _lift;
+  set lift(OffsetLayer? value) {
+    if (_disposed) return;
+    if (identical(value, _lift)) return;
+    _lift?.removeAllChildren();
+    _lift = value;
+    if (!attached) return;
+    _surfaceChanged();
+    markNeedsPaint();
+  }
+
+  /// What the bar paints, as a surface: [BarSurface.surface] blended toward
+  /// the edge surface, or else the decoration's fill, gradient, border and
+  /// shadows.
+  BottomBarSurface get paintedSurface {
+    final painted = _painted;
+    if (painted != null) return painted;
+    final decoration = _decoration;
+    return BottomBarSurface(
+      tint: decoration?.color ?? const Color(0x00000000),
+      gradient: decoration?.gradient,
+      border: decoration?.border,
+      shadows: decoration?.boxShadow,
+    );
+  }
+
   Rect get _outlineRect {
     final t = _morph;
     return t == 0 ? _barRect : Rect.lerp(_barRect, _compactRect, t)!;
   }
 
   bool get _blurs =>
+      _lift == null &&
       child != null &&
       (_painted?.blur ?? 0) > 0 &&
       (_visibility?.value ?? 1) > 0;
@@ -261,8 +297,7 @@ class RenderBarSurface extends RenderShiftedBox {
   bool _composited = false;
   void _surfaceChanged() {
     if (!_blurs) {
-      _clipLayer.layer = null;
-      _backdropLayer.layer = null;
+      _surfacePainter.release();
     }
     if (_opacity == 0 || _opacity == 1) _opacityLayer.layer = null;
     if (alwaysNeedsCompositing == _composited) return;
@@ -276,9 +311,8 @@ class RenderBarSurface extends RenderShiftedBox {
       _blurs ||
       (_surface != null && child != null && _opacity > 0 && _opacity < 1);
 
-  final _clipLayer = LayerHandle<ClipPathLayer>();
+  final _surfacePainter = SurfacePainter();
   final _childClipLayer = LayerHandle<ClipPathLayer>();
-  final _backdropLayer = LayerHandle<BackdropFilterLayer>();
   final _opacityLayer = LayerHandle<OpacityLayer>();
 
   final List<RenderCenterActionSlot> _actions = [];
@@ -407,24 +441,30 @@ class RenderBarSurface extends RenderShiftedBox {
     _edge?.removeListener(_edgeChanged);
     _minimize?.removeListener(markNeedsPaint);
     _capsule?.removeListener(markNeedsPaint);
-    _clipLayer.layer = null;
+    _surfacePainter.release();
     _childClipLayer.layer = null;
-    _backdropLayer.layer = null;
     _opacityLayer.layer = null;
     _painter?.dispose();
     _painter = null;
     _paintedDecoration = null;
     super.detach();
+    _releaseLift();
   }
 
   @override
   void dispose() {
+    _disposed = true;
+    _releaseLift();
     _painter?.dispose();
-    _clipLayer.layer = null;
+    _surfacePainter.release();
     _childClipLayer.layer = null;
-    _backdropLayer.layer = null;
     _opacityLayer.layer = null;
     super.dispose();
+  }
+
+  void _releaseLift() {
+    _lift?.removeAllChildren();
+    _lift = null;
   }
 
   @override
@@ -482,10 +522,20 @@ class RenderBarSurface extends RenderShiftedBox {
 
   @override
   void paint(PaintingContext context, Offset offset) {
+    final lift = _lift;
+    if (lift != null) {
+      _surfacePainter.release();
+      _opacityLayer.layer = null;
+      lift.removeAllChildren();
+      if (child == null) return;
+      final lifted = _LiftContext(lift, Offset.zero & size);
+      _paintChild(lifted, Offset.zero);
+      lifted.finish();
+      return;
+    }
     final surface = _painted;
     if (surface == null || child == null || !_blurs) {
-      _clipLayer.layer = null;
-      _backdropLayer.layer = null;
+      _surfacePainter.release();
     }
     if (surface != null && child != null) {
       final opacity = _opacity;
@@ -545,159 +595,25 @@ class RenderBarSurface extends RenderShiftedBox {
     );
   }
 
-  // The blurred backdrop clipped to the outline, then the fill,
-  // edge highlight and border. The child paints on top, outside the clip, so
-  // a raised action is never cut.
   void _paintSurface(
     PaintingContext context,
     Offset offset,
     BottomBarSurface surface,
     double opacity,
   ) {
-    final outline = this.outline;
     final rect = _outlineRect;
-    final textDirection = _configuration.textDirection;
-    final path = outline.getOuterPath(rect, textDirection: textDirection);
-    void faded(Canvas canvas, Rect bounds, VoidCallback paint) {
-      if (opacity == 1) return paint();
-      canvas.saveLayer(
-        bounds,
-        Paint()..color = Color.fromRGBO(0, 0, 0, opacity),
-      );
-      paint();
-      canvas.restore();
-    }
-
-    void paintFill(PaintingContext context, Offset offset) =>
-        faded(context.canvas, rect.shift(offset).inflate(1), () {
-          final canvas = context.canvas;
-          final shifted = rect.shift(offset);
-          final shape = path.shift(offset);
-          final tint = surface.tint;
-          if (tint != null) {
-            canvas.drawPath(
-              shape,
-              Paint()
-                ..color = tint.withValues(alpha: tint.a * surface.fillOpacity),
-            );
-          }
-          final gradient = surface.gradient;
-          if (gradient != null) {
-            canvas.drawPath(
-              shape,
-              Paint()
-                ..shader = gradient.createShader(
-                  shifted,
-                  textDirection: textDirection,
-                )
-                ..color = Color.fromRGBO(0, 0, 0, surface.fillOpacity),
-            );
-          }
-          final highlight = surface.edgeHighlight;
-          if (highlight != null && highlight.a > 0) {
-            // A 2px stroke clipped to the inside leaves 1px along the edge.
-            canvas
-              ..save()
-              ..clipPath(shape)
-              ..drawPath(
-                shape,
-                Paint()
-                  ..style = PaintingStyle.stroke
-                  ..strokeWidth = 2
-                  ..shader = LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [highlight, highlight.withValues(alpha: 0)],
-                    stops: const [0, 0.6],
-                  ).createShader(shifted),
-              )
-              ..restore();
-          }
-          outline.paint(canvas, shifted, textDirection: textDirection);
-        });
-
-    if (!_blurs) {
-      paintFill(context, offset);
-    } else {
-      final backdrop = _backdropLayer.layer ??= BackdropFilterLayer();
-      backdrop
-        ..filter = _filter(surface, opacity)
-        ..backdropKey = _backdropKey;
-      _clipLayer.layer = context.pushClipPath(
-        needsCompositing,
-        offset,
-        rect,
-        path,
-        (context, offset) => context.pushLayer(backdrop, paintFill, offset),
-        oldLayer: _clipLayer.layer,
-      );
-    }
-    // Exterior shadows must not become part of the backdrop being blurred.
-    faded(
-      context.canvas,
-      Rect.largest,
-      () => _paintShadows(context.canvas, offset, rect, outline, path, surface),
+    _surfacePainter.paint(
+      context,
+      offset,
+      rect: rect,
+      outline: outline,
+      surface: surface,
+      opacity: opacity,
+      blurs: _blurs,
+      needsCompositing: needsCompositing,
+      backdropKey: _backdropKey,
+      textDirection: _configuration.textDirection,
     );
-  }
-
-  // A fading bar scales its blur and saturation toward none.
-  static ui.ImageFilter _filter(BottomBarSurface surface, double opacity) {
-    final sigma = surface.blur * opacity;
-    final blur = ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma);
-    final s = 1 + (surface.saturation - 1) * opacity;
-    if (s == 1) return blur;
-    final r = 0.2126 * (1 - s), g = 0.7152 * (1 - s), b = 0.0722 * (1 - s);
-    return ui.ImageFilter.compose(
-      outer: ColorFilter.matrix([
-        r + s, g, b, 0, 0, //
-        r, g + s, b, 0, 0, //
-        r, g, b + s, 0, 0, //
-        0, 0, 0, 1, 0, //
-      ]),
-      inner: blur,
-    );
-  }
-
-  // Clipped to the outside of the outline, so a translucent fill never shows
-  // the shadow through it.
-  void _paintShadows(
-    Canvas canvas,
-    Offset offset,
-    Rect rect,
-    BarOutline outline,
-    Path path,
-    BottomBarSurface surface,
-  ) {
-    final shadows = surface.shadows;
-    if (shadows == null || shadows.isEmpty) return;
-    final reach = shadows.fold<double>(
-      0,
-      (reach, shadow) => math.max(
-        reach,
-        shadow.blurRadius * 2 +
-            shadow.spreadRadius.abs() +
-            shadow.offset.distance,
-      ),
-    );
-    final shifted = rect.shift(offset);
-    canvas
-      ..save()
-      ..clipPath(
-        Path()
-          ..fillType = PathFillType.evenOdd
-          ..addRect(shifted.inflate(reach + 1))
-          ..addPath(path, offset),
-      );
-    for (final shadow in shadows) {
-      canvas.drawPath(
-        outline.getOuterPath(
-          shifted.shift(shadow.offset).inflate(shadow.spreadRadius),
-          textDirection: _configuration.textDirection,
-        ),
-        shadow.toPaint(),
-      );
-    }
-    canvas.restore();
   }
 
   bool _actionAllowsHit(Offset position) {
@@ -769,6 +685,13 @@ class RenderBarSurface extends RenderShiftedBox {
     if (_morph > 0 && !_outlineRect.contains(position)) return false;
     return super.hitTest(result, position: position);
   }
+}
+
+/// Paints into a layer that is not part of the tree being painted.
+class _LiftContext extends PaintingContext {
+  _LiftContext(super.containerLayer, super.estimatedBounds);
+
+  void finish() => stopRecordingIfNeeded();
 }
 
 /// The centre action's slot in a row. Reserves [width] in the row; when
@@ -986,5 +909,189 @@ class RenderCenterActionSlot extends RenderShiftedBox {
       position: position,
       hitTest: (result, position) => child.hitTest(result, position: position),
     );
+  }
+}
+
+/// Paints a [BottomBarSurface] through a [BarOutline]: the blurred backdrop
+/// clipped to the outline, then the fill, edge highlight and border, then
+/// the shadows outside the outline.
+///
+/// Holds the backdrop and clip layers between frames. Call [release] when
+/// the surface stops painting.
+class SurfacePainter {
+  final _clipLayer = LayerHandle<ClipPathLayer>();
+  final _backdropLayer = LayerHandle<BackdropFilterLayer>();
+
+  /// Whether a backdrop layer is held.
+  bool get hasBackdrop => _backdropLayer.layer != null;
+
+  void release() {
+    _clipLayer.layer = null;
+    _backdropLayer.layer = null;
+  }
+
+  void paint(
+    PaintingContext context,
+    Offset offset, {
+    required Rect rect,
+    required BarOutline outline,
+    required BottomBarSurface surface,
+    required double opacity,
+    required bool blurs,
+    required bool needsCompositing,
+    BackdropKey? backdropKey,
+    TextDirection? textDirection,
+  }) {
+    final path = outline.getOuterPath(rect, textDirection: textDirection);
+    void faded(Canvas canvas, Rect bounds, VoidCallback paint) {
+      if (opacity == 1) return paint();
+      canvas.saveLayer(
+        bounds,
+        Paint()..color = Color.fromRGBO(0, 0, 0, opacity),
+      );
+      paint();
+      canvas.restore();
+    }
+
+    void paintFill(PaintingContext context, Offset offset) =>
+        faded(context.canvas, rect.shift(offset).inflate(1), () {
+          final canvas = context.canvas;
+          final shifted = rect.shift(offset);
+          final shape = path.shift(offset);
+          final tint = surface.tint;
+          if (tint != null) {
+            canvas.drawPath(
+              shape,
+              Paint()
+                ..color = tint.withValues(alpha: tint.a * surface.fillOpacity),
+            );
+          }
+          final gradient = surface.gradient;
+          if (gradient != null) {
+            canvas.drawPath(
+              shape,
+              Paint()
+                ..shader = gradient.createShader(
+                  shifted,
+                  textDirection: textDirection,
+                )
+                ..color = Color.fromRGBO(0, 0, 0, surface.fillOpacity),
+            );
+          }
+          final highlight = surface.edgeHighlight;
+          if (highlight != null && highlight.a > 0) {
+            // A 2px stroke clipped to the inside leaves 1px along the edge.
+            canvas
+              ..save()
+              ..clipPath(shape)
+              ..drawPath(
+                shape,
+                Paint()
+                  ..style = PaintingStyle.stroke
+                  ..strokeWidth = 2
+                  ..shader = LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [highlight, highlight.withValues(alpha: 0)],
+                    stops: const [0, 0.6],
+                  ).createShader(shifted),
+              )
+              ..restore();
+          }
+          outline.paint(canvas, shifted, textDirection: textDirection);
+        });
+
+    if (!blurs) {
+      release();
+      paintFill(context, offset);
+    } else {
+      final backdrop = _backdropLayer.layer ??= BackdropFilterLayer();
+      backdrop
+        ..filter = _filter(surface, opacity)
+        ..backdropKey = backdropKey;
+      _clipLayer.layer = context.pushClipPath(
+        needsCompositing,
+        offset,
+        rect,
+        path,
+        (context, offset) => context.pushLayer(backdrop, paintFill, offset),
+        oldLayer: _clipLayer.layer,
+      );
+    }
+    // Exterior shadows must not become part of the backdrop being blurred.
+    faded(
+      context.canvas,
+      Rect.largest,
+      () => _paintShadows(
+        context.canvas,
+        offset,
+        rect,
+        outline,
+        path,
+        surface,
+        textDirection,
+      ),
+    );
+  }
+
+  // A fading bar scales its blur and saturation toward none.
+  static ui.ImageFilter _filter(BottomBarSurface surface, double opacity) {
+    final sigma = surface.blur * opacity;
+    final blur = ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma);
+    final s = 1 + (surface.saturation - 1) * opacity;
+    if (s == 1) return blur;
+    final r = 0.2126 * (1 - s), g = 0.7152 * (1 - s), b = 0.0722 * (1 - s);
+    return ui.ImageFilter.compose(
+      outer: ColorFilter.matrix([
+        r + s, g, b, 0, 0, //
+        r, g + s, b, 0, 0, //
+        r, g, b + s, 0, 0, //
+        0, 0, 0, 1, 0, //
+      ]),
+      inner: blur,
+    );
+  }
+
+  // Clipped to the outside of the outline, so a translucent fill never shows
+  // the shadow through it.
+  void _paintShadows(
+    Canvas canvas,
+    Offset offset,
+    Rect rect,
+    BarOutline outline,
+    Path path,
+    BottomBarSurface surface,
+    TextDirection? textDirection,
+  ) {
+    final shadows = surface.shadows;
+    if (shadows == null || shadows.isEmpty) return;
+    final reach = shadows.fold<double>(
+      0,
+      (reach, shadow) => math.max(
+        reach,
+        shadow.blurRadius * 2 +
+            shadow.spreadRadius.abs() +
+            shadow.offset.distance,
+      ),
+    );
+    final shifted = rect.shift(offset);
+    canvas
+      ..save()
+      ..clipPath(
+        Path()
+          ..fillType = PathFillType.evenOdd
+          ..addRect(shifted.inflate(reach + 1))
+          ..addPath(path, offset),
+      );
+    for (final shadow in shadows) {
+      canvas.drawPath(
+        outline.getOuterPath(
+          shifted.shift(shadow.offset).inflate(shadow.spreadRadius),
+          textDirection: textDirection,
+        ),
+        shadow.toPaint(),
+      );
+    }
+    canvas.restore();
   }
 }

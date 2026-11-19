@@ -1253,6 +1253,65 @@ BottomBar(
 
 The switcher demo is in `example/lib/demos/switcher_demo.dart`.
 
+### Expand into a panel
+
+`showBottomBarPanel` grows the bar into a panel above a scrim. Use it for a
+menu, a create sheet or a full panel. The panel shrinks back into the bar when
+it closes. It returns a `Future<T?>` with the value passed to `Navigator.pop`.
+
+```dart
+BottomBar(
+  trailing: Builder(
+    builder: (context) => IconButton(
+      icon: const Icon(Icons.more_horiz),
+      onPressed: () => showBottomBarPanel<String>(
+        context,
+        semanticLabel: 'More',
+        builder: (context) => const MorePanel(),
+      ),
+    ),
+  ),
+  child: BottomBarItems(...),
+  body: ...,
+)
+```
+
+A centre action can call `showBottomBarPanel` from its `onPressed` in the same way.
+
+- The panel grows from the piece of the bar that holds the context, such as
+  `trailing`. Otherwise it grows from the bar. From a context above the bar, it
+  grows from the first `BottomBar` below it. When the bar is minimized, it
+  grows from the compact pill. When the bar is hidden, it slides up from the
+  bottom edge.
+- It is as wide as the bar, and full width in a `BottomBarLayout.docked` bar.
+  It sits on the bottom edge and is as tall as its content, up to `maxHeight`.
+  Make tall content scrollable. It rises above the keyboard when the keyboard
+  opens.
+- In a `BottomBarAdaptive` that shows its rail, the panel grows from the rail
+  into a centred panel. It is as wide as `BottomBarLayout.maxWidth` or 560,
+  whichever is less.
+- It closes on `Navigator.pop`, the system back gesture, Escape, and, when
+  `dismissible` is true, a tap on the scrim or a drag down on the panel. With
+  Android's predictive back, the panel follows the gesture. Wrap the content
+  in a `PopScope` to stop it closing.
+- It is a modal route. Focus moves into the panel and cannot leave it. When the
+  panel closes, focus returns to where it was. Screen readers announce
+  `semanticLabel` and ignore the bar behind the scrim. `barrierLabel` names the
+  scrim.
+- With reduced motion, the panel does not morph. It fades in and out where it
+  rests.
+
+| Option | Default | Notes |
+| --- | --- | --- |
+| `builder` | Required | Builds the panel's content. |
+| `maxHeight` | `0.9` | Largest share of the height between the top safe area and the bar's bottom edge. |
+| `barrierColor` | The scheme's scrim at 32% opacity | Color of the scrim. |
+| `barrierLabel` | The localized "Dismiss" | Names the scrim for screen readers. |
+| `dismissible` | `true` | Allows a tap on the scrim and a drag down on the panel. |
+| `semanticLabel` | The localized dialog label | Announced when the panel opens. |
+
+See the `panel` demo in `example/lib/demos/panel_demo.dart`.
+
 ## Migrating from another bar
 
 The [migration guides](./docs/migrate/README.md) move an existing bottom bar
