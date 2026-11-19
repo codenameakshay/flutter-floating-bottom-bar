@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'demos/accessibility_demo.dart';
 import 'demos/accessory_demo.dart';
 import 'demos/adaptive_rail_demo.dart';
 import 'demos/ai_prompt_dock_demo.dart';
@@ -127,6 +128,11 @@ final demos = <({String slug, String title, WidgetBuilder builder})>[
     slug: 'panel',
     title: 'Expand into a panel',
     builder: (_) => const PanelDemoPage(),
+  ),
+  (
+    slug: 'accessibility',
+    title: 'Accessibility',
+    builder: (_) => const AccessibilityDemoPage(),
   ),
 ];
 

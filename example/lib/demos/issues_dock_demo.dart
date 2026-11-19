@@ -92,6 +92,7 @@ class _IssuesDockDemoPageState extends State<IssuesDockDemoPage> {
               Expanded(
                 child: _DockButton(
                   icon: Icons.inbox_rounded,
+                  label: 'Inbox',
                   selected: _index == 0,
                   onTap: () => setState(() => _index = 0),
                 ),
@@ -99,6 +100,7 @@ class _IssuesDockDemoPageState extends State<IssuesDockDemoPage> {
               Expanded(
                 child: _DockButton(
                   icon: Icons.center_focus_strong_rounded,
+                  label: 'Focus',
                   selected: _index == 1,
                   onTap: () => setState(() => _index = 1),
                 ),
@@ -106,6 +108,7 @@ class _IssuesDockDemoPageState extends State<IssuesDockDemoPage> {
               Expanded(
                 child: _DockButton(
                   icon: Icons.star_border_rounded,
+                  label: 'Starred',
                   selected: _index == 2,
                   onTap: () => setState(() => _index = 2),
                 ),
@@ -113,6 +116,7 @@ class _IssuesDockDemoPageState extends State<IssuesDockDemoPage> {
               Expanded(
                 child: _DockButton(
                   icon: Icons.keyboard_double_arrow_up_rounded,
+                  label: 'Priority',
                   selected: _index == 3,
                   onTap: () => setState(() => _index = 3),
                 ),
@@ -288,27 +292,33 @@ class _IssueRow extends StatelessWidget {
 class _DockButton extends StatelessWidget {
   const _DockButton({
     required this.icon,
+    required this.label,
     required this.selected,
     required this.onTap,
   });
 
   final IconData icon;
+  final String label;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(32),
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        height: 46,
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFFF1F1EF) : Colors.transparent,
-          borderRadius: BorderRadius.circular(32),
+    return Semantics(
+      label: label,
+      button: true,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(32),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          height: 48,
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFFF1F1EF) : Colors.transparent,
+            borderRadius: BorderRadius.circular(32),
+          ),
+          child: Icon(icon, size: 24),
         ),
-        child: Icon(icon, size: 24),
       ),
     );
   }
@@ -321,17 +331,21 @@ class _SearchPuck extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      customBorder: const CircleBorder(),
-      onTap: onTap,
-      child: Container(
-        width: 50,
-        height: 50,
-        decoration: const BoxDecoration(
-          color: Color(0xFFF8F8F6),
-          shape: BoxShape.circle,
+    return Semantics(
+      label: 'Search',
+      button: true,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Container(
+          width: 50,
+          height: 50,
+          decoration: const BoxDecoration(
+            color: Color(0xFFF8F8F6),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.search_rounded, size: 26),
         ),
-        child: const Icon(Icons.search_rounded, size: 26),
       ),
     );
   }

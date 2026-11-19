@@ -50,7 +50,7 @@ void main() {
     expect(find.text('Search'), findsNothing);
   });
 
-  test('panel demo is the last registered demo', () {
-    expect(demos.last.slug, 'panel');
+  test('accessibility demo is the last registered demo', () {
+    expect(demos.last.slug, 'accessibility');
   });
 }

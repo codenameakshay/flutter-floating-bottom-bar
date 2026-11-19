@@ -149,15 +149,17 @@ class _TabsDemoPageState extends State<TabsDemoPage>
                     onSelectionChanged: _setHost,
                   ),
                 ),
-                Row(
-                  children: [
-                    Switch(
-                      key: const ValueKey('restore-switch'),
-                      value: _restore,
-                      onChanged: (value) => setState(() => _restore = value),
-                    ),
-                    const Text('Restore per tab'),
-                  ],
+                MergeSemantics(
+                  child: Row(
+                    children: [
+                      Switch(
+                        key: const ValueKey('restore-switch'),
+                        value: _restore,
+                        onChanged: (value) => setState(() => _restore = value),
+                      ),
+                      const Text('Restore per tab'),
+                    ],
+                  ),
                 ),
               ],
             ),

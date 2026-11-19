@@ -234,43 +234,46 @@ class _Tile extends StatelessWidget {
     final color = swatch[200 + (index ~/ Colors.primaries.length) * 100]!;
     final primary = Theme.of(context).colorScheme.primary;
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: AnimatedScale(
-        scale: selected ? 0.92 : 1,
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            AnimatedPadding(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-              padding: EdgeInsets.all(selected ? 8 : 0),
-              child: AnimatedContainer(
+    return Semantics(
+      label: 'Photo ${index + 1}',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: AnimatedScale(
+          scale: selected ? 0.92 : 1,
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              AnimatedPadding(
                 duration: const Duration(milliseconds: 180),
                 curve: Curves.easeOutCubic,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(selected ? 12 : 0),
-                ),
-              ),
-            ),
-            if (selected)
-              PositionedDirectional(
-                top: 6,
-                end: 6,
-                child: DecoratedBox(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
+                padding: EdgeInsets.all(selected ? 8 : 0),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(selected ? 12 : 0),
                   ),
-                  child: Icon(Icons.check_circle, size: 22, color: primary),
                 ),
               ),
-          ],
+              if (selected)
+                PositionedDirectional(
+                  top: 6,
+                  end: 6,
+                  child: DecoratedBox(
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.check_circle, size: 22, color: primary),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
