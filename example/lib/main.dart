@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'configurator/configurator_page.dart';
 import 'demos/accessibility_demo.dart';
 import 'demos/accessory_demo.dart';
 import 'demos/adaptive_rail_demo.dart';
@@ -134,6 +135,11 @@ final demos = <({String slug, String title, WidgetBuilder builder})>[
     title: 'Accessibility',
     builder: (_) => const AccessibilityDemoPage(),
   ),
+  (
+    slug: 'configurator',
+    title: 'Configurator',
+    builder: (_) => const ConfiguratorPage(),
+  ),
 ];
 
 final _currentRoute = ValueNotifier<String?>(null);
@@ -171,6 +177,7 @@ class ExampleApp extends StatelessWidget {
         '/': (_) => const _DemoPicker(),
         for (final demo in demos) '/${demo.slug}': demo.builder,
       },
+      onGenerateRoute: configuratorRoute,
       onUnknownRoute: (_) => MaterialPageRoute<void>(
         settings: const RouteSettings(name: '/'),
         builder: (_) => const _DemoPicker(),
@@ -188,7 +195,7 @@ class _DeviceFrame extends StatelessWidget {
   const _DeviceFrame({required this.child});
 
   static const _phoneBreakpoint = 600.0;
-  static const _framelessRoutes = {'/adaptive-rail'};
+  static const _framelessRoutes = {'/adaptive-rail', '/configurator'};
   static const _frameSize = Size(430, 932);
   static const _radius = BorderRadius.all(Radius.circular(44));
 
@@ -198,7 +205,8 @@ class _DeviceFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<String?>(
       valueListenable: _currentRoute,
-      builder: (context, route, _) => _framelessRoutes.contains(route)
+      builder: (context, route, _) =>
+          _framelessRoutes.contains(Uri.tryParse(route ?? '')?.path)
           ? child
           : LayoutBuilder(
               builder: (context, constraints) =>
@@ -303,6 +311,14 @@ class _DemoPicker extends StatelessWidget {
       appBar: AppBar(title: const Text('Demos')),
       body: ListView(
         children: [
+          ListTile(
+            leading: const Icon(Icons.tune_rounded),
+            title: const Text('Build your bar'),
+            subtitle: const Text('Tune the knobs, copy the code'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).pushNamed('/configurator'),
+          ),
+          const Divider(height: 1),
           for (final demo in demos)
             ListTile(
               title: Text(demo.title),

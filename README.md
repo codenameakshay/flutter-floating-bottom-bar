@@ -29,6 +29,8 @@ surface, or any custom child.
 
 **[Try it live](https://codenameakshay.github.io/flutter-floating-bottom-bar/)**. Every demo runs in your browser. Link one demo with `#/<demo>`, for example [`#/issues-dock`](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/issues-dock).
 
+**[Build your bar in the browser](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/configurator)**. Pick a preset and tune the knobs, then watch a live preview. Copy working Dart or share a link to the same bar.
+
 | ![Issues dock](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/1-issues-dock.gif) | ![AI prompt dock](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/2-ai-prompt-dock.gif) | ![Basic TabBar](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/3-basic-tab-bar.gif) |
 | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | **Issues dock**                                                                                                                 | **AI prompt dock**                                                                                                                    | **Basic TabBar**                                                                                                                    |

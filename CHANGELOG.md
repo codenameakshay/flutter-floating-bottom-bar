@@ -1,5 +1,11 @@
 ## Unreleased
 
+- Add a playground configurator at `#/configurator`. Knobs set the
+  preset, indicator, surface, layout, motion, scroll rules, items, groups
+  and accessory, and a live preview follows. Copy code gives a runnable
+  `main.dart` with the preset plus `copyWith` for what differs. Share links
+  encode the config in the URL and fall back to defaults when bad. Snapshot
+  tests analyze the generated code. Code in `example/lib/configurator/`.
 - Add an accessibility pass. Each `BottomBarItem` in a row or rail is one
   semantics node named like "Inbox, 3 new, Tab 2 of 4", with the position from
   `MaterialLocalizations.tabLabel`; the centre action is not counted. Add
