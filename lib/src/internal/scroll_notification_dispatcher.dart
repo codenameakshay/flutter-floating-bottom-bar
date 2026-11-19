@@ -60,11 +60,20 @@ class ScrollNotificationDispatcher {
   /// [holdFollow] was called during the scroll in progress.
   bool _held = false;
 
-  Duration? _flingTime;
-  double _flingVelocity = 0;
+  bool get isFollowing => _trackedScrollables.values.any((state) {
+    if (!state.following) return false;
+    final context = state.context;
+    final position = state.position;
+    return context != null &&
+        context.mounted &&
+        position != null &&
+        identical(Scrollable.maybeOf(context)?.position, position) &&
+        position.isScrollingNotifier.value &&
+        _drives(position);
+  });
 
   /// Stops following the scroll in progress until it ends.
-  void holdFollow() => _held = _scrolling;
+  void holdFollow() => _held = _scrolling || (followScroll && isFollowing);
   double deltaThreshold;
   bool reverse;
   bool showAtStart;
@@ -371,6 +380,10 @@ class ScrollNotificationDispatcher {
   }
 
   void handle(ScrollNotification notification) {
+    if (notification is ScrollEndNotification) {
+      final position = _positionOf(notification);
+      _trackedScrollables[_keyFor(notification, position)]?.following = false;
+    }
     final filter = predicate;
     if (filter != null && !filter(notification)) return;
 
@@ -391,12 +404,24 @@ class ScrollNotificationDispatcher {
       final show =
           showOnScrollEnd ||
           (!reverse && metrics.pixels <= metrics.minScrollExtent);
-      final followed = followScroll && _scrolling && !_held;
+      final held = followScroll && _held;
+      final followed = followScroll && _scrolling && !held;
       _scrolling = _held = false;
-      if (show) {
+      if (show && !held) {
         onShouldHide(false);
       } else if (followed) {
         onFollowEnd?.call(0);
+      }
+      return;
+    }
+
+    if (followScroll && notification is OverscrollNotification) {
+      if (!_held &&
+          notification.dragDetails == null &&
+          notification.velocity != 0) {
+        onFollowEnd?.call(
+          reverse ? -notification.velocity : notification.velocity,
+        );
       }
       return;
     }
@@ -416,10 +441,15 @@ class ScrollNotificationDispatcher {
 
     if (notification is ScrollStartNotification) {
       _resetState(state, pixels);
+      state.following = true;
       _scrolling = true;
       _held = false;
-      _flingTime = null;
-      _flingVelocity = 0;
+      if (followScroll) {
+        state.followTime =
+            SchedulerBinding.instance.currentSystemFrameTimeStamp;
+        state.followPreviousTime = null;
+        state.followDelta = 0;
+      }
 
       if (showAtStart && pixels <= notification.metrics.minScrollExtent) {
         onShouldHide(false);
@@ -427,7 +457,9 @@ class ScrollNotificationDispatcher {
       return;
     }
 
-    if (showAtStart && pixels <= notification.metrics.minScrollExtent) {
+    if (!(followScroll && _held) &&
+        showAtStart &&
+        pixels <= notification.metrics.minScrollExtent) {
       _resetState(state, pixels);
       onShouldHide(false);
       return;
@@ -454,19 +486,28 @@ class ScrollNotificationDispatcher {
     // on, and hand it to the settle when it reaches an end of the list, where
     // overscroll stops the follow.
     final now = SchedulerBinding.instance.currentSystemFrameTimeStamp;
-    final last = _flingTime;
-    _flingTime = now;
-    if (notification.dragDetails != null) return;
-    if (last != null && now > last) {
-      final elapsed = now - last;
-      _flingVelocity = elapsed <= const Duration(milliseconds: 100)
-          ? away * Duration.microsecondsPerSecond / elapsed.inMicroseconds
-          : 0;
+    if (state.followTime != now) {
+      state.followPreviousTime = state.followTime;
+      state.followTime = now;
+      state.followDelta = 0;
     }
-    final metrics = notification.metrics;
-    if (pixels <= metrics.minScrollExtent ||
-        pixels >= metrics.maxScrollExtent) {
-      onFollowEnd?.call(_flingVelocity);
+    if (notification.dragDetails != null) {
+      state.followPreviousTime = null;
+      state.followDelta = 0;
+      return;
+    }
+    state.followDelta +=
+        (reverse ? -1 : 1) * (notification.scrollDelta ?? delta);
+    final previous = state.followPreviousTime;
+    final elapsed = previous == null ? Duration.zero : now - previous;
+    final velocity =
+        elapsed > Duration.zero && elapsed <= const Duration(milliseconds: 100)
+        ? state.followDelta *
+              Duration.microsecondsPerSecond /
+              elapsed.inMicroseconds
+        : 0.0;
+    if (notification.metrics.outOfRange) {
+      onFollowEnd?.call(velocity);
     }
   }
 
@@ -577,6 +618,10 @@ class _TrackedScrollState {
   double anchorPixels;
   double lastPixels;
   double? direction;
+  Duration? followTime;
+  Duration? followPreviousTime;
+  double followDelta = 0;
+  bool following = false;
   bool interacted = false;
   ScrollPosition? position;
   BuildContext? context;

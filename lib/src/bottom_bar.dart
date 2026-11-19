@@ -478,7 +478,7 @@ class _BottomBarState extends State<BottomBar>
   }
 
   /// Moves the bar [delta] logical pixels toward hidden, out of its full
-  /// footprint. A bar that comes out of hiding counts as shown at once.
+  /// footprint. Visibility changes only when the scroll settles.
   void _follow(double delta) {
     final travel = _barHeight.value;
     if (!mounted || travel <= 0) return;
@@ -494,9 +494,6 @@ class _BottomBarState extends State<BottomBar>
     _motionController
       ..stop(canceled: true)
       ..value = to;
-    if (to > 0 && !_targetVisible) {
-      _go(BottomBarVisibility.shown, tracking: true);
-    }
   }
 
   /// Settles a followed bar on the spring: toward [velocity], in logical
@@ -528,20 +525,18 @@ class _BottomBarState extends State<BottomBar>
   /// around it, and to the selected item when the pill expands while
   /// focused or with [focusSelected].
   ///
-  /// With [tracking], a followed scroll keeps the bar where it put it.
-  /// Otherwise the bar settles on the spring, starting at [velocity].
+  /// Settles the bar on the spring, starting at [velocity].
   void _go(
     BottomBarVisibility next, {
     bool focusSelected = false,
-    bool tracking = false,
     double? velocity,
   }) {
     if (!mounted) return;
     if (next == BottomBarVisibility.minimized && !_hasPill) {
       next = BottomBarVisibility.hidden;
     }
-    final settles = _tracking && !tracking;
-    if (settles) _tracking = false;
+    final settles = _tracking;
+    _tracking = false;
     if (next == _visibility) {
       if (settles) {
         _animate(_motionController, _targetVisible ? 1 : 0, velocity: velocity);
@@ -577,9 +572,7 @@ class _BottomBarState extends State<BottomBar>
     if (transition != _visibilityTransition) return;
     _isVisibleNotifier.value = _targetVisible;
     if (transition != _visibilityTransition) return;
-    if (!tracking) {
-      _animate(_motionController, _targetVisible ? 1 : 0, velocity: velocity);
-    }
+    _animate(_motionController, _targetVisible ? 1 : 0, velocity: velocity);
     _animate(_minimizeController, _pill ? 1 : 0);
     _syncVisibleHeight();
     if (transition != _visibilityTransition) return;
@@ -837,13 +830,17 @@ class _BottomBarState extends State<BottomBar>
       bar = ValueListenableBuilder(
         valueListenable: _barHeight,
         child: bar,
-        builder: (context, footprint, bar) => VisibilityAnimator(
-          animation: _motionController,
-          isVisible: _targetVisible,
-          motion: _motion,
-          slideTargetResolver: _resolveBarRenderBox,
-          slideTravel: follows && footprint > 0 ? footprint : null,
-          child: bar!,
+        builder: (context, footprint, bar) => AnimatedBuilder(
+          animation: follows ? _motionController : kAlwaysCompleteAnimation,
+          child: bar,
+          builder: (context, bar) => VisibilityAnimator(
+            animation: _motionController,
+            isVisible: _tracking ? _motionController.value > 0 : _targetVisible,
+            motion: _motion,
+            slideTargetResolver: _resolveBarRenderBox,
+            slideTravel: follows && footprint > 0 ? footprint : null,
+            child: bar!,
+          ),
         ),
       );
     }
@@ -875,7 +872,12 @@ class _BottomBarState extends State<BottomBar>
           _wrapWithSafeArea(
             l,
             translate: l.resolveIconOffset(Directionality.of(context)),
-            child: _buildIcon(theme),
+            child: AnimatedBuilder(
+              animation: _follows(_scrollBehavior)
+                  ? _motionController
+                  : kAlwaysCompleteAnimation,
+              builder: (context, _) => _buildIcon(theme),
+            ),
           ),
         bar,
       ],
@@ -955,7 +957,7 @@ class _BottomBarState extends State<BottomBar>
     final iconHeight = theme.iconHeight!;
     return BottomBarAction(
       animation: ReverseAnimation(_motionController),
-      enabled: !_targetVisible,
+      enabled: _tracking ? _motionController.value <= 0 : !_targetVisible,
       visualWidth: iconWidth,
       visualHeight: iconHeight,
       decoration: theme.iconDecoration ?? const BoxDecoration(),
@@ -1029,6 +1031,7 @@ class _BottomBarState extends State<BottomBar>
   void _followTarget() {
     final (:active, :paging) = _dispatcher.resolve();
     if (paging) return;
+    if (_tracking && !_dispatcher.isFollowing) _settleFollow(0);
     final tabVisibility = active == null
         ? null
         : _dispatcher.enterTab(active.tab, current: _visibility);
@@ -1273,12 +1276,18 @@ class _BottomBarState extends State<BottomBar>
         );
         final paintedBar = surface == null ? bar : RepaintBoundary(child: bar);
         if (!animate) return paintedBar;
-        return VisibilityAnimator(
-          animation: _motionController,
-          isVisible: _targetVisible,
-          motion: _motion,
-          fade: !fadesItself,
+        return AnimatedBuilder(
+          animation: _follows(_scrollBehavior)
+              ? _motionController
+              : kAlwaysCompleteAnimation,
           child: paintedBar,
+          builder: (context, child) => VisibilityAnimator(
+            animation: _motionController,
+            isVisible: _tracking ? _motionController.value > 0 : _targetVisible,
+            motion: _motion,
+            fade: !fadesItself,
+            child: child!,
+          ),
         );
       },
     );

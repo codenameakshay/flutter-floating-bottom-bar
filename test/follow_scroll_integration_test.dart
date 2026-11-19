@@ -159,10 +159,10 @@ void main() {
       await back.moveBy(const Offset(0, 10));
       await tester.pump();
     }
-    expect(shown, 1);
+    expect(shown, 0);
     expect(hidden, 1);
-    expect(changes, [false, true]);
-    expect(listened, 2);
+    expect(changes, [false]);
+    expect(listened, 1);
 
     await back.up();
     await tester.pumpAndSettle();
@@ -172,6 +172,181 @@ void main() {
     expect(listened, 2);
     expect(controller.visibility.value, BottomBarVisibility.shown);
   });
+
+  testWidgets('a hidden-start drag publishes only its settled change', (
+    tester,
+  ) async {
+    final controller = BottomBarController();
+    final scroll = ScrollController(initialScrollOffset: 200);
+    addTearDown(controller.dispose);
+    addTearDown(scroll.dispose);
+    final changes = <bool>[];
+    late BottomBarScope scope;
+    await tester.pumpWidget(
+      harness(
+        controller: controller,
+        onVisibilityChanged: changes.add,
+        body: Builder(
+          builder: (context) {
+            scope = BottomBarScope.of(context);
+            return BottomBarBodyPadding(
+              child: ListView.builder(
+                controller: scroll,
+                itemCount: 200,
+                itemBuilder: (_, index) =>
+                    SizedBox(height: 50, child: Text('$index')),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    controller.hide();
+    await tester.pumpAndSettle();
+    changes.clear();
+    var notifications = 0;
+    void changed() => notifications++;
+    controller.visibility.addListener(changed);
+    scope.visibility.addListener(changed);
+    scope.isVisible.addListener(changed);
+    scope.visibleHeight.addListener(changed);
+    final hiddenTop = barTop(tester);
+    final gesture = await tester.startGesture(const Offset(200, 300));
+    await gesture.moveBy(const Offset(0, 30));
+    await tester.pump();
+    expect(barTop(tester), lessThan(hiddenTop));
+    expect(excludingAncestors(tester, _barKey), isNot(contains(true)));
+    expect(
+      tester
+          .widgetList<IgnorePointer>(
+            find.ancestor(
+              of: findByTooltip('Scroll to top'),
+              matching: find.byType(IgnorePointer),
+            ),
+          )
+          .any((widget) => widget.ignoring),
+      isTrue,
+    );
+    for (var i = 0; i < 6; i++) {
+      await gesture.moveBy(const Offset(0, -20));
+      await tester.pump();
+      await gesture.moveBy(const Offset(0, 4));
+      await tester.pump();
+    }
+    expect(changes, isEmpty);
+    expect(notifications, 0);
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(controller.visibility.value, BottomBarVisibility.hidden);
+    expect(changes, isEmpty);
+    expect(notifications, 0);
+  });
+
+  for (final fallback in [false, true]) {
+    testWidgets(
+      'disposing a followed list settles the abandoned drag (fallback $fallback)',
+      (tester) async {
+        final body = ValueNotifier<bool>(true);
+        addTearDown(body.dispose);
+        await tester.pumpWidget(
+          harness(
+            body: ValueListenableBuilder(
+              valueListenable: body,
+              builder: (_, present, _) => Column(
+                children: [
+                  Expanded(child: present ? _defaultBody() : const SizedBox()),
+                  if (fallback) Expanded(child: _defaultBody()),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final shownTop = barTop(tester);
+        final gesture = await tester.startGesture(const Offset(200, 150));
+        await dragTo(tester, gesture, 20);
+        expect(barTop(tester), greaterThan(shownTop));
+        body.value = false;
+        await tester.pumpAndSettle();
+        expect(barTop(tester), moreOrLessEquals(shownTop, epsilon: 0.01));
+        await gesture.up();
+      },
+    );
+  }
+
+  for (final hide in [false, true]) {
+    testWidgets(
+      'a drag takes over an overshooting ${hide ? 'hide' : 'show'} spring',
+      (tester) async {
+        final controller = BottomBarController();
+        final scroll = ScrollController(initialScrollOffset: 200);
+        addTearDown(controller.dispose);
+        addTearDown(scroll.dispose);
+        double progress = 1;
+        await tester.pumpWidget(
+          harness(
+            controller: controller,
+            body: ListView.builder(
+              controller: scroll,
+              itemCount: 200,
+              itemBuilder: (_, index) =>
+                  SizedBox(height: 50, child: Text('$index')),
+            ),
+            motion: BottomBarMotion.cupertino(
+              preset: BottomBarCupertinoMotion.bouncy,
+              extraBounce: 0.3,
+              snapToEnd: false,
+              transitionBuilder: (_, animation, child) {
+                progress = animation.value;
+                return child;
+              },
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        if (!hide) {
+          controller.hide();
+          await tester.pumpAndSettle();
+          controller.show();
+        } else {
+          controller.hide();
+        }
+        for (
+          var i = 0;
+          i < 200 && (hide ? progress >= 0 : progress <= 1);
+          i++
+        ) {
+          await tester.pump(const Duration(milliseconds: 5));
+        }
+        expect(hide ? progress < 0 : progress > 1, isTrue);
+        final start = scroll.offset;
+        final gesture = await tester.startGesture(const Offset(200, 300));
+        await gesture.moveBy(Offset(0, hide ? 30 : -30));
+        await tester.pump();
+        expect(
+          progress,
+          moreOrLessEquals(
+            (hide ? 0.0 : 1.0) - (scroll.offset - start) / _travel,
+            epsilon: 0.001,
+          ),
+        );
+        final before = progress;
+        final pixels = scroll.offset;
+        await gesture.moveBy(Offset(0, hide ? -4 : 4));
+        await tester.pump();
+        expect(
+          progress,
+          moreOrLessEquals(
+            before - (scroll.offset - pixels) / _travel,
+            epsilon: 0.001,
+          ),
+        );
+        await gesture.up();
+        await tester.pumpAndSettle();
+      },
+    );
+  }
 
   testWidgets('the reserved body padding stays put while the bar moves', (
     tester,

@@ -1,3 +1,4 @@
+import 'package:flutter_floating_bottom_bar/src/internal/scroll_notification_dispatcher.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -15,8 +16,14 @@ void main() {
     ScrollPhysics? physics,
     int itemCount = 200,
     bool reverse = false,
+    double barHeight = 56,
+    bool reducedMotion = false,
   }) {
     return MaterialApp(
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(disableAnimations: reducedMotion),
+        child: child!,
+      ),
       home: Scaffold(
         body: BottomBar(
           controller: controller,
@@ -32,7 +39,7 @@ void main() {
                 itemBuilder: (context, index) =>
                     SizedBox(height: 50, child: Text('Item $index')),
               ),
-          child: const SizedBox(key: _barKey, height: 56),
+          child: SizedBox(key: _barKey, height: barHeight),
         ),
       ),
     );
@@ -45,6 +52,123 @@ void main() {
       .state<ScrollableState>(find.byType(Scrollable).first)
       .position
       .pixels;
+
+  testWidgets('bounce handoff uses unclamped velocity on its first frame', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const SizedBox());
+    final context = tester.element(find.byType(SizedBox));
+    final velocities = <double>[];
+    final dispatcher = ScrollNotificationDispatcher(
+      followScroll: true,
+      onShouldHide: (_) {},
+      onFollowEnd: velocities.add,
+    );
+    FixedScrollMetrics metrics(double pixels) => FixedScrollMetrics(
+      minScrollExtent: 0,
+      maxScrollExtent: 100,
+      pixels: pixels,
+      viewportDimension: 50,
+      axisDirection: AxisDirection.down,
+      devicePixelRatio: 1,
+    );
+    dispatcher.handle(
+      ScrollStartNotification(metrics: metrics(99), context: context),
+    );
+    tester.binding.scheduleFrameCallback((_) {
+      dispatcher.handle(
+        ScrollUpdateNotification(
+          metrics: metrics(109),
+          context: context,
+          scrollDelta: 10,
+        ),
+      );
+    });
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(velocities, [625.0]);
+  });
+
+  testWidgets('bounce handoff includes all updates in the boundary frame', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const SizedBox());
+    final context = tester.element(find.byType(SizedBox));
+    final velocities = <double>[];
+    final dispatcher = ScrollNotificationDispatcher(
+      followScroll: true,
+      onShouldHide: (_) {},
+      onFollowEnd: velocities.add,
+    );
+    FixedScrollMetrics metrics(double pixels) => FixedScrollMetrics(
+      minScrollExtent: 0,
+      maxScrollExtent: 100,
+      pixels: pixels,
+      viewportDimension: 50,
+      axisDirection: AxisDirection.down,
+      devicePixelRatio: 1,
+    );
+    dispatcher.handle(
+      ScrollStartNotification(metrics: metrics(85), context: context),
+    );
+    tester.binding.scheduleFrameCallback((_) {
+      for (final pixels in [95.0, 105.0]) {
+        dispatcher.handle(
+          ScrollUpdateNotification(
+            metrics: metrics(pixels),
+            context: context,
+            scrollDelta: 10,
+          ),
+        );
+      }
+    });
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(velocities, [1250.0]);
+  });
+
+  testWidgets('bounce handoff discards samples older than 100ms', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const SizedBox());
+    final context = tester.element(find.byType(SizedBox));
+    final velocities = <double>[];
+    final dispatcher = ScrollNotificationDispatcher(
+      followScroll: true,
+      onShouldHide: (_) {},
+      onFollowEnd: velocities.add,
+    );
+    FixedScrollMetrics metrics(double pixels) => FixedScrollMetrics(
+      minScrollExtent: 0,
+      maxScrollExtent: 100,
+      pixels: pixels,
+      viewportDimension: 50,
+      axisDirection: AxisDirection.down,
+      devicePixelRatio: 1,
+    );
+    dispatcher.handle(
+      ScrollStartNotification(metrics: metrics(85), context: context),
+    );
+    tester.binding.scheduleFrameCallback((_) {
+      dispatcher.handle(
+        ScrollUpdateNotification(
+          metrics: metrics(95),
+          context: context,
+          scrollDelta: 10,
+        ),
+      );
+    });
+    await tester.pump(const Duration(milliseconds: 16));
+    tester.binding.scheduleFrameCallback((_) {
+      dispatcher.handle(
+        ScrollUpdateNotification(
+          metrics: metrics(105),
+          context: context,
+          scrollDelta: 10,
+        ),
+      );
+    });
+    await tester.pump(const Duration(milliseconds: 101));
+    expect(velocities, [0.0]);
+  });
 
   testWidgets('moves the bar one pixel per pixel of scroll', (tester) async {
     await tester.pumpWidget(harness());
@@ -223,6 +347,41 @@ void main() {
     expect(barTop(tester), shownTop + 76);
   });
 
+  testWidgets(
+    'a first ballistic frame into a nearby end keeps fling velocity',
+    (tester) async {
+      final controller = BottomBarController();
+      final scroll = ScrollController();
+      await tester.pumpWidget(
+        harness(
+          controller: controller,
+          scrollController: scroll,
+          physics: const ClampingScrollPhysics(),
+          itemCount: 40,
+        ),
+      );
+      scroll.jumpTo(scroll.position.maxScrollExtent - 21);
+      await tester.pumpAndSettle();
+      controller.show();
+      await tester.pumpAndSettle();
+      final shownTop = barTop(tester);
+      final gesture = await tester.createGesture();
+      await gesture.down(const Offset(200, 300));
+      for (var step = 1; step <= 4; step++) {
+        await gesture.moveBy(
+          const Offset(0, -5),
+          timeStamp: Duration(milliseconds: 8 * step),
+        );
+        await tester.pump(const Duration(milliseconds: 8));
+      }
+      expect(scroll.offset, lessThan(scroll.position.maxScrollExtent));
+      await gesture.up(timeStamp: const Duration(milliseconds: 40));
+      await tester.pumpAndSettle();
+      expect(controller.isVisible, isFalse);
+      expect(barTop(tester), shownTop + 76);
+    },
+  );
+
   testWidgets('overscroll at either end does not move the bar', (tester) async {
     final controller = BottomBarController();
     final scroll = ScrollController();
@@ -379,6 +538,92 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('a nested fling settles after its outer position stops', (
+    tester,
+  ) async {
+    final nestedKey = GlobalKey<NestedScrollViewState>();
+    final controller = BottomBarController();
+    await tester.pumpWidget(
+      harness(
+        controller: controller,
+        barHeight: 400,
+        body: NestedScrollView(
+          key: nestedKey,
+          headerSliverBuilder: (_, _) => const [
+            SliverAppBar(expandedHeight: 200, pinned: false),
+          ],
+          body: ListView.builder(
+            itemCount: 200,
+            itemBuilder: (_, index) =>
+                SizedBox(height: 50, child: Text('Item $index')),
+          ),
+        ),
+      ),
+    );
+    nestedKey.currentState!.outerController.jumpTo(100);
+    await tester.pumpAndSettle();
+    controller.show();
+    await tester.pumpAndSettle();
+    final shownTop = barTop(tester);
+    await tester.flingFrom(const Offset(200, 150), const Offset(0, -80), 600);
+    await tester.pumpAndSettle();
+    expect(nestedKey.currentState!.outerController.offset, 200);
+    expect(barTop(tester), anyOf(shownTop, shownTop + 420));
+  });
+
+  testWidgets(
+    'a programmatic show holds while only the nested inner list flings',
+    (tester) async {
+      final nestedKey = GlobalKey<NestedScrollViewState>();
+      final controller = BottomBarController();
+      await tester.pumpWidget(
+        harness(
+          controller: controller,
+          barHeight: 400,
+          reducedMotion: true,
+          body: NestedScrollView(
+            key: nestedKey,
+            headerSliverBuilder: (_, _) => const [
+              SliverAppBar(expandedHeight: 200, pinned: false),
+            ],
+            body: ListView.builder(
+              itemCount: 200,
+              itemBuilder: (_, index) =>
+                  SizedBox(height: 50, child: Text('Item $index')),
+            ),
+          ),
+        ),
+      );
+      nestedKey.currentState!.outerController.jumpTo(100);
+      await tester.pumpAndSettle();
+      controller.show();
+      await tester.pumpAndSettle();
+      final shownTop = barTop(tester);
+      await tester.flingFrom(const Offset(200, 150), const Offset(0, -80), 600);
+      final nested = nestedKey.currentState!;
+      for (var frame = 0; frame < 100; frame++) {
+        if (!nested.outerController.position.isScrollingNotifier.value &&
+            nested.innerController.position.isScrollingNotifier.value) {
+          break;
+        }
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      expect(
+        nested.outerController.position.isScrollingNotifier.value,
+        isFalse,
+      );
+      expect(nested.innerController.position.isScrollingNotifier.value, isTrue);
+      controller.show();
+      await tester.pump();
+      expect(barTop(tester), shownTop);
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(barTop(tester), shownTop);
+      await tester.pumpAndSettle();
+      expect(barTop(tester), shownTop);
+      expect(controller.isVisible, isTrue);
+    },
+  );
+
   testWidgets('a tab switch mid-track shows the bar', (tester) async {
     final controller = BottomBarController();
     final tab = ValueNotifier<int>(0);
@@ -463,6 +708,42 @@ void main() {
     await tester.pumpAndSettle();
     expect(barTop(tester), shownTop);
     expect(controller.isVisible, isTrue);
+  });
+
+  testWidgets('a held programmatic hide ignores showAtStart updates', (
+    tester,
+  ) async {
+    final controller = BottomBarController();
+    final scroll = ScrollController();
+    await tester.pumpWidget(
+      harness(
+        controller: controller,
+        scrollController: scroll,
+        scrollBehavior: const BottomBarScrollBehavior(
+          followScroll: true,
+          showAtStart: true,
+        ),
+      ),
+    );
+    scroll.jumpTo(40);
+    await tester.pumpAndSettle();
+    controller.show();
+    await tester.pumpAndSettle();
+    final shownTop = barTop(tester);
+    final gesture = await tester.startGesture(const Offset(200, 300));
+    await gesture.moveBy(const Offset(0, 20));
+    await tester.pump();
+    controller.hide();
+    await tester.pump();
+    await gesture.moveBy(const Offset(0, 40));
+    await tester.pumpAndSettle();
+    expect(scroll.offset, 0);
+    expect(controller.isVisible, isFalse);
+    expect(barTop(tester), shownTop + 76);
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(controller.isVisible, isFalse);
+    expect(barTop(tester), shownTop + 76);
   });
 
   testWidgets('scrollToStart mid-drag ends at the start with the bar shown', (
