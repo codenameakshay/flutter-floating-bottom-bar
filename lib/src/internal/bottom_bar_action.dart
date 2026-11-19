@@ -70,7 +70,9 @@ class _BottomBarActionState extends State<BottomBarAction> {
                       child: ClipOval(
                         child: DecoratedBox(
                           decoration: widget.decoration,
-                          child: widget.visualBuilder(width, height),
+                          child: ExcludeSemantics(
+                            child: widget.visualBuilder(width, height),
+                          ),
                         ),
                       ),
                     ),

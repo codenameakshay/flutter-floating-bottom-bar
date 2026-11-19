@@ -46,7 +46,9 @@ String? itemSemanticsLabel(BottomBarItem item, BottomBarLocalizations strings) {
   final base =
       item.semanticLabel ??
       item.tooltip ??
-      (label is Text ? label.semanticsLabel ?? label.data : null);
+      (label is Text
+          ? label.semanticsLabel ?? label.data ?? label.textSpan?.toPlainText()
+          : null);
   final badge = item.badge;
   final badgeLabel = badge is BottomBarBadge
       ? badgeSemanticsLabel(badge, strings)

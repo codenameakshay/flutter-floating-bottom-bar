@@ -273,9 +273,7 @@ class BottomBarItems extends StatelessWidget {
               withAction([
                 for (final child in children)
                   Expanded(
-                    key: selectedIndex != null && child.key != null
-                        ? ValueKey<Key>(child.key!)
-                        : null,
+                    key: child.key != null ? ValueKey<Key>(child.key!) : null,
                     child: child,
                   ),
               ]),

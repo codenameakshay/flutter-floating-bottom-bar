@@ -69,8 +69,9 @@ class BottomBarItem extends StatelessWidget {
   /// A `Text` label with non-null `data` stays on one line. It follows the
   /// text scale up to 1.3x and shrinks back toward 1.0x when that is too wide
   /// for its slot, so a label that fits at the normal size never truncates.
-  /// A label too long even then ends in an ellipsis. Other widgets
-  /// (including `Text.rich`) are left untouched.
+  /// A label too long even then ends in an ellipsis.
+  /// `Text.rich` keeps its wrapping and overflow settings, with the same
+  /// text-scale cap. Other widgets are left untouched.
   /// Label visibility is controlled by the enclosing
   /// [BottomBarItems.labelBehavior].
   final Widget? label;
@@ -329,31 +330,56 @@ class _ItemViewState extends State<_ItemView>
 
     final currentLabel = item.label;
     Widget labelChild = currentLabel ?? const SizedBox.shrink();
-    if (currentLabel is Text && currentLabel.data != null) {
-      labelChild = Text(
-        currentLabel.data!,
-        key: currentLabel.key,
-        style: currentLabel.style,
-        strutStyle: currentLabel.strutStyle,
-        textAlign: currentLabel.textAlign ?? TextAlign.center,
-        textDirection: currentLabel.textDirection,
-        locale: currentLabel.locale,
-        softWrap: currentLabel.softWrap,
-        textScaler: currentLabel.textScaler,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        semanticsLabel: currentLabel.semanticsLabel,
-        semanticsIdentifier: currentLabel.semanticsIdentifier,
-        textWidthBasis: currentLabel.textWidthBasis,
-        textHeightBehavior: currentLabel.textHeightBehavior,
-        selectionColor: currentLabel.selectionColor,
-      );
-      final scale = labelTextScalerOf(context).scale(100) / 100;
-      if (scale > 1) labelChild = _FitLabel(scale: scale, child: labelChild);
+    if (currentLabel is Text) {
+      final textScaler = (currentLabel.textScaler ?? labelTextScalerOf(context))
+          .clamp(maxScaleFactor: maxLabelTextScale);
+      labelChild = currentLabel.data == null
+          ? Text.rich(
+              currentLabel.textSpan!,
+              key: currentLabel.key,
+              style: currentLabel.style,
+              strutStyle: currentLabel.strutStyle,
+              textAlign: currentLabel.textAlign,
+              textDirection: currentLabel.textDirection,
+              locale: currentLabel.locale,
+              softWrap: currentLabel.softWrap,
+              textScaler: textScaler,
+              maxLines: currentLabel.maxLines,
+              overflow: currentLabel.overflow,
+              semanticsLabel: currentLabel.semanticsLabel,
+              semanticsIdentifier: currentLabel.semanticsIdentifier,
+              textWidthBasis: currentLabel.textWidthBasis,
+              textHeightBehavior: currentLabel.textHeightBehavior,
+              selectionColor: currentLabel.selectionColor,
+            )
+          : Text(
+              currentLabel.data!,
+              key: currentLabel.key,
+              style: currentLabel.style,
+              strutStyle: currentLabel.strutStyle,
+              textAlign: currentLabel.textAlign ?? TextAlign.center,
+              textDirection: currentLabel.textDirection,
+              locale: currentLabel.locale,
+              softWrap: currentLabel.softWrap,
+              textScaler: textScaler,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              semanticsLabel: currentLabel.semanticsLabel,
+              semanticsIdentifier: currentLabel.semanticsIdentifier,
+              textWidthBasis: currentLabel.textWidthBasis,
+              textHeightBehavior: currentLabel.textHeightBehavior,
+              selectionColor: currentLabel.selectionColor,
+            );
+      final scale = textScaler.scale(100) / 100;
+      if (currentLabel.data != null && scale > 1) {
+        labelChild = _FitLabel(scale: scale, child: labelChild);
+      }
     }
 
     final textLabel = currentLabel is Text
-        ? currentLabel.semanticsLabel ?? currentLabel.data
+        ? currentLabel.semanticsLabel ??
+              currentLabel.data ??
+              currentLabel.textSpan?.toPlainText()
         : null;
     final name = item.semanticLabel ?? item.tooltip ?? textLabel;
     final badgeLabel = badge is BottomBarBadge
@@ -373,7 +399,14 @@ class _ItemViewState extends State<_ItemView>
         : [name, ?badgeLabel, ?tabLabel].join(', ');
     final tooltip =
         item.tooltip ??
-        (showLabel && labelTextCapped(context) ? textLabel : null);
+        (showLabel &&
+                (labelTextCapped(context) ||
+                    (currentLabel is Text &&
+                        currentLabel.textScaler != null &&
+                        currentLabel.textScaler!.scale(100) / 100 >
+                            maxLabelTextScale))
+            ? textLabel
+            : null);
 
     // The reveal mounts the icon and label twice, which a GlobalKey forbids.
     final ink =
@@ -448,8 +481,14 @@ class _ItemViewState extends State<_ItemView>
       return Stack(
         alignment: Alignment.center,
         children: [
-          Opacity(opacity: 1 - t, child: icon),
-          Opacity(opacity: t, child: selectedIcon),
+          ExcludeSemantics(
+            excluding: selected,
+            child: Opacity(opacity: 1 - t, child: icon),
+          ),
+          ExcludeSemantics(
+            excluding: !selected,
+            child: Opacity(opacity: t, child: selectedIcon),
+          ),
         ],
       );
     }
