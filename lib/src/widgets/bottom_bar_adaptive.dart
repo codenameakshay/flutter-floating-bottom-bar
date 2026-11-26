@@ -265,7 +265,7 @@ class _BottomBarAdaptiveState extends State<BottomBarAdaptive> {
     final railItems = BottomBarItems(
       key: items.key,
       spacing: items.spacing,
-      labelBehavior: widget.railLabelBehavior ?? items.labelBehavior,
+      labelBehavior: widget.railLabelBehavior ?? rowLabelBehavior(items),
       selectedIndex: items.selectedIndex,
       onSelected: items.onSelected,
       indicator: items.indicator,
