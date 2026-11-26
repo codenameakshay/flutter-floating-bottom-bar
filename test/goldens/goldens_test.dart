@@ -1,13 +1,13 @@
 @Tags(['golden'])
 library;
 
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'cases/table.dart';
+import 'gallery_manifest.dart';
 import 'golden_case.dart';
 
 void main() {
@@ -37,21 +37,7 @@ void main() {
   // must match the table otherwise.
   test('gallery.json matches the table', () {
     final file = File('test/goldens/gallery.json');
-    final manifest =
-        '${const JsonEncoder.withIndent('  ').convert([
-          for (final f in goldenFeatures) {
-              'title': f.title,
-              'readme': f.readme,
-              'demo': f.demo,
-              'cases': [
-                for (final c in f.cases) {
-                    'id': c.id,
-                    'caption': c.caption,
-                    'shots': {for (final s in c.shots) s.name: c.fileName(s)},
-                  },
-              ],
-            },
-        ])}\n';
+    final manifest = goldenGalleryManifest();
     if (autoUpdateGoldenFiles) {
       file.writeAsStringSync(manifest);
     } else {

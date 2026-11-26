@@ -55,8 +55,9 @@ pixels.
 - `make goldens-update` regenerates every PNG and `test/goldens/gallery.json`
   in Docker. It removes PNGs that no case produces, and it refreshes
   `tool/goldens/pubspec.lock`.
-- `make check` runs everything except tests tagged `golden`. It also runs
-  `make gallery-check`, and it prints how to run the goldens.
+- `make check` skips pixel comparisons but checks that `gallery.json` matches
+  the case table. It also runs `make gallery-check` to compare the PNG filenames
+  with the manifest.
 
 Running a golden test outside the pinned setup fails with a message that points
 to `make goldens`. Failure diffs go to `test/goldens/failures/`, which is

@@ -1,6 +1,6 @@
 // Builds the golden gallery from test/goldens/gallery.json and the PNGs.
 //
-//   dart run tool/gallery.dart --check          # fail if goldens and table disagree
+//   dart run tool/gallery.dart --check          # fail if PNGs and manifest disagree
 //   dart run tool/gallery.dart --out build/gallery
 //
 // gallery.json is written by `make goldens-update` from the case table in
@@ -17,20 +17,12 @@ void main(List<String> args) {
       (jsonDecode(File('${goldens.path}/gallery.json').readAsStringSync())
               as List)
           .cast<Map<String, dynamic>>();
-
-  final listed = {
-    for (final f in features)
-      for (final c in (f['cases'] as List).cast<Map<String, dynamic>>())
-        ...(c['shots'] as Map).values.cast<String>(),
-  };
+  final listed = _listedFiles(features);
   final onDisk = {
     for (final e in goldens.listSync())
       if (e is File && e.path.endsWith('.png')) e.uri.pathSegments.last,
   };
-  final problems = [
-    for (final f in listed.difference(onDisk)) 'missing golden: $f',
-    for (final f in onDisk.difference(listed)) 'golden not in the table: $f',
-  ]..sort();
+  final problems = galleryProblems(features: features, pngs: onDisk);
   if (problems.isNotEmpty) {
     stderr
       ..writeln(problems.join('\n'))
@@ -38,7 +30,7 @@ void main(List<String> args) {
     exit(1);
   }
   if (args.contains('--check')) {
-    stdout.writeln('Gallery: ${listed.length} goldens match the table.');
+    stdout.writeln('Gallery: ${listed.length} goldens match gallery.json.');
     return;
   }
 
@@ -58,6 +50,46 @@ void main(List<String> args) {
   );
   stdout.writeln('Gallery: ${listed.length} goldens -> ${out.path}/index.html');
 }
+
+/// Reports invalid gallery entries and drift between the manifest and PNGs.
+List<String> galleryProblems({
+  required List<Map<String, dynamic>> features,
+  required Set<String> pngs,
+}) {
+  final problems = <String>[];
+  final filenames = _listedFiles(features);
+  final listed = filenames.toSet();
+  final caseIds = <String>{};
+  if (features.isEmpty) problems.add('gallery.json has no features');
+  for (final feature in features) {
+    final cases = (feature['cases'] as List).cast<Map<String, dynamic>>();
+    if (cases.isEmpty) {
+      problems.add('feature has no cases: ${feature['title']}');
+    }
+    for (final c in cases) {
+      final id = c['id'] as String;
+      if (!caseIds.add(id)) problems.add('duplicate case id: $id');
+      final shots = c['shots'] as Map;
+      if (shots.isEmpty) problems.add('case has no shots: $id');
+    }
+  }
+  if (listed.length != filenames.length) {
+    problems.add('gallery.json contains duplicate golden filenames');
+  }
+
+  if (pngs.isEmpty) problems.add('no golden PNG files found');
+  problems.addAll([
+    for (final f in listed.difference(pngs)) 'missing golden: $f',
+    for (final f in pngs.difference(listed)) 'golden not in gallery.json: $f',
+  ]);
+  return problems..sort();
+}
+
+List<String> _listedFiles(List<Map<String, dynamic>> features) => [
+  for (final feature in features)
+    for (final c in (feature['cases'] as List).cast<Map<String, dynamic>>())
+      ...(c['shots'] as Map).values.cast<String>(),
+];
 
 /// Width and height from the PNG header, so the page does not reflow.
 (int, int) _size(File png) {
