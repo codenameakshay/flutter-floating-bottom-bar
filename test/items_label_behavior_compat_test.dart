@@ -1,6 +1,7 @@
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'fixtures/row_label_behavior_sentinel.dart';
 
 const _items = [
   BottomBarItem(icon: Icon(Icons.home), label: Text('Home')),
@@ -8,17 +9,27 @@ const _items = [
 ];
 
 void main() {
-  test('labelBehavior reads as non-nullable, as in 3.1.0', () {
-    final BottomBarLabelBehavior unset = const BottomBarItems(
+  test('the package barrel keeps its row label helper hidden', () {
+    // These unprefixed imports make a barrel export collide with the sentinel.
+    expect(rowLabelBehavior, 'fixture sentinel');
+  });
+
+  test('labelBehavior stays non-nullable with the 3.1.0 default', () {
+    final unset = const BottomBarItems(children: []);
+    final explicitlyNull = const BottomBarItems(
+      labelBehavior: null,
       children: [],
-    ).labelBehavior;
-    final BottomBarLabelBehavior set = const BottomBarItems(
+    );
+    final set = const BottomBarItems(
       labelBehavior: BottomBarLabelBehavior.alwaysHide,
       children: [],
-    ).labelBehavior;
+    );
 
-    expect(unset, BottomBarLabelBehavior.alwaysShow);
-    expect(set, BottomBarLabelBehavior.alwaysHide);
+    // This is the 3.1.0 consumer expression, which must not become nullable.
+    final int legacyIndex = unset.labelBehavior.index;
+    expect(legacyIndex, BottomBarLabelBehavior.alwaysShow.index);
+    expect(explicitlyNull.labelBehavior, unset.labelBehavior);
+    expect(set.labelBehavior, BottomBarLabelBehavior.alwaysHide);
   });
 
   Widget bar(BottomBarItems items) => MaterialApp(

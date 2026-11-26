@@ -101,13 +101,14 @@ class BottomBarItems extends StatelessWidget {
   /// expanded. A vertical column ignores it: it is as tall as its items.
   final MainAxisAlignment spacing;
 
-  /// When this row's [BottomBarItem] labels show, as passed to the
-  /// constructor, or [BottomBarLabelBehavior.alwaysShow] when none was passed.
+  /// The label behavior configured for this row, or
+  /// [BottomBarLabelBehavior.alwaysShow] if the constructor argument was
+  /// omitted or null.
   ///
-  /// This is the row's own value. It does not reflect
-  /// [BottomBarItemThemeData.labelBehavior]: a row built with no
-  /// `labelBehavior` shows labels as the theme says, then always, and
-  /// [BottomBarItemsScope] exposes that resolved value to descendants.
+  /// When no behavior is configured, rendering uses
+  /// [BottomBarItemThemeData.labelBehavior], falling back to
+  /// [BottomBarLabelBehavior.alwaysShow]. [BottomBarItemsScope] exposes the
+  /// resolved value to descendants.
   BottomBarLabelBehavior get labelBehavior =>
       _labelBehavior ?? BottomBarLabelBehavior.alwaysShow;
 
@@ -235,7 +236,7 @@ class BottomBarItems extends StatelessWidget {
 
     return BottomBarItemsScope(
       labelBehavior:
-          _labelBehavior ??
+          rowLabelBehavior(this) ??
           itemThemeOf(context).labelBehavior ??
           BottomBarLabelBehavior.alwaysShow,
       child: LayoutBuilder(
@@ -297,7 +298,7 @@ class BottomBarItems extends StatelessWidget {
     final action = centerAction;
     return BottomBarItemsScope(
       labelBehavior:
-          _labelBehavior ??
+          rowLabelBehavior(this) ??
           itemThemeOf(context).labelBehavior ??
           BottomBarLabelBehavior.alwaysShow,
       child: BottomBarItemHeightScope(
@@ -701,10 +702,18 @@ class BottomBarItemSelectionScope extends InheritedWidget {
   }
 }
 
-/// The `labelBehavior` passed to [items]'s constructor, or null when none was
-/// passed, so a theme can still apply. Hidden from the package's public API.
-BottomBarLabelBehavior? rowLabelBehavior(BottomBarItems items) =>
-    items._labelBehavior;
+/// The row's behavior before theme fallback. If the constructor argument is
+/// unset and the getter returns `alwaysShow`, returns null so the theme can
+/// apply. Reads the getter to preserve 3.1.0 subclass overrides. Hidden from
+/// the package's public API.
+BottomBarLabelBehavior? rowLabelBehavior(BottomBarItems items) {
+  final behavior = items.labelBehavior;
+  if (behavior == BottomBarLabelBehavior.alwaysShow &&
+      items._labelBehavior == null) {
+    return null;
+  }
+  return behavior;
+}
 
 /// Exposes the enclosing [BottomBarItems] row's resolved label behavior to
 /// descendant [BottomBarItem]s.
