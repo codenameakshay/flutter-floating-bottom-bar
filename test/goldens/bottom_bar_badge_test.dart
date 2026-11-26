@@ -1,21 +1,11 @@
-import 'dart:typed_data';
+@Tags(['golden'])
+library;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  late GoldenFileComparator previous;
-  setUpAll(() {
-    previous = goldenFileComparator;
-    goldenFileComparator = _TolerantComparator(
-      (previous as LocalFileComparator).basedir.resolve(
-        'bottom_bar_badge_test.dart',
-      ),
-    );
-  });
-  tearDownAll(() => goldenFileComparator = previous);
-
   _badgeGolden('badge_light.png', Brightness.light);
   _badgeGolden('badge_dark.png', Brightness.dark);
   _badgeGolden('badge_rtl.png', Brightness.light, direction: TextDirection.rtl);
@@ -91,29 +81,4 @@ void _badgeGolden(
 
     await expectLater(find.byType(BottomBar), matchesGoldenFile(fileName));
   });
-}
-
-/// Accepts antialiasing drift between machines: the GitHub macOS runner
-/// rasterises these icon glyphs and curves a few pixels differently from a
-/// local Mac. A misplaced indicator changes thousands of pixels, far above
-/// this limit.
-class _TolerantComparator extends LocalFileComparator {
-  _TolerantComparator(super.testFile);
-
-  static const _maxDiff = 0.0001;
-
-  @override
-  Future<bool> compare(Uint8List imageBytes, Uri golden) async {
-    final result = await GoldenFileComparator.compareLists(
-      imageBytes,
-      await getGoldenBytes(golden),
-    );
-    if (result.passed || result.diffPercent <= _maxDiff) {
-      result.dispose();
-      return true;
-    }
-    final error = await generateFailureOutput(result, golden, basedir);
-    result.dispose();
-    throw FlutterError(error);
-  }
 }

@@ -1,4 +1,5 @@
-import 'dart:typed_data';
+@Tags(['golden'])
+library;
 
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -20,17 +21,6 @@ const _backdropColors = <Color>[
 ];
 
 void main() {
-  late GoldenFileComparator previous;
-  setUpAll(() {
-    previous = goldenFileComparator;
-    goldenFileComparator = _TolerantComparator(
-      (previous as LocalFileComparator).basedir.resolve(
-        'adaptive_rail_test.dart',
-      ),
-    );
-  });
-  tearDownAll(() => goldenFileComparator = previous);
-
   _railGolden('rail_glass_floating_light.png', BottomBarThemeData.glass);
   _railGolden(
     'rail_glass_floating_dark.png',
@@ -135,26 +125,4 @@ void _railGolden(
 
     await expectLater(find.byType(BottomBarAdaptive), matchesGoldenFile(file));
   });
-}
-
-/// See the comparator in presets_test.dart.
-class _TolerantComparator extends LocalFileComparator {
-  _TolerantComparator(super.testFile);
-
-  static const _maxDiff = 0.0005;
-
-  @override
-  Future<bool> compare(Uint8List imageBytes, Uri golden) async {
-    final result = await GoldenFileComparator.compareLists(
-      imageBytes,
-      await getGoldenBytes(golden),
-    );
-    if (result.passed || result.diffPercent <= _maxDiff) {
-      result.dispose();
-      return true;
-    }
-    final error = await generateFailureOutput(result, golden, basedir);
-    result.dispose();
-    throw FlutterError(error);
-  }
 }

@@ -1,4 +1,5 @@
-import 'dart:typed_data';
+@Tags(['golden'])
+library;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
@@ -27,17 +28,6 @@ const _linear = BottomBarMotion.curved(
 );
 
 void main() {
-  late GoldenFileComparator previous;
-  setUpAll(() {
-    previous = goldenFileComparator;
-    goldenFileComparator = _TolerantComparator(
-      (previous as LocalFileComparator).basedir.resolve(
-        'scroll_edge_surface_test.dart',
-      ),
-    );
-  });
-  tearDownAll(() => goldenFileComparator = previous);
-
   _edgeGolden('scroll_edge_standard_light.png');
   _edgeGolden('scroll_edge_standard_dark.png', brightness: Brightness.dark);
   _edgeGolden('scroll_edge_clear_light.png', scrolledToEnd: true);
@@ -143,29 +133,5 @@ class _StripedList extends StatelessWidget {
       itemBuilder: (_, i) =>
           Container(height: 40, color: _stripes[i % _stripes.length]),
     );
-  }
-}
-
-/// Accepts antialiasing drift between machines: the GitHub macOS runner draws
-/// the blurred notch edge about 10 pixels differently from a local Mac. A
-/// misplaced notch or a lost blur changes thousands of pixels.
-class _TolerantComparator extends LocalFileComparator {
-  _TolerantComparator(super.testFile);
-
-  static const _maxDiff = 0.0005;
-
-  @override
-  Future<bool> compare(Uint8List imageBytes, Uri golden) async {
-    final result = await GoldenFileComparator.compareLists(
-      imageBytes,
-      await getGoldenBytes(golden),
-    );
-    if (result.passed || result.diffPercent <= _maxDiff) {
-      result.dispose();
-      return true;
-    }
-    final error = await generateFailureOutput(result, golden, basedir);
-    result.dispose();
-    throw FlutterError(error);
   }
 }

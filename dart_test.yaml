@@ -1,0 +1,3 @@
+tags:
+  # Rendered and checked only on the pinned Linux setup: `make goldens`.
+  golden:

@@ -1,4 +1,5 @@
-import 'dart:typed_data';
+@Tags(['golden'])
+library;
 
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,15 +13,6 @@ const _tabs = <(IconData, IconData, String)>[
 ];
 
 void main() {
-  late GoldenFileComparator previous;
-  setUpAll(() {
-    previous = goldenFileComparator;
-    goldenFileComparator = _TolerantComparator(
-      (previous as LocalFileComparator).basedir.resolve('large_text_test.dart'),
-    );
-  });
-  tearDownAll(() => goldenFileComparator = previous);
-
   for (final scale in [2.0, 3.0]) {
     for (final brightness in Brightness.values) {
       _largeTextGolden(
@@ -107,27 +99,4 @@ void _largeTextGolden(
     expect(tester.takeException(), isNull);
     await expectLater(find.byType(BottomBar), matchesGoldenFile(file));
   });
-}
-
-/// Accepts antialiasing drift between a local Mac and the GitHub macOS
-/// runner, as in presets_test.dart.
-class _TolerantComparator extends LocalFileComparator {
-  _TolerantComparator(super.testFile);
-
-  static const _maxDiff = 0.0005;
-
-  @override
-  Future<bool> compare(Uint8List imageBytes, Uri golden) async {
-    final result = await GoldenFileComparator.compareLists(
-      imageBytes,
-      await getGoldenBytes(golden),
-    );
-    if (result.passed || result.diffPercent <= _maxDiff) {
-      result.dispose();
-      return true;
-    }
-    final error = await generateFailureOutput(result, golden, basedir);
-    result.dispose();
-    throw FlutterError(error);
-  }
 }
