@@ -1,5 +1,15 @@
 ## Unreleased
 
+### Tooling
+
+- Add a golden gallery page at `/gallery/`, next to the playground. It shows
+  every golden test as an image, grouped by feature. Goldens now draw real
+  Roboto and Material Icons fonts on one pinned Linux setup in Docker, and
+  they match pixel for pixel. Add `make goldens` to check them and
+  `make goldens-update` to regenerate them. Add goldens for the container,
+  builder and no-indicator styles, and for badges and the pill indicator at
+  text scale 2. No API change.
+
 ## 3.2.0
 
 ### Presets
