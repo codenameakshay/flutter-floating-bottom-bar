@@ -1,9 +1,8 @@
-@Tags(['golden'])
-library;
-
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
+
+import '../golden_case.dart';
 
 const _tabs = <(IconData, IconData, String)>[
   (Icons.home_outlined, Icons.home, 'Home'),
@@ -12,51 +11,46 @@ const _tabs = <(IconData, IconData, String)>[
   (Icons.person_outline, Icons.person, 'Profile'),
 ];
 
-void main() {
-  for (final scale in [2.0, 3.0]) {
-    for (final brightness in Brightness.values) {
-      _largeTextGolden(
-        'large_text_${scale.toInt()}x_${brightness.name}.png',
-        scale: scale,
-        brightness: brightness,
-      );
-    }
-  }
-  _largeTextGolden(
-    'large_text_3x_rtl.png',
-    scale: 3,
-    brightness: Brightness.light,
-    direction: TextDirection.rtl,
-  );
-}
+const _twoX = [
+  Shot('light', textScale: 2),
+  Shot('dark', brightness: Brightness.dark, textScale: 2),
+];
 
-void _largeTextGolden(
-  String file, {
-  required double scale,
-  required Brightness brightness,
-  TextDirection direction = TextDirection.ltr,
-}) {
-  testWidgets(file, (tester) async {
-    tester.view.physicalSize = const Size(390, 360);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
+const _threeX = [
+  Shot('light', textScale: 3),
+  Shot('dark', brightness: Brightness.dark, textScale: 3),
+  Shot('rtl', direction: TextDirection.rtl, textScale: 3),
+];
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: ThemeData(
-          useMaterial3: true,
-          colorSchemeSeed: Colors.indigo,
-          brightness: brightness,
-        ),
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: TextScaler.linear(scale)),
-          child: child!,
-        ),
-        home: Directionality(
-          textDirection: direction,
-          child: BottomBar(
+final largeTextFeature = GoldenFeature(
+  'Large text',
+  readme: 'accessibility',
+  demo: 'accessibility',
+  cases: [
+    _largeTextCase(
+      'large_text_2x',
+      'Bar at 2x text scale in light and dark',
+      _twoX,
+    ),
+    _largeTextCase(
+      'large_text_3x',
+      'Bar at 3x text scale in light, dark and right to left',
+      _threeX,
+    ),
+  ],
+);
+
+GoldenCase _largeTextCase(String id, String caption, List<Shot> shots) {
+  return GoldenCase(
+    id,
+    caption: caption,
+    shots: shots,
+    size: const Size(390, 360),
+    run: (tester, shot) async {
+      await tester.pumpWidget(
+        goldenApp(
+          shot,
+          BottomBar(
             theme: BottomBarThemeData.glass(),
             showIcon: false,
             body: const ColoredBox(
@@ -92,11 +86,10 @@ void _largeTextGolden(
             ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(tester.takeException(), isNull);
-    await expectLater(find.byType(BottomBar), matchesGoldenFile(file));
-  });
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

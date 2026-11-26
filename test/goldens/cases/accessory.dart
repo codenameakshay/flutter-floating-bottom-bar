@@ -1,9 +1,8 @@
-@Tags(['golden'])
-library;
-
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../golden_case.dart';
 
 const _tabs = <(IconData, String)>[
   (Icons.home, 'Home'),
@@ -21,98 +20,78 @@ const _stripes = [
   Color(0xFF43A047),
 ];
 
-void main() {
-  _accessoryGolden('accessory_expanded_glass_light.png');
-  _accessoryGolden(
-    'accessory_expanded_glass_dark.png',
-    brightness: Brightness.dark,
-  );
-  _accessoryGolden('accessory_expanded_solid_light.png', glass: false);
-  _accessoryGolden(
-    'accessory_expanded_solid_dark.png',
-    glass: false,
-    brightness: Brightness.dark,
-  );
-  _accessoryGolden(
-    'accessory_expanded_glass_rtl.png',
-    direction: TextDirection.rtl,
-  );
-  _accessoryGolden('accessory_inline_glass_light.png', minimized: true);
-  _accessoryGolden(
-    'accessory_inline_glass_dark.png',
-    minimized: true,
-    brightness: Brightness.dark,
-  );
-  _accessoryGolden(
-    'accessory_inline_solid_light.png',
-    minimized: true,
-    glass: false,
-  );
-  _accessoryGolden(
-    'accessory_inline_solid_dark.png',
-    minimized: true,
-    glass: false,
-    brightness: Brightness.dark,
-  );
-  _accessoryGolden(
-    'accessory_inline_glass_rtl.png',
-    minimized: true,
-    direction: TextDirection.rtl,
-  );
-}
+final accessoryFeature = GoldenFeature(
+  'Accessory',
+  readme: 'accessory',
+  demo: 'accessory',
+  cases: [
+    GoldenCase(
+      'accessory_expanded_glass',
+      caption: 'Expanded glass bar with a now-playing accessory',
+      shots: themedRtl,
+      size: const Size(400, 260),
+      run: _accessoryRun(),
+    ),
+    GoldenCase(
+      'accessory_expanded_solid',
+      caption: 'Expanded solid bar with a now-playing accessory',
+      size: const Size(400, 260),
+      run: _accessoryRun(glass: false),
+    ),
+    GoldenCase(
+      'accessory_inline_glass',
+      caption: 'Minimized glass bar with an inline now-playing accessory',
+      shots: themedRtl,
+      size: const Size(400, 260),
+      run: _accessoryRun(minimized: true),
+    ),
+    GoldenCase(
+      'accessory_inline_solid',
+      caption: 'Minimized solid bar with an inline now-playing accessory',
+      size: const Size(400, 260),
+      run: _accessoryRun(glass: false, minimized: true),
+    ),
+  ],
+);
 
-void _accessoryGolden(
-  String name, {
-  Brightness brightness = Brightness.light,
-  TextDirection direction = TextDirection.ltr,
+Future<void> Function(WidgetTester, Shot) _accessoryRun({
   bool glass = true,
   bool minimized = false,
 }) {
-  testWidgets(name, (tester) async {
-    tester.view
-      ..physicalSize = const Size(400, 260)
-      ..devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
+  return (tester, shot) async {
     final controller = BottomBarController();
     addTearDown(controller.dispose);
     await tester.pumpWidget(
-      MaterialApp(
-        theme: ThemeData(
-          useMaterial3: true,
-          colorSchemeSeed: Colors.indigo,
-          brightness: brightness,
-        ),
-        home: Directionality(
-          textDirection: direction,
-          child: BottomBar(
-            body: const _Stripes(),
-            layout: const BottomBarLayout(width: 360),
-            trailing: IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.search),
-            ),
-            accessory: Builder(builder: _accessory),
-            theme: BottomBarThemeData(
-              surface: glass
-                  ? const BottomBarSurface.glass()
-                  : const BottomBarSurface.solid(),
-            ),
-            scrollBehavior: const BottomBarScrollBehavior(
-              minimizeBehavior: BottomBarMinimizeBehavior.onScrollDown,
-            ),
-            controller: controller,
-            child: BottomBarItems(
-              selectedIndex: 0,
-              indicator: const BottomBarIndicator.pill(),
-              children: [
-                for (var i = 0; i < _tabs.length; i++)
-                  BottomBarItem(
-                    icon: Icon(_tabs[i].$1),
-                    label: Text(_tabs[i].$2),
-                    badge: i == 0 ? const BottomBarBadge.count(3) : null,
-                  ),
-              ],
-            ),
+      goldenApp(
+        shot,
+        BottomBar(
+          body: const _Stripes(),
+          layout: const BottomBarLayout(width: 360),
+          trailing: IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.search),
+          ),
+          accessory: Builder(builder: _accessory),
+          theme: BottomBarThemeData(
+            surface: glass
+                ? const BottomBarSurface.glass()
+                : const BottomBarSurface.solid(),
+          ),
+          scrollBehavior: const BottomBarScrollBehavior(
+            minimizeBehavior: BottomBarMinimizeBehavior.onScrollDown,
+          ),
+          controller: controller,
+          child: BottomBarItems(
+            selectedIndex: 0,
+            indicator: const BottomBarIndicator.pill(),
+            children: [
+              for (var i = 0; i < _tabs.length; i++)
+                BottomBarItem(
+                  icon: Icon(_tabs[i].$1),
+                  label: Text(_tabs[i].$2),
+                  badge: i == 0 ? const BottomBarBadge.count(3) : null,
+                ),
+            ],
           ),
         ),
       ),
@@ -131,8 +110,7 @@ void _accessoryGolden(
           ? 'a hidden bar would make this golden show nothing'
           : 'the expanded golden needs the full bar on screen',
     );
-    await expectLater(find.byType(BottomBar), matchesGoldenFile(name));
-  });
+  };
 }
 
 Widget _accessory(BuildContext context) {

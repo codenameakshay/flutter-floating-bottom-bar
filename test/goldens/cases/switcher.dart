@@ -1,9 +1,8 @@
-@Tags(['golden'])
-library;
-
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
+
+import '../golden_case.dart';
 
 const _navTabs = <(IconData, String)>[
   (Icons.photo_library, 'Library'),
@@ -21,46 +20,12 @@ const _stripes = [
   Color(0xFF43A047),
 ];
 
-void main() {
-  _switcherGolden('switcher_nav_light.png');
-  _switcherGolden('switcher_nav_dark.png', brightness: Brightness.dark);
-  _switcherGolden('switcher_actions_light.png', switchTo: 'actions');
-  _switcherGolden(
-    'switcher_actions_dark.png',
-    switchTo: 'actions',
-    brightness: Brightness.dark,
-  );
-  _switcherGolden('switcher_composer_light.png', switchTo: 'composer');
-  _switcherGolden(
-    'switcher_composer_dark.png',
-    switchTo: 'composer',
-    brightness: Brightness.dark,
-  );
-  _switcherGolden(
-    'switcher_midpoint_light.png',
-    switchTo: 'composer',
-    midpoint: true,
-  );
-  _switcherGolden(
-    'switcher_midpoint_dark.png',
-    switchTo: 'composer',
-    midpoint: true,
-    brightness: Brightness.dark,
-  );
-}
-
-void _switcherGolden(
-  String name, {
-  Brightness brightness = Brightness.light,
+Future<void> Function(WidgetTester tester, Shot shot) _switcherRun({
   String? switchTo,
   bool midpoint = false,
 }) {
-  testWidgets(name, (tester) async {
-    tester.view
-      ..physicalSize = const Size(400, 260)
-      ..devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(_Harness(brightness: brightness));
+  return (tester, shot) async {
+    await tester.pumpWidget(_Harness(brightness: shot.brightness));
     await tester.pumpAndSettle();
 
     final harness = tester.state<_HarnessState>(find.byType(_Harness));
@@ -72,10 +37,40 @@ void _switcherGolden(
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
     }
-
-    await expectLater(find.byType(BottomBar), matchesGoldenFile(name));
-  });
+  };
 }
+
+final switcherFeature = GoldenFeature(
+  'Morph between bars',
+  readme: 'morph-between-bars',
+  demo: 'switcher',
+  cases: [
+    GoldenCase(
+      'switcher_nav',
+      caption: 'Navigation items before switching',
+      size: const Size(400, 260),
+      build: (shot) => _Harness(brightness: shot.brightness),
+    ),
+    GoldenCase(
+      'switcher_actions',
+      caption: 'Selection actions after switching',
+      size: const Size(400, 260),
+      run: _switcherRun(switchTo: 'actions'),
+    ),
+    GoldenCase(
+      'switcher_composer',
+      caption: 'Message composer after switching',
+      size: const Size(400, 260),
+      run: _switcherRun(switchTo: 'composer'),
+    ),
+    GoldenCase(
+      'switcher_midpoint',
+      caption: 'Switcher halfway through the morph into the composer',
+      size: const Size(400, 260),
+      run: _switcherRun(switchTo: 'composer', midpoint: true),
+    ),
+  ],
+);
 
 class _Harness extends StatefulWidget {
   const _Harness({required this.brightness});
