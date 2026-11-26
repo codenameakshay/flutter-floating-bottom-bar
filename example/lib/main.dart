@@ -24,6 +24,7 @@ import 'demos/panel_demo.dart';
 import 'demos/presets_demo.dart';
 import 'demos/switcher_demo.dart';
 import 'demos/tabs_demo.dart';
+import 'recipes/recipes_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -135,6 +136,8 @@ final demos = <({String slug, String title, WidgetBuilder builder})>[
     title: 'Accessibility',
     builder: (_) => const AccessibilityDemoPage(),
   ),
+  (slug: 'recipes', title: 'Recipes', builder: (_) => const RecipesPage()),
+  ...recipes.map((r) => (slug: r.slug, title: r.title, builder: r.builder)),
   (
     slug: 'configurator',
     title: 'Configurator',
@@ -320,11 +323,12 @@ class _DemoPicker extends StatelessWidget {
           ),
           const Divider(height: 1),
           for (final demo in demos)
-            ListTile(
-              title: Text(demo.title),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).pushNamed('/${demo.slug}'),
-            ),
+            if (!demo.slug.startsWith('recipe-'))
+              ListTile(
+                title: Text(demo.title),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).pushNamed('/${demo.slug}'),
+              ),
         ],
       ),
     );

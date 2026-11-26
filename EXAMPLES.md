@@ -13,6 +13,233 @@ cd example
 fvm flutter run
 ```
 
+## Recipes
+
+Copy-paste answers for the commonest apps. Each one is a full page in `example/lib/recipes/`, and the [recipes page](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/recipes) opens all seven.
+
+| Recipe | Use this when | Playground |
+| --- | --- | --- |
+| [Composer](#composer) | A chat or prompt input should sit above the keyboard. | [recipe-composer](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/recipe-composer) |
+| [Selection dock](#selection-dock) | A long-press selects rows and the navigation turns into "N selected" actions. | [recipe-selection-dock](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/recipe-selection-dock) |
+| [Reader controls](#reader-controls) | A reading screen should bring its controls back on a tap without moving the page. | [recipe-reader-controls](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/recipe-reader-controls) |
+| [Scroll under](#scroll-under) | A `CustomScrollView` should scroll under a glass bar while its last row still clears the bar. | [recipe-scroll-under](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/recipe-scroll-under) |
+| [Long labels](#long-labels) | Five tabs with long labels must stay usable on small phones, at large text sizes and in right-to-left layouts. | [recipe-long-labels](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/recipe-long-labels) |
+| [Mini player](#mini-player) | A now-playing row above the tabs should shrink with the bar. | [recipe-mini-player](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/recipe-mini-player) |
+| [Split bar](#split-bar) | You want the iOS 26 split tab bar: a pill, a profile button before it and a search circle after it, in glass. | [recipe-split-bar](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/recipe-split-bar) |
+
+### Composer
+
+Use this when a chat or prompt input should sit above the keyboard.
+
+Source: [composer.dart](example/lib/recipes/composer.dart) · [Try it](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/recipe-composer)
+
+<!-- example/lib/recipes/composer.dart -->
+```dart
+void _send() {
+  final message = _text.text.trim();
+  if (message.isEmpty) return;
+  setState(() => _messages.insert(0, message));
+  _text.clear();
+}
+```
+
+<!-- example/lib/recipes/composer.dart -->
+```dart
+child: TextField(
+  controller: _text,
+  minLines: 1,
+  maxLines: 5,
+  decoration: const InputDecoration.collapsed(
+    hintText: 'Ask anything',
+  ),
+),
+```
+
+- The `Scaffold` shrinks its body for the keyboard, so the bar rides on top of it. `BottomBarLayout.avoidKeyboard`, on by default, covers a body the `Scaffold` does not resize.
+- `hideOnScroll: false` keeps the composer on screen. Scrolling the list never takes focus from the field.
+- Send trims the text, adds the message and clears the field. Focus stays in the field, so the keyboard stays up.
+- `maxLines: 5` grows the bar up to five lines, then the field scrolls. `BottomBarBodyPadding` follows the taller bar.
+
+### Selection dock
+
+Use this when a long-press selects rows and the navigation turns into "N selected" actions.
+
+Source: [selection_dock.dart](example/lib/recipes/selection_dock.dart) · [Try it](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/recipe-selection-dock)
+
+<!-- example/lib/recipes/selection_dock.dart -->
+```dart
+child: BottomBarSwitcher(
+  child: _selected.isEmpty
+      ? BottomBarItems(
+          key: const ValueKey('nav'),
+          selectedIndex: _tab,
+          onSelected: (i) => setState(() => _tab = i),
+          indicator: const BottomBarIndicator.pill(),
+          children: const [
+            BottomBarItem(
+              icon: Icon(Icons.inbox),
+              label: Text('Inbox'),
+            ),
+            BottomBarItem(
+              icon: Icon(Icons.star),
+              label: Text('Starred'),
+            ),
+            BottomBarItem(icon: Icon(Icons.send), label: Text('Sent')),
+          ],
+        )
+      : Row(
+          key: const ValueKey('selection'),
+          children: [
+            IconButton(
+              tooltip: 'Clear selection',
+              onPressed: () => setState(_selected.clear),
+              icon: const Icon(Icons.close),
+            ),
+            Expanded(child: Text('${_selected.length} selected')),
+            IconButton(
+              tooltip: 'Delete',
+              onPressed: () => setState(() {
+                _rows.removeWhere(_selected.contains);
+                _selected.clear();
+              }),
+              icon: const Icon(Icons.delete_outline),
+            ),
+          ],
+        ),
+),
+```
+
+- `BottomBarSwitcher` morphs the bar when its child's key changes, here from `nav` to `selection` and back.
+- The tab index lives in the page state, so clearing the selection returns to the same tab. The list keeps its scroll position because it lives in the body, not in the switcher.
+- While rows are selected, a tap toggles a row. Delete removes the selected rows and brings the navigation back.
+
+### Reader controls
+
+Use this when a reading screen should bring its controls back on a tap without moving the page.
+
+Source: [reader_controls.dart](example/lib/recipes/reader_controls.dart) · [Try it](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/recipe-reader-controls)
+
+<!-- example/lib/recipes/reader_controls.dart -->
+```dart
+controller: _bar,
+showIcon: false,
+body: Semantics(
+  container: true,
+  label: 'Article. Tap to show reading controls',
+  child: GestureDetector(
+    behavior: HitTestBehavior.opaque,
+    onTap: _bar.show,
+```
+
+- `showIcon: false` removes the back-to-top action, which would scroll the article.
+- `BottomBarController.show()` only animates the bar, so the scroll offset stays where it was.
+- `HitTestBehavior.opaque` catches taps between paragraphs too. Drags still scroll and hide the bar.
+- The `Semantics` label gives screen reader users the same tap to bring the controls back.
+
+### Scroll under
+
+Use this when a `CustomScrollView` should scroll under a glass bar while its last row still clears the bar.
+
+Source: [scroll_under.dart](example/lib/recipes/scroll_under.dart) · [Try it](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/recipe-scroll-under)
+
+<!-- example/lib/recipes/scroll_under.dart -->
+```dart
+body: Builder(
+  builder: (context) => ValueListenableBuilder<double>(
+    valueListenable: BottomBarScope.of(context).barHeight,
+    builder: (context, barHeight, _) => CustomScrollView(
+      slivers: [
+        const SliverAppBar.medium(title: Text('Scroll under')),
+        SliverPadding(
+          padding: EdgeInsets.only(bottom: barHeight),
+          sliver: SliverList.builder(
+```
+
+- `BottomBarBodyPadding` would shrink the viewport, so nothing would scroll under the bar. Read `BottomBarScope.barHeight` and pad the last sliver instead.
+- `barHeight` is the measured footprint: the bar, its offset and the bottom safe area. It keeps its value while the bar is hidden, so content does not jump.
+- When the dock grows, `BottomBarSwitcher` springs the height and `barHeight` follows every frame, so the padding grows with it.
+
+### Long labels
+
+Use this when five tabs with long labels must stay usable on small phones, at large text sizes and in right-to-left layouts.
+
+Source: [long_labels.dart](example/lib/recipes/long_labels.dart) · [Try it](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/recipe-long-labels)
+
+<!-- example/lib/recipes/long_labels.dart -->
+```dart
+child: BottomBarItems(
+  selectedIndex: _index,
+  onSelected: (i) => setState(() => _index = i),
+  indicator: const BottomBarIndicator.pill(),
+  children: [
+    for (final (icon, label) in _tabs)
+      BottomBarItem(icon: Icon(icon), label: Text(label)),
+  ],
+),
+```
+
+- No extra code. Each item keeps a 48 x 48 target, and a label that does not fit its slot ends in an ellipsis.
+- Labels follow the text size up to 1.3x, like `NavigationBar`. Above 1.3x, a long-press shows the full label in a tooltip, and screen readers read the full label.
+- The row mirrors in right to left. The page's app bar toggles 2x text and right to left so you can try both.
+
+### Mini player
+
+Use this when a now-playing row above the tabs should shrink with the bar.
+
+Source: [mini_player.dart](example/lib/recipes/mini_player.dart) · [Try it](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/recipe-mini-player)
+
+<!-- example/lib/recipes/mini_player.dart -->
+```dart
+theme: BottomBarThemeData.glass(),
+scrollBehavior: const BottomBarScrollBehavior(
+  minimizeBehavior: BottomBarMinimizeBehavior.onScrollDown,
+),
+accessory: NowPlaying(
+  playing: _playing,
+  onToggle: () => setState(() => _playing = !_playing),
+),
+```
+
+<!-- example/lib/recipes/mini_player.dart -->
+```dart
+final expanded =
+    BottomBarAccessoryPlacement.of(context) ==
+    BottomBarAccessoryPlacement.expanded;
+```
+
+- `minimizeBehavior: onScrollDown` shrinks the bar into a pill on scroll down, and the accessory moves inline beside it.
+- `BottomBarAccessoryPlacement.of(context)` picks the layout: title, artist and Next when expanded, title and Play when inline.
+- The play state lives in the page, so it survives the move. Tapping the inline player runs its buttons and never expands the bar.
+
+### Split bar
+
+Use this when you want the iOS 26 split tab bar: a pill, a profile button before it and a search circle after it, in glass.
+
+Source: [split_bar.dart](example/lib/recipes/split_bar.dart) · [Try it](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/recipe-split-bar)
+
+<!-- example/lib/recipes/split_bar.dart -->
+```dart
+theme: BottomBarThemeData.glass(),
+layout: const BottomBarLayout.adaptive(
+  maxWidth: 480,
+  borderRadius: BorderRadius.all(Radius.circular(999)),
+),
+leading: IconButton(
+  tooltip: 'Profile',
+  onPressed: () {},
+  icon: const CircleAvatar(radius: 16, child: Text('JD')),
+),
+trailing: IconButton(
+  tooltip: 'Search',
+  onPressed: () {},
+  icon: const Icon(Icons.search),
+),
+```
+
+- `leading` and `trailing` are separate pieces with the bar's glass. A 999 radius makes the pill and the circles.
+- The gaps between the pieces pass taps through to the content below.
+- The grid pads itself with `BottomBarScope.barHeight`, so the photos scroll under the glass.
+
 ## Minimal bar
 
 Related runnable demo: `example/lib/demos/basic_demo.dart`.
@@ -47,37 +274,7 @@ class MinimalBottomBarExample extends StatelessWidget {
 
 ## Focus-aware search bar
 
-While the `TextField` is focused, the default `keepVisibleOnFocus: true` keeps
-the bar visible as the body scrolls.
-
-```dart
-import 'package:flutter/material.dart';
-import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
-
-class FocusAwareBottomBarExample extends StatelessWidget {
-  const FocusAwareBottomBarExample({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: BottomBar(
-        body: BottomBarBodyPadding(
-          child: ListView.builder(
-            itemCount: 40,
-            itemBuilder: (_, index) => ListTile(title: Text('Item $index')),
-          ),
-        ),
-        child: const Padding(
-          padding: EdgeInsets.all(8),
-          child: TextField(
-            decoration: InputDecoration(hintText: 'Search'),
-          ),
-        ),
-      ),
-    );
-  }
-}
-```
+Moved to the [Composer](#composer) recipe. While a field in the bar has focus, the default `keepVisibleOnFocus: true` keeps the bar visible as the body scrolls.
 
 To opt out, pass
 `scrollBehavior: const BottomBarScrollBehavior(keepVisibleOnFocus: false)`.
@@ -518,85 +715,7 @@ final router = GoRouter(
 
 ## Contextual dock with BottomBarSwitcher
 
-The bar shows a navigation row until something is selected. Then it morphs
-into a selection row. Clearing the selection brings the navigation row back.
-
-```dart
-import 'package:flutter/material.dart';
-import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
-
-class ContextualDockExample extends StatefulWidget {
-  const ContextualDockExample({super.key});
-
-  @override
-  State<ContextualDockExample> createState() => _ContextualDockExampleState();
-}
-
-class _ContextualDockExampleState extends State<ContextualDockExample> {
-  int index = 0;
-  final selected = <int>{};
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: BottomBar(
-        body: BottomBarBodyPadding(
-          child: ListView.builder(
-            itemCount: 30,
-            itemBuilder: (_, row) => CheckboxListTile(
-              value: selected.contains(row),
-              title: Text('Row $row'),
-              onChanged: (on) => setState(() {
-                if (on ?? false) {
-                  selected.add(row);
-                } else {
-                  selected.remove(row);
-                }
-              }),
-            ),
-          ),
-        ),
-        child: BottomBarSwitcher(
-          child: selected.isEmpty
-              ? BottomBarItems(
-                  key: const ValueKey('nav'),
-                  selectedIndex: index,
-                  onSelected: (i) => setState(() => index = i),
-                  children: [
-                    BottomBarItem(
-                      icon: const Icon(Icons.home_outlined),
-                      label: const Text('Home'),
-                    ),
-                    BottomBarItem(
-                      icon: const Icon(Icons.inbox_outlined),
-                      label: const Text('Inbox'),
-                    ),
-                  ],
-                )
-              : Padding(
-                  key: const ValueKey('selection'),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('${selected.length} selected'),
-                      const SizedBox(width: 12),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: () => setState(selected.clear),
-                      ),
-                    ],
-                  ),
-                ),
-        ),
-      ),
-    );
-  }
-}
-```
-
-The switcher morphs the bar between the two rows. The bar's height and shape
-spring from one to the other, so neither row jumps.
+Moved to the [Selection dock](#selection-dock) recipe, which adds long-press selection and keeps the tab when the selection clears.
 
 ## Demo index
 
@@ -611,6 +730,7 @@ spring from one to the other, so neither row jumps.
 - `example/lib/demos/tabs_demo.dart`
 - `example/lib/demos/adaptive_rail_demo.dart`
 - `example/lib/demos/switcher_demo.dart`
+- `example/lib/recipes/` (the seven recipes)
 
 The adaptive rail demo is live at `#/adaptive-rail`.
 

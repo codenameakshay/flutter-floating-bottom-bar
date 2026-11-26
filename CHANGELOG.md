@@ -10,6 +10,16 @@
   builder and no-indicator styles, and for badges and the pill indicator at
   text scale 2. No API change.
 
+### Docs and playground
+
+- Add seven recipes in `example/lib/recipes/`: a composer, a selection
+  dock, reader controls, scroll under, long labels, a mini player and a
+  split bar. Each is the shortest page that does the job on today's API.
+  `EXAMPLES.md` opens with a Recipes table and quotes the core of each,
+  and a test keeps the quotes in sync with the code. Open them on the
+  playground at `#/recipes`, or one at a time at `#/recipe-<name>`. No
+  package changes.
+
 ## 3.2.0
 
 ### Presets

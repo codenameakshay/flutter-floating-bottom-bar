@@ -205,6 +205,11 @@ Try the [presets demo](https://codenameakshay.github.io/flutter-floating-bottom-
 
 ## Common recipes
 
+Copy-paste answers for the commonest apps (a composer, a selection dock,
+reader controls, scroll under, long labels, a mini player and a split bar)
+are in [EXAMPLES.md](./EXAMPLES.md#recipes). Try them on the
+[recipes page](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/recipes).
+
 ### Adaptive width + stable body padding
 
 Use `BottomBarLayout.adaptive(maxWidth: ...)` to span narrow screens while
@@ -1594,7 +1599,7 @@ footprint for me" behavior without wiring your own `ValueListenableBuilder`.
 
 ## Examples and demos
 
-- API recipes: [EXAMPLES.md](./EXAMPLES.md)
+- Recipes and API snippets: [EXAMPLES.md](./EXAMPLES.md#recipes)
 - Runnable demo app: `example/`
 - Demo entry point: `example/lib/main.dart`
 
