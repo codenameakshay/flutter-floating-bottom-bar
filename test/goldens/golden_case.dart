@@ -1,5 +1,5 @@
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// One rendering of a case: a theme brightness, a text direction and a text
 /// scale. [name] is the file-name suffix; an empty name means no suffix.
@@ -26,6 +26,14 @@ class Shot {
 
 const themed = [Shot.light, Shot.dark];
 const themedRtl = [Shot.light, Shot.dark, Shot.rtl];
+
+/// Pins the test view used to capture a golden and restores it after the test.
+void pinGoldenView(WidgetTester tester, Size physicalSize) {
+  tester.view
+    ..devicePixelRatio = 1
+    ..physicalSize = physicalSize;
+  addTearDown(tester.view.reset);
+}
 
 /// One row of the golden table: a widget state rendered once per [shots].
 ///

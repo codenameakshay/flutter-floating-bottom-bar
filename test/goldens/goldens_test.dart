@@ -8,6 +8,7 @@ import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'cases/table.dart';
+import 'golden_case.dart';
 
 void main() {
   for (final feature in goldenFeatures) {
@@ -15,8 +16,7 @@ void main() {
       for (final c in feature.cases) {
         for (final shot in c.shots) {
           testWidgets(c.fileName(shot), (tester) async {
-            tester.view.physicalSize = c.size;
-            addTearDown(tester.view.reset);
+            pinGoldenView(tester, c.size);
             if (c.run case final run?) {
               await run(tester, shot);
             } else {
