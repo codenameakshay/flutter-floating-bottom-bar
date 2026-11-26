@@ -1,60 +1,9 @@
 ## Unreleased
 
-- Add a playground configurator at `#/configurator`. Knobs set the
-  preset, indicator, surface, layout, motion, scroll rules, items, groups
-  and accessory, and a live preview follows. Copy code gives a runnable
-  `main.dart` with the preset plus `copyWith` for what differs. Share links
-  encode the config in the URL and fall back to defaults when bad. Snapshot
-  tests analyze the generated code. Code in `example/lib/configurator/`.
-- Add an accessibility pass. Each `BottomBarItem` in a row or rail is one
-  semantics node named like "Inbox, 3 new, Tab 2 of 4", with the position from
-  `MaterialLocalizations.tabLabel`; the centre action is not counted. Add
-  `BottomBarLocalizations` and `BottomBarLocalizationsDelegate` to translate
-  the hidden action and badge strings. A count badge now announces "3 new"
-  and a dot announces "New". Item labels and badge text follow the text size
-  up to 1.3x, like `NavigationBar`. A label that fits at the normal size
-  never truncates at a larger one, and a long-press shows it at full size
-  above 1.3x. Focused items, the centre action, the pill and the hidden
-  action draw a focus ring. Add an accessibility demo in
-  `example/lib/demos/accessibility_demo.dart`.
-- Add `showBottomBarPanel`, which grows the bar into a panel above a scrim
-  and shrinks it back into the bar when it closes. The morph follows the
-  bar's motion. It starts from the bar, the pill or the bottom edge, and can
-  turn around mid-flight. The panel paints the bar's glass and shadows, and
-  the bar's content fades out as the panel's content fades in. It closes on
-  pop, back with predictive back, Escape, a scrim tap or a drag down. Focus
-  is trapped and returned. Add a panel demo in
-  `example/lib/demos/panel_demo.dart`.
-- Add `BottomBarSwitcher`, which swaps the bar's content with a morph of the
-  bar itself. The height springs from the old child's size to the new one's
-  and retargets mid-flight, and the outline, glass and shadows follow. The old
-  and new children cross-fade and scale with an overlap. Add a switcher demo
-  in `example/lib/demos/switcher_demo.dart`.
-- Add `BottomBar.accessory`, a mini player or dock above the bar, like the
-  iOS 26 tab view bottom accessory. It moves inline beside the minimized
-  pill on the morph's spring. `BottomBarAccessoryPlacement.of` tells it
-  which placement it is in. Body padding counts it. `BottomBarAdaptive`
-  forwards it and floats it over the body beside the rail. Add an accessory
-  demo in `example/lib/demos/accessory_demo.dart`.
-- Add minimize on scroll, like the iOS 26 tab bar.
-  `BottomBarScrollBehavior.minimizeBehavior` (`never`, `onScrollDown`,
-  `onScrollUp`) makes scrolling shrink the bar into a compact pill at its
-  leading edge instead of hiding it, and takes precedence over
-  `hideOnScroll`. The outline morphs onto the pill on the bar's spring, with
-  the glass and shadows following it. Tap the pill to expand. The pill shows
-  the selected item's icon and badge, or `BottomBar.compactChild`. A bar
-  with neither hides instead. `BottomBarController` gains `minimize()`,
-  `expand()` and a `visibility` listenable. `BottomBarScope` gains
-  `visibility` and `visibleHeight`. `barHeight` and `BottomBarBodyPadding`
-  keep the full height while minimized. With the default `never`, nothing
-  changes. Add a minimize demo in `example/lib/demos/minimize_demo.dart`.
-- Finish minimize on scroll. The `leading` and `trailing` pieces keep their
-  place while the bar minimizes, with the pill one `groupSpacing` after a
-  leading piece. The items shrink into the outline as it morphs, so the
-  glass is never empty. The pill is one collapsed button to screen readers,
-  and a `compactChild`'s text becomes its label. Focus moves to the pill
-  when the bar minimizes around it, and to the selected item when the pill
-  expands. No new API.
+## 3.2.0
+
+### Presets
+
 - Add four presets on `BottomBarThemeData`: `glass()`, `material3()`,
   `pill()` and `minimal()`. Each is one line to a finished bar, built from
   the existing layout, surface, indicator, motion and item theme. Colours
@@ -67,13 +16,102 @@
   edge too. To change a preset's surface everywhere, set both `surface` and
   `scrollEdgeSurface`. Add a presets demo in
   `example/lib/demos/presets_demo.dart`.
+
 - Add `BottomBarIndicator.container()`, the Material 3 `NavigationBar`
   indicator: a 64 x 32 capsule behind the icon in `secondaryContainer`, with
   the selected icon in `onSecondaryContainer` and the selected label in
   `onSurface`. `material3()` uses it.
+
 - Add `BottomBarItemThemeData.labelBehavior`, so a theme can set when labels
-  show. `BottomBarItems.labelBehavior` is now nullable and still wins when
-  set. `minimal()` shows only the selected label.
+  show. `BottomBarItems.labelBehavior` still wins when set. `minimal()`
+  shows only the selected label.
+
+### Layout and RTL
+
+- Add `BottomBar.leading` and `BottomBar.trailing`, detached pieces beside the
+  pill like the iOS 26 split tab bar. Each piece is as tall as the bar and at
+  least as wide, uses the bar's surface and hides with it. Add
+  `BottomBarLayout.groupSpacing` for the gap, default 8, and lerp it. A narrow
+  row narrows the pill first, then its items scroll. Gaps pass taps through.
+
+- Add directional layout fields for right to left: `directionalAlignment`,
+  `directionalBorderRadius` and `directionalIconOffset` follow the reading
+  direction and replace their physical field when set. Add
+  `BottomBarMotion.directionalSlide` to mirror the slide offsets too. The
+  physical fields are unchanged, so existing code does not move. Items,
+  the indicator, badges, the centre action and groups already mirror.
+
+- Add `BottomBarLayout.docked()`, a full-width bar on the bottom edge like the
+  Material 3 docked toolbar. Its surface runs under the bottom inset while its
+  items stay above it. It hides by sliding fully off screen. Corners are
+  square unless `borderRadius` is set. A docked bar ignores `leading` and
+  `trailing`, so put those widgets in the child.
+
+- Fix safe-area padding. A bottom-aligned bar ignores the top inset.
+  `BottomBarBodyPadding` counts the bottom inset once, even when a `ListView`
+  or `SafeArea` sits inside it. Add `BottomBarScope.bottomInset`, the part of
+  `barHeight` that is the bottom inset.
+
+- Add a docked demo in `example/lib/demos/docked_demo.dart`, with switches
+  for floating or docked, glass and right to left. The example app now runs
+  edge to edge on Android with a transparent navigation bar.
+
+### Minimize and accessory
+
+- Add minimize on scroll, like the iOS 26 tab bar.
+  `BottomBarScrollBehavior.minimizeBehavior` (`never`, `onScrollDown`,
+  `onScrollUp`) makes scrolling shrink the bar into a compact pill at its
+  leading edge instead of hiding it, and takes precedence over
+  `hideOnScroll`. The outline morphs onto the pill on the bar's spring, with
+  the glass and shadows following it. Tap the pill to expand. The pill shows
+  the selected item's icon and badge, or `BottomBar.compactChild`. A bar
+  with neither hides instead. `BottomBarController` gains `minimize()`,
+  `expand()` and a `visibility` listenable. `BottomBarScope` gains
+  `visibility` and `visibleHeight`. `barHeight` and `BottomBarBodyPadding`
+  keep the full height while minimized. With the default `never`, nothing
+  changes. Add a minimize demo in `example/lib/demos/minimize_demo.dart`.
+
+- Finish minimize on scroll. The `leading` and `trailing` pieces keep their
+  place while the bar minimizes, with the pill one `groupSpacing` after a
+  leading piece. The items shrink into the outline as it morphs, so the
+  glass is never empty. The pill is one collapsed button to screen readers,
+  and a `compactChild`'s text becomes its label. Focus moves to the pill
+  when the bar minimizes around it, and to the selected item when the pill
+  expands. No new API.
+
+- Add `BottomBar.accessory`, a mini player or dock above the bar, like the
+  iOS 26 tab view bottom accessory. It moves inline beside the minimized
+  pill on the morph's spring. `BottomBarAccessoryPlacement.of` tells it
+  which placement it is in. Body padding counts it. `BottomBarAdaptive`
+  forwards it and floats it over the body beside the rail. Add an accessory
+  demo in `example/lib/demos/accessory_demo.dart`.
+
+### Morph and panel
+
+- Add `BottomBarSwitcher`, which swaps the bar's content with a morph of the
+  bar itself. The height springs from the old child's size to the new one's
+  and retargets mid-flight, and the outline, glass and shadows follow. The old
+  and new children cross-fade and scale with an overlap. Add a switcher demo
+  in `example/lib/demos/switcher_demo.dart`.
+
+- Add `showBottomBarPanel`, which grows the bar into a panel above a scrim
+  and shrinks it back into the bar when it closes. The morph follows the
+  bar's motion. It starts from the bar, the pill or the bottom edge, and can
+  turn around mid-flight. The panel paints the bar's glass and shadows, and
+  the bar's content fades out as the panel's content fades in. It closes on
+  pop, back with predictive back, Escape, a scrim tap or a drag down. Focus
+  is trapped and returned. Add a panel demo in
+  `example/lib/demos/panel_demo.dart`.
+
+### Scroll
+
+- Add `BottomBarScrollBehavior.followScroll`, which tracks the finger 1:1
+  over the bar's full footprint, like Safari's toolbar. A fling keeps it
+  moving until it is fully in or out. On release it settles on its spring to
+  the nearer state, or the fling's direction. Try the switch in the Basic
+  TabBar demo.
+
+### Navigation and tabs
 
 - The bar and `BottomBarController` follow the active tab in an
   `IndexedStack`, `PageView` or `TabBarView`. Only the list on the page in
@@ -85,45 +123,41 @@
   shown state. `scrollToStart()` and `scrollToEnd()` no longer log a debug
   error when there is no list to scroll.
 
-- Add `BottomBar.leading` and `BottomBar.trailing`, detached pieces beside the
-  pill like the iOS 26 split tab bar. Each piece is as tall as the bar and at
-  least as wide, uses the bar's surface and hides with it. Add
-  `BottomBarLayout.groupSpacing` for the gap, default 8, and lerp it. A narrow
-  row narrows the pill first, then its items scroll. Gaps pass taps through.
+- Add `BottomBarAdaptive`, a bar below 600 wide and a navigation rail on the
+  start side at 600 and above. Both take the same `BottomBarItems`, theme and
+  presets, and the body keeps its state when the window crosses the
+  breakpoint. Add `BottomBarItems.direction`, which lays the items out in a
+  column when set to `Axis.vertical`.
+
+### Accessibility
+
+- Add an accessibility pass. Each `BottomBarItem` in a row or rail is one
+  semantics node named like "Inbox, 3 new, Tab 2 of 4", with the position from
+  `MaterialLocalizations.tabLabel`; the centre action is not counted. Add
+  `BottomBarLocalizations` and `BottomBarLocalizationsDelegate` to translate
+  the hidden action and badge strings. A count badge now announces "3 new"
+  and a dot announces "New". Item labels and badge text follow the text size
+  up to 1.3x, like `NavigationBar`. A label that fits at the normal size
+  never truncates at a larger one, and a long-press shows it at full size
+  above 1.3x. Focused items, the centre action, the pill and the hidden
+  action draw a focus ring. Add an accessibility demo in
+  `example/lib/demos/accessibility_demo.dart`.
+
+### Docs and playground
+
+- Add a playground configurator at `#/configurator`. Knobs set the
+  preset, indicator, surface, layout, motion, scroll rules, items, groups
+  and accessory, and a live preview follows. Copy code gives a runnable
+  `main.dart` with the preset plus `copyWith` for what differs. Share links
+  encode the config in the URL and fall back to defaults when bad. Snapshot
+  tests analyze the generated code. Code in `example/lib/configurator/`.
+
 - Add migration guides in `docs/migrate/` from Flutter's
   `BottomNavigationBar` and `NavigationBar`, `google_nav_bar`,
   `convex_bottom_bar`, `salomon_bottom_bar`, `persistent_bottom_nav_bar_v2`
   and `animated_bottom_navigation_bar`. Each has before and after code, a
   property mapping and the behaviour differences. The after code lives in
   `example/lib/migrate/`, and a test keeps the guides in sync with it.
-- Add directional layout fields for right to left: `directionalAlignment`,
-  `directionalBorderRadius` and `directionalIconOffset` follow the reading
-  direction and replace their physical field when set. Add
-  `BottomBarMotion.directionalSlide` to mirror the slide offsets too. The
-  physical fields are unchanged, so existing code does not move. Items,
-  the indicator, badges, the centre action and groups already mirror.
-- Add `BottomBarLayout.docked()`, a full-width bar on the bottom edge like the
-  Material 3 docked toolbar. Its surface runs under the bottom inset while its
-  items stay above it. It hides by sliding fully off screen. Corners are
-  square unless `borderRadius` is set. A docked bar ignores `leading` and
-  `trailing`, so put those widgets in the child.
-- Fix safe-area padding. A bottom-aligned bar ignores the top inset.
-  `BottomBarBodyPadding` counts the bottom inset once, even when a `ListView`
-  or `SafeArea` sits inside it. Add `BottomBarScope.bottomInset`, the part of
-  `barHeight` that is the bottom inset.
-- Add a docked demo in `example/lib/demos/docked_demo.dart`, with switches
-  for floating or docked, glass and right to left. The example app now runs
-  edge to edge on Android with a transparent navigation bar.
-- Add `BottomBarAdaptive`, a bar below 600 wide and a navigation rail on the
-  start side at 600 and above. Both take the same `BottomBarItems`, theme and
-  presets, and the body keeps its state when the window crosses the
-  breakpoint. Add `BottomBarItems.direction`, which lays the items out in a
-  column when set to `Axis.vertical`.
-- Add `BottomBarScrollBehavior.followScroll`, which tracks the finger 1:1
-  over the bar's full footprint, like Safari's toolbar. A fling keeps it
-  moving until it is fully in or out. On release it settles on its spring to
-  the nearer state, or the fling's direction. Try the switch in the Basic
-  TabBar demo.
 
 ## 3.1.0
 

@@ -65,7 +65,21 @@ surface, or any custom child.
 - [Centre action](#centre-action): an inline, raised or notched button in the middle of the row. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/center-action).
 - [Glass surface](#glass-surface): `BottomBarThemeData.surface` paints the bar as frosted glass or a solid fill, and [`scrollEdgeSurface`](#scroll-edge-surface) changes it when nothing scrolls under the bar. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/glass-surface).
 - [Works with go_router](#works-with-go_router): a `StatefulShellRoute` recipe, with no go_router dependency in the package. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/go-router-shell).
-- [Adaptive rail](#adaptive-rail) shows a bar on narrow windows and a navigation rail on wide ones, from the same `BottomBarItems`.
+- [Presets](#presets): `glass()`, `material3()`, `pill()` and `minimal()` give a finished bar in one line. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/presets).
+- [Groups](#groups): `BottomBar.leading` and `BottomBar.trailing` sit beside the pill like the iOS 26 split tab bar. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/groups).
+- [RTL](#rtl): directional alignment, corners, icon offset and slide follow the reading direction. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/docked).
+- [Edge-to-edge and safe area](#edge-to-edge-and-safe-area): the bar and `BottomBarBodyPadding` count the bottom inset once. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/docked).
+- [Docked](#docked): `BottomBarLayout.docked()` is a full-width bar on the bottom edge. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/docked).
+- [Minimize on scroll](#minimize-on-scroll): scrolling shrinks the bar into a pill, like the iOS 26 tab bar. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/minimize).
+- [Follow the finger](#follow-the-finger): `followScroll` tracks the finger 1:1, like Safari's toolbar. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/basic-tab-bar).
+- [Accessory](#accessory): a mini player or dock above the bar that moves beside the minimized pill. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/accessory).
+- [Tabs and pages](#tabs-and-pages): the bar follows the active tab in an `IndexedStack`, `PageView` or `TabBarView`. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/tabs).
+- [Adaptive rail](#adaptive-rail): `BottomBarAdaptive` shows a bar on narrow windows and a navigation rail on wide ones, from the same `BottomBarItems`. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/adaptive-rail).
+- [Morph between bars](#morph-between-bars): `BottomBarSwitcher` swaps the bar's content and springs the bar to the new size. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/switcher).
+- [Expand into a panel](#expand-into-a-panel): `showBottomBarPanel` grows the bar into a panel and shrinks it back. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/panel).
+- [Accessibility](#accessibility): one semantics node per item with its position and badge, text scaling, focus rings and translatable strings. [Demo](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/accessibility).
+- [Migrating from another bar](#migrating-from-another-bar): guides from `BottomNavigationBar`, `NavigationBar` and five packages, with before and after code.
+- [Configurator](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/configurator): build a bar in the browser and copy its code.
 - The hidden action is accessibility-safe by default: it is non-interactive and
   excluded from semantics while the bar is visible, keeps at least a 48x48 hit
   target when active, uses direction-aware icon/tooltip text, and defaults its
@@ -81,11 +95,12 @@ surface, or any custom child.
 
 Requires Dart `>=3.12.0` and Flutter `>=3.44.0`.
 
-See the [3.1.0 release notes](./CHANGELOG.md#310) for the complete list of new
-indicator, item theme, badge, gesture, centre action and surface features.
+See the [3.2.0 release notes](./CHANGELOG.md#320) for the complete list of new
+preset, layout, RTL, minimize, accessory, morph, panel, scroll, tab, rail and
+accessibility features.
 
 ```bash
-flutter pub add flutter_floating_bottom_bar:^3.1.0
+flutter pub add flutter_floating_bottom_bar:^3.2.0
 ```
 
 ```dart
