@@ -71,14 +71,43 @@ test: test-pkg test-app ## Run tests for package and app
 
 .PHONY: test-pkg
 test-pkg:
-	cd $(PKG_DIR) && $(FLUTTER) test
+	cd $(PKG_DIR) && $(FLUTTER) test --exclude-tags golden
 
 .PHONY: test-app
 test-app:
 	cd $(APP_DIR) && $(FLUTTER) test
 
 .PHONY: check
-check: format-check analyze test ## Format check + analyze + test
+check: format-check analyze test gallery-check ## Format check + analyze + test (goldens run with make goldens)
+	@echo "Goldens are not part of make check. They render only on the pinned Linux setup:"
+	@echo "  make goldens         check them in Docker"
+	@echo "  make goldens-update  regenerate them in Docker"
+
+# ---------------------------------------------------------------------------
+# Goldens and the gallery (pinned Linux setup in Docker, see CONTRIBUTING.md)
+# ---------------------------------------------------------------------------
+
+.PHONY: goldens
+goldens: ## Check the goldens on the pinned Linux setup in Docker
+	./tool/goldens/run.sh check
+
+.PHONY: goldens-update
+goldens-update: ## Regenerate the goldens on the pinned Linux setup in Docker
+	./tool/goldens/run.sh update
+	$(DART) run tool/gallery.dart --check
+
+.PHONY: gallery
+gallery: ## Build the golden gallery page into build/gallery
+	$(DART) run tool/gallery.dart --out build/gallery
+
+.PHONY: gallery-check
+gallery-check: ## Fail if the gallery is out of date with the goldens
+	$(DART) run tool/gallery.dart --check
+
+.PHONY: goldens-tooling
+goldens-tooling: ## Test the golden runner and the playground gallery link (bash, node)
+	bash tool/goldens/test-runner.sh
+	node tool/check-gallery-link.mjs
 
 # ---------------------------------------------------------------------------
 # Run example app

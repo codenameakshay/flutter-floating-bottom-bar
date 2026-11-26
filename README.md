@@ -31,6 +31,8 @@ surface, or any custom child.
 
 **[Build your bar in the browser](https://codenameakshay.github.io/flutter-floating-bottom-bar/#/configurator)**. Pick a preset and tune the knobs, then watch a live preview. Copy working Dart or share a link to the same bar.
 
+**[Golden gallery](https://codenameakshay.github.io/flutter-floating-bottom-bar/gallery/)**. It shows every golden test as an image, each indicator, badge, preset and surface in light, dark, RTL and large text, and CI checks each one pixel for pixel on every pull request.
+
 | ![Issues dock](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/1-issues-dock.gif) | ![AI prompt dock](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/2-ai-prompt-dock.gif) | ![Basic TabBar](https://raw.githubusercontent.com/codenameakshay/flutter-floating-bottom-bar/0c1275b/screenshots/3-basic-tab-bar.gif) |
 | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | **Issues dock**                                                                                                                 | **AI prompt dock**                                                                                                                    | **Basic TabBar**                                                                                                                    |

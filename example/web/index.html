@@ -33,6 +33,24 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <a id="gallery-link" href="gallery/" hidden
+     style="position:fixed;top:12px;right:12px;z-index:10;padding:6px 12px;border-radius:999px;background:rgba(30,30,40,.78);color:#fff;font:500 13px/1.4 system-ui,sans-serif;text-decoration:none">Golden gallery</a>
+  <script>
+    // History API route updates do not emit hashchange, so wrap them too.
+    const galleryLink = document.getElementById('gallery-link');
+    const onHome = () => { galleryLink.hidden = !['', '#', '#/'].includes(location.hash); };
+    for (const method of ['pushState', 'replaceState']) {
+      const updateHistory = history[method];
+      history[method] = function (...args) {
+        const result = updateHistory.apply(this, args);
+        onHome();
+        return result;
+      };
+    }
+    addEventListener('hashchange', onHome);
+    addEventListener('popstate', onHome);
+    onHome();
+  </script>
   <!--
     Flutter generates this bootstrap during build. Customize it only when the
     demo needs a non-default loader configuration.

@@ -1,8 +1,8 @@
-import 'dart:typed_data';
-
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../golden_case.dart';
 
 const _stripes = [
   Color(0xFFE53935),
@@ -13,47 +13,17 @@ const _stripes = [
   Color(0xFF43A047),
 ];
 
-void main() {
-  late GoldenFileComparator previous;
-  setUpAll(() {
-    previous = goldenFileComparator;
-    goldenFileComparator = _TolerantComparator(
-      (previous as LocalFileComparator).basedir.resolve('panel_test.dart'),
-    );
-  });
-  tearDownAll(() => goldenFileComparator = previous);
-
-  _panelGolden('panel_open_glass_light.png');
-  _panelGolden('panel_open_glass_dark.png', brightness: Brightness.dark);
-  _panelGolden('panel_open_solid_light.png', glass: false);
-  _panelGolden(
-    'panel_open_solid_dark.png',
-    glass: false,
-    brightness: Brightness.dark,
-  );
-  _panelGolden('panel_midpoint_glass_light.png', midpoint: true);
-  _panelGolden(
-    'panel_midpoint_glass_dark.png',
-    midpoint: true,
-    brightness: Brightness.dark,
-  );
-  _panelGolden('panel_open_glass_rtl.png', direction: TextDirection.rtl);
-}
-
-void _panelGolden(
-  String name, {
-  Brightness brightness = Brightness.light,
+Future<void> Function(WidgetTester tester, Shot shot) _panelRun({
   bool glass = true,
   bool midpoint = false,
-  TextDirection direction = TextDirection.ltr,
 }) {
-  testWidgets(name, (tester) async {
-    tester.view
-      ..physicalSize = const Size(400, 700)
-      ..devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
+  return (tester, shot) async {
     await tester.pumpWidget(
-      _Harness(brightness: brightness, glass: glass, direction: direction),
+      _Harness(
+        brightness: shot.brightness,
+        glass: glass,
+        direction: shot.direction,
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -68,10 +38,38 @@ void _panelGolden(
     } else {
       await tester.pumpAndSettle();
     }
-
-    await expectLater(find.byType(MaterialApp), matchesGoldenFile(name));
-  });
+  };
 }
+
+final panelFeature = GoldenFeature(
+  'Expand into a panel',
+  readme: 'expand-into-a-panel',
+  demo: 'panel',
+  cases: [
+    GoldenCase(
+      'panel_open_glass',
+      caption: 'Glass panel open over the bar',
+      shots: themedRtl,
+      size: const Size(400, 700),
+      run: _panelRun(),
+      target: () => find.byType(MaterialApp),
+    ),
+    GoldenCase(
+      'panel_open_solid',
+      caption: 'Solid panel open over the bar',
+      size: const Size(400, 700),
+      run: _panelRun(glass: false),
+      target: () => find.byType(MaterialApp),
+    ),
+    GoldenCase(
+      'panel_midpoint_glass',
+      caption: 'Glass panel halfway through opening',
+      size: const Size(400, 700),
+      run: _panelRun(midpoint: true),
+      target: () => find.byType(MaterialApp),
+    ),
+  ],
+);
 
 class _Harness extends StatelessWidget {
   const _Harness({
@@ -190,29 +188,5 @@ class _Stripes extends StatelessWidget {
       ),
       child: const SizedBox.expand(),
     );
-  }
-}
-
-/// Accepts antialiasing drift between machines: the GitHub macOS runner draws
-/// the blurred notch edge about 10 pixels differently from a local Mac. A
-/// misplaced notch or a lost blur changes thousands of pixels.
-class _TolerantComparator extends LocalFileComparator {
-  _TolerantComparator(super.testFile);
-
-  static const _maxDiff = 0.0005;
-
-  @override
-  Future<bool> compare(Uint8List imageBytes, Uri golden) async {
-    final result = await GoldenFileComparator.compareLists(
-      imageBytes,
-      await getGoldenBytes(golden),
-    );
-    if (result.passed || result.diffPercent <= _maxDiff) {
-      result.dispose();
-      return true;
-    }
-    final error = await generateFailureOutput(result, golden, basedir);
-    result.dispose();
-    throw FlutterError(error);
   }
 }

@@ -1,0 +1,635 @@
+[
+  {
+    "title": "Default bar",
+    "readme": "basic-usage",
+    "demo": "minimal-api",
+    "cases": [
+      {
+        "id": "bottom_bar_default",
+        "caption": "Default bar in light and dark themes",
+        "shots": {
+          "light": "bottom_bar_default_light.png",
+          "dark": "bottom_bar_default_dark.png"
+        }
+      }
+    ]
+  },
+  {
+    "title": "Presets",
+    "readme": "presets",
+    "demo": "presets",
+    "cases": [
+      {
+        "id": "preset_glass",
+        "caption": "Glass preset in light and dark",
+        "shots": {
+          "light": "preset_glass_light.png",
+          "dark": "preset_glass_dark.png"
+        }
+      },
+      {
+        "id": "preset_material3",
+        "caption": "Material 3 preset in light and dark",
+        "shots": {
+          "light": "preset_material3_light.png",
+          "dark": "preset_material3_dark.png"
+        }
+      },
+      {
+        "id": "preset_pill",
+        "caption": "Pill preset in light, dark and right to left",
+        "shots": {
+          "light": "preset_pill_light.png",
+          "dark": "preset_pill_dark.png",
+          "rtl": "preset_pill_rtl.png"
+        }
+      },
+      {
+        "id": "preset_minimal",
+        "caption": "Minimal preset in light and dark",
+        "shots": {
+          "light": "preset_minimal_light.png",
+          "dark": "preset_minimal_dark.png"
+        }
+      },
+      {
+        "id": "preset_glass_notched_badges",
+        "caption": "Glass preset with a notched centre action and badges",
+        "shots": {
+          "light": "preset_glass_notched_badges_light.png"
+        }
+      },
+      {
+        "id": "preset_material3_vs_navigation_bar",
+        "caption": "Material 3 preset beside the Material navigation bar",
+        "shots": {
+          "light": "preset_material3_vs_navigation_bar_light.png"
+        }
+      }
+    ]
+  },
+  {
+    "title": "Indicators",
+    "readme": "indicators",
+    "demo": "indicators",
+    "cases": [
+      {
+        "id": "indicator_pill",
+        "caption": "Pill indicator on the second tab",
+        "shots": {
+          "light": "indicator_pill_light.png",
+          "dark": "indicator_pill_dark.png",
+          "rtl": "indicator_pill_rtl.png",
+          "text2x": "indicator_pill_text2x.png"
+        }
+      },
+      {
+        "id": "indicator_tint",
+        "caption": "Tint indicator on the second tab",
+        "shots": {
+          "light": "indicator_tint_light.png",
+          "dark": "indicator_tint_dark.png"
+        }
+      },
+      {
+        "id": "indicator_underline",
+        "caption": "Underline indicator on the second tab",
+        "shots": {
+          "light": "indicator_underline_light.png",
+          "dark": "indicator_underline_dark.png"
+        }
+      },
+      {
+        "id": "indicator_dot",
+        "caption": "Dot indicator on the second tab",
+        "shots": {
+          "light": "indicator_dot_light.png",
+          "dark": "indicator_dot_dark.png"
+        }
+      },
+      {
+        "id": "indicator_container",
+        "caption": "Container indicator on the second tab",
+        "shots": {
+          "light": "indicator_container_light.png",
+          "dark": "indicator_container_dark.png"
+        }
+      },
+      {
+        "id": "indicator_builder",
+        "caption": "Tubelight indicator on the second tab",
+        "shots": {
+          "light": "indicator_builder_light.png",
+          "dark": "indicator_builder_dark.png"
+        }
+      },
+      {
+        "id": "indicator_none",
+        "caption": "No indicator on the second tab",
+        "shots": {
+          "light": "indicator_none_light.png",
+          "dark": "indicator_none_dark.png"
+        }
+      }
+    ]
+  },
+  {
+    "title": "Item theme",
+    "readme": "item-theme",
+    "demo": "item-theme",
+    "cases": [
+      {
+        "id": "item_theme_quiet",
+        "caption": "Quiet item theme with tint indicator and always-shown labels",
+        "shots": {
+          "light": "item_theme_quiet_light.png",
+          "dark": "item_theme_quiet_dark.png"
+        }
+      },
+      {
+        "id": "item_theme_bold",
+        "caption": "Bold item theme with stretching pill indicator",
+        "shots": {
+          "light": "item_theme_bold_light.png",
+          "dark": "item_theme_bold_dark.png",
+          "rtl": "item_theme_bold_rtl.png"
+        }
+      },
+      {
+        "id": "item_theme_icon_only",
+        "caption": "Icon-only item theme with dot indicator",
+        "shots": {
+          "light": "item_theme_icon_only_light.png",
+          "dark": "item_theme_icon_only_dark.png"
+        }
+      }
+    ]
+  },
+  {
+    "title": "Badges",
+    "readme": "badges",
+    "demo": "badged-nav",
+    "cases": [
+      {
+        "id": "badge",
+        "caption": "Dot, count, label and outlined count badges on the tabs",
+        "shots": {
+          "light": "badge_light.png",
+          "dark": "badge_dark.png",
+          "rtl": "badge_rtl.png",
+          "text2x": "badge_text2x.png"
+        }
+      }
+    ]
+  },
+  {
+    "title": "Glass surface",
+    "readme": "glass-surface",
+    "demo": "glass-surface",
+    "cases": [
+      {
+        "id": "glass_default",
+        "caption": "Glass surface on the second tab",
+        "shots": {
+          "light": "glass_default_light.png",
+          "dark": "glass_default_dark.png"
+        }
+      },
+      {
+        "id": "glass_notched",
+        "caption": "Glass surface with a notched centre action",
+        "shots": {
+          "light": "glass_notched_light.png",
+          "dark": "glass_notched_dark.png",
+          "rtl": "glass_notched_rtl.png"
+        }
+      },
+      {
+        "id": "glass_shadow",
+        "caption": "Glass surface at half fill with a heavy shadow",
+        "shots": {
+          "light": "glass_shadow_light.png"
+        }
+      },
+      {
+        "id": "glass_high_contrast",
+        "caption": "Glass surface with high contrast on",
+        "shots": {
+          "light": "glass_high_contrast_light.png",
+          "dark": "glass_high_contrast_dark.png"
+        }
+      },
+      {
+        "id": "glass_over_white",
+        "caption": "Glass surface over a white backdrop",
+        "shots": {
+          "light": "glass_over_white_light.png",
+          "dark": "glass_over_white_dark.png"
+        }
+      },
+      {
+        "id": "glass_over_black",
+        "caption": "Glass surface over a black backdrop",
+        "shots": {
+          "light": "glass_over_black_light.png",
+          "dark": "glass_over_black_dark.png"
+        }
+      }
+    ]
+  },
+  {
+    "title": "Scroll edge surface",
+    "readme": "scroll-edge-surface",
+    "demo": "glass-surface",
+    "cases": [
+      {
+        "id": "scroll_edge_standard",
+        "caption": "Standard scroll edge surface before scrolling",
+        "shots": {
+          "light": "scroll_edge_standard_light.png",
+          "dark": "scroll_edge_standard_dark.png"
+        }
+      },
+      {
+        "id": "scroll_edge_clear",
+        "caption": "Clear scroll edge surface after scrolling to the end",
+        "shots": {
+          "light": "scroll_edge_clear_light.png",
+          "dark": "scroll_edge_clear_dark.png"
+        }
+      },
+      {
+        "id": "scroll_edge_mid",
+        "caption": "Clear scroll edge surface 100 ms into the fade",
+        "shots": {
+          "light": "scroll_edge_mid_light.png",
+          "dark": "scroll_edge_mid_dark.png"
+        }
+      },
+      {
+        "id": "scroll_edge_notched_clear",
+        "caption": "Clear scroll edge surface with a notched centre action",
+        "shots": {
+          "light": "scroll_edge_notched_clear_light.png"
+        }
+      }
+    ]
+  },
+  {
+    "title": "Centre action",
+    "readme": "centre-action",
+    "demo": "center-action",
+    "cases": [
+      {
+        "id": "center_action_inline",
+        "caption": "Inline centre action between the tabs",
+        "shots": {
+          "light": "center_action_inline_light.png",
+          "dark": "center_action_inline_dark.png"
+        }
+      },
+      {
+        "id": "center_action_raised",
+        "caption": "Raised centre action above the tabs",
+        "shots": {
+          "light": "center_action_raised_light.png",
+          "dark": "center_action_raised_dark.png"
+        }
+      },
+      {
+        "id": "center_action_notched",
+        "caption": "Notched centre action in the bar",
+        "shots": {
+          "light": "center_action_notched_light.png",
+          "dark": "center_action_notched_dark.png",
+          "rtl": "center_action_notched_rtl.png"
+        }
+      }
+    ]
+  },
+  {
+    "title": "Groups",
+    "readme": "groups",
+    "demo": "groups",
+    "cases": [
+      {
+        "id": "group_glass",
+        "caption": "Glass group with side buttons and a notched centre action",
+        "shots": {
+          "light": "group_glass_light.png",
+          "dark": "group_glass_dark.png",
+          "rtl": "group_glass_rtl.png"
+        }
+      },
+      {
+        "id": "group_solid",
+        "caption": "Solid group with side buttons and a notched centre action",
+        "shots": {
+          "light": "group_solid_light.png",
+          "dark": "group_solid_dark.png"
+        }
+      }
+    ]
+  },
+  {
+    "title": "Docked",
+    "readme": "docked",
+    "demo": "docked",
+    "cases": [
+      {
+        "id": "docked_solid",
+        "caption": "Solid docked bar with a bottom inset",
+        "shots": {
+          "light": "docked_solid_light.png",
+          "dark": "docked_solid_dark.png"
+        }
+      },
+      {
+        "id": "docked_glass",
+        "caption": "Glass docked bar with a bottom inset",
+        "shots": {
+          "light": "docked_glass_light.png",
+          "dark": "docked_glass_dark.png"
+        }
+      }
+    ]
+  },
+  {
+    "title": "RTL",
+    "readme": "rtl",
+    "demo": null,
+    "cases": [
+      {
+        "id": "rtl_start_aligned",
+        "caption": "Narrow glass bar aligned to the start edge in RTL",
+        "shots": {
+          "": "rtl_start_aligned.png"
+        }
+      }
+    ]
+  },
+  {
+    "title": "Edge-to-edge and safe area",
+    "readme": "edge-to-edge-and-safe-area",
+    "demo": null,
+    "cases": [
+      {
+        "id": "landscape_side_insets",
+        "caption": "Full-width solid bar inset from the landscape side edges",
+        "shots": {
+          "": "landscape_side_insets.png"
+        }
+      }
+    ]
+  },
+  {
+    "title": "Minimize on scroll",
+    "readme": "minimize-on-scroll",
+    "demo": "minimize",
+    "cases": [
+      {
+        "id": "minimize_glass",
+        "caption": "Minimized glass bar",
+        "shots": {
+          "light": "minimize_glass_light.png",
+          "dark": "minimize_glass_dark.png",
+          "rtl": "minimize_glass_rtl.png"
+        }
+      },
+      {
+        "id": "minimize_solid",
+        "caption": "Minimized solid bar",
+        "shots": {
+          "light": "minimize_solid_light.png",
+          "dark": "minimize_solid_dark.png"
+        }
+      },
+      {
+        "id": "minimize_midpoint",
+        "caption": "Glass bar halfway through minimizing",
+        "shots": {
+          "light": "minimize_midpoint_light.png"
+        }
+      },
+      {
+        "id": "minimize_pieces",
+        "caption": "Minimized glass bar with leading and trailing buttons",
+        "shots": {
+          "light": "minimize_pieces_light.png",
+          "dark": "minimize_pieces_dark.png",
+          "rtl": "minimize_pieces_rtl.png"
+        }
+      }
+    ]
+  },
+  {
+    "title": "Accessory",
+    "readme": "accessory",
+    "demo": "accessory",
+    "cases": [
+      {
+        "id": "accessory_expanded_glass",
+        "caption": "Expanded glass bar with a now-playing accessory",
+        "shots": {
+          "light": "accessory_expanded_glass_light.png",
+          "dark": "accessory_expanded_glass_dark.png",
+          "rtl": "accessory_expanded_glass_rtl.png"
+        }
+      },
+      {
+        "id": "accessory_expanded_solid",
+        "caption": "Expanded solid bar with a now-playing accessory",
+        "shots": {
+          "light": "accessory_expanded_solid_light.png",
+          "dark": "accessory_expanded_solid_dark.png"
+        }
+      },
+      {
+        "id": "accessory_inline_glass",
+        "caption": "Minimized glass bar with an inline now-playing accessory",
+        "shots": {
+          "light": "accessory_inline_glass_light.png",
+          "dark": "accessory_inline_glass_dark.png",
+          "rtl": "accessory_inline_glass_rtl.png"
+        }
+      },
+      {
+        "id": "accessory_inline_solid",
+        "caption": "Minimized solid bar with an inline now-playing accessory",
+        "shots": {
+          "light": "accessory_inline_solid_light.png",
+          "dark": "accessory_inline_solid_dark.png"
+        }
+      }
+    ]
+  },
+  {
+    "title": "Adaptive rail",
+    "readme": "adaptive-rail",
+    "demo": "adaptive-rail",
+    "cases": [
+      {
+        "id": "rail_glass_floating",
+        "caption": "Glass adaptive rail on a colored backdrop",
+        "shots": {
+          "light": "rail_glass_floating_light.png",
+          "dark": "rail_glass_floating_dark.png",
+          "rtl": "rail_glass_floating_rtl.png"
+        }
+      },
+      {
+        "id": "rail_material3_attached",
+        "caption": "Material 3 adaptive rail attached to the edge",
+        "shots": {
+          "light": "rail_material3_attached_light.png",
+          "dark": "rail_material3_attached_dark.png",
+          "rtl": "rail_material3_attached_rtl.png"
+        }
+      },
+      {
+        "id": "rail_labels_selected",
+        "caption": "Material 3 rail with the label on the selected item only",
+        "shots": {
+          "light": "rail_labels_selected_light.png"
+        }
+      },
+      {
+        "id": "rail_labels_all",
+        "caption": "Glass adaptive rail with a label on every item",
+        "shots": {
+          "light": "rail_labels_all_light.png"
+        }
+      }
+    ]
+  },
+  {
+    "title": "Morph between bars",
+    "readme": "morph-between-bars",
+    "demo": "switcher",
+    "cases": [
+      {
+        "id": "switcher_nav",
+        "caption": "Navigation items before switching",
+        "shots": {
+          "light": "switcher_nav_light.png",
+          "dark": "switcher_nav_dark.png"
+        }
+      },
+      {
+        "id": "switcher_actions",
+        "caption": "Selection actions after switching",
+        "shots": {
+          "light": "switcher_actions_light.png",
+          "dark": "switcher_actions_dark.png"
+        }
+      },
+      {
+        "id": "switcher_composer",
+        "caption": "Message composer after switching",
+        "shots": {
+          "light": "switcher_composer_light.png",
+          "dark": "switcher_composer_dark.png"
+        }
+      },
+      {
+        "id": "switcher_midpoint",
+        "caption": "Switcher halfway through the morph into the composer",
+        "shots": {
+          "light": "switcher_midpoint_light.png",
+          "dark": "switcher_midpoint_dark.png"
+        }
+      }
+    ]
+  },
+  {
+    "title": "Expand into a panel",
+    "readme": "expand-into-a-panel",
+    "demo": "panel",
+    "cases": [
+      {
+        "id": "panel_open_glass",
+        "caption": "Glass panel open over the bar",
+        "shots": {
+          "light": "panel_open_glass_light.png",
+          "dark": "panel_open_glass_dark.png",
+          "rtl": "panel_open_glass_rtl.png"
+        }
+      },
+      {
+        "id": "panel_open_solid",
+        "caption": "Solid panel open over the bar",
+        "shots": {
+          "light": "panel_open_solid_light.png",
+          "dark": "panel_open_solid_dark.png"
+        }
+      },
+      {
+        "id": "panel_midpoint_glass",
+        "caption": "Glass panel halfway through opening",
+        "shots": {
+          "light": "panel_midpoint_glass_light.png",
+          "dark": "panel_midpoint_glass_dark.png"
+        }
+      }
+    ]
+  },
+  {
+    "title": "Large text",
+    "readme": "accessibility",
+    "demo": "accessibility",
+    "cases": [
+      {
+        "id": "large_text_2x",
+        "caption": "Bar at 2x text scale in light and dark",
+        "shots": {
+          "light": "large_text_2x_light.png",
+          "dark": "large_text_2x_dark.png"
+        }
+      },
+      {
+        "id": "large_text_3x",
+        "caption": "Bar at 3x text scale in light, dark and right to left",
+        "shots": {
+          "light": "large_text_3x_light.png",
+          "dark": "large_text_3x_dark.png",
+          "rtl": "large_text_3x_rtl.png"
+        }
+      }
+    ]
+  },
+  {
+    "title": "Custom transitions",
+    "readme": "custom-transitions",
+    "demo": "custom-transition",
+    "cases": [
+      {
+        "id": "bottom_bar_transition_fade",
+        "caption": "Fade transition halfway through hiding",
+        "shots": {
+          "": "bottom_bar_transition_fade.png"
+        }
+      },
+      {
+        "id": "bottom_bar_transition_scale",
+        "caption": "Scale transition halfway through hiding",
+        "shots": {
+          "": "bottom_bar_transition_scale.png"
+        }
+      },
+      {
+        "id": "bottom_bar_transition_slide",
+        "caption": "Slide transition halfway through hiding",
+        "shots": {
+          "": "bottom_bar_transition_slide.png"
+        }
+      },
+      {
+        "id": "bottom_bar_transition_slideAndFade",
+        "caption": "Slide and fade transition halfway through hiding",
+        "shots": {
+          "": "bottom_bar_transition_slideAndFade.png"
+        }
+      }
+    ]
+  }
+]

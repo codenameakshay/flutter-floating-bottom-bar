@@ -37,6 +37,12 @@ jobs:
         working-directory: example
         run: flutter build web --release --wasm --base-href /flutter-floating-bottom-bar/
 
+      - name: Install package dependencies
+        run: flutter pub get
+
+      - name: Build golden gallery
+        run: dart run tool/gallery.dart --out example/build/web/gallery
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:

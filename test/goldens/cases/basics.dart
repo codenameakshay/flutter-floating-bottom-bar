@@ -1,15 +1,21 @@
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_floating_bottom_bar/flutter_floating_bottom_bar.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
-void main() {
-  testWidgets('default Material 3 dark theme', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
+import '../golden_case.dart';
+
+final basicsFeature = GoldenFeature(
+  'Default bar',
+  readme: 'basic-usage',
+  demo: 'minimal-api',
+  cases: [
+    GoldenCase(
+      'bottom_bar_default',
+      caption: 'Default bar in light and dark themes',
+      build: (shot) => MaterialApp(
         theme: ThemeData(
           useMaterial3: true,
           colorSchemeSeed: Colors.indigo,
-          brightness: Brightness.dark,
+          brightness: shot.brightness,
         ),
         home: Scaffold(
           body: BottomBar(
@@ -21,12 +27,6 @@ void main() {
           ),
         ),
       ),
-    );
-    await tester.pumpAndSettle();
-
-    await expectLater(
-      find.byType(BottomBar),
-      matchesGoldenFile('bottom_bar_default_dark.png'),
-    );
-  });
-}
+    ),
+  ],
+);
