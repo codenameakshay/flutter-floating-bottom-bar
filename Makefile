@@ -104,6 +104,11 @@ gallery: ## Build the golden gallery page into build/gallery
 gallery-check: ## Fail if the gallery is out of date with the goldens
 	$(DART) run tool/gallery.dart --check
 
+.PHONY: goldens-tooling
+goldens-tooling: ## Test the golden runner and the playground gallery link (bash, node)
+	bash tool/goldens/test-runner.sh
+	node tool/check-gallery-link.mjs
+
 # ---------------------------------------------------------------------------
 # Run example app
 # ---------------------------------------------------------------------------

@@ -63,6 +63,9 @@ jobs:
           cache-from: type=gha,scope=goldens
           cache-to: type=gha,mode=max,scope=goldens
 
+      - name: Test the golden tooling
+        run: make goldens-tooling
+
       - name: Check goldens
         run: make goldens
 

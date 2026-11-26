@@ -144,11 +144,11 @@ h2 { font-size: 21px; margin: 0; }
 .links { font-size: 14px; display: flex; gap: 14px; }
 .case { margin: 22px 0 0; }
 .case h3 { font-size: 15px; font-weight: 600; margin: 0 0 10px; }
-.shots { display: flex; flex-wrap: wrap; gap: 12px; }
-figure { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px; max-width: 100%; }
-figure img { display: block; max-width: 100%; height: auto; border-radius: 4px; }
-figcaption { font-size: 12px; color: var(--muted); padding-top: 6px; display: flex; justify-content: space-between; gap: 12px; }
-figcaption code { font-size: 11px; }
+.shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 12px; align-items: start; }
+figure { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px; min-width: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 4px; }
+figcaption { font-size: 12px; color: var(--muted); padding-top: 6px; display: flex; justify-content: space-between; gap: 12px; min-width: 0; }
+figcaption code { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 footer { max-width: 1200px; margin: 40px auto; padding: 0 16px; color: var(--muted); font-size: 13px; }
 </style>
 </head>
