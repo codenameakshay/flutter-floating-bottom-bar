@@ -36,10 +36,19 @@
   <a id="gallery-link" href="gallery/" hidden
      style="position:fixed;top:12px;right:12px;z-index:10;padding:6px 12px;border-radius:999px;background:rgba(30,30,40,.78);color:#fff;font:500 13px/1.4 system-ui,sans-serif;text-decoration:none">Golden gallery</a>
   <script>
-    // Shown on the playground home only, not over a demo.
+    // History API route updates do not emit hashchange, so wrap them too.
     const galleryLink = document.getElementById('gallery-link');
     const onHome = () => { galleryLink.hidden = !['', '#', '#/'].includes(location.hash); };
+    for (const method of ['pushState', 'replaceState']) {
+      const updateHistory = history[method];
+      history[method] = function (...args) {
+        const result = updateHistory.apply(this, args);
+        onHome();
+        return result;
+      };
+    }
     addEventListener('hashchange', onHome);
+    addEventListener('popstate', onHome);
     onHome();
   </script>
   <!--
