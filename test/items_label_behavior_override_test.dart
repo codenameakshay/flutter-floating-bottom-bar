@@ -6,13 +6,10 @@ class _AlwaysHideItems extends BottomBarItems {
   const _AlwaysHideItems({required super.children});
 
   @override
-  BottomBarLabelBehavior get labelBehavior =>
-      BottomBarLabelBehavior.alwaysHide;
+  BottomBarLabelBehavior get labelBehavior => BottomBarLabelBehavior.alwaysHide;
 }
 
-const _children = [
-  BottomBarItem(icon: Icon(Icons.home), label: Text('Home')),
-];
+const _children = [BottomBarItem(icon: Icon(Icons.home), label: Text('Home'))];
 
 void _expectHiddenLabel() {
   expect(find.byIcon(Icons.home), findsOneWidget);
