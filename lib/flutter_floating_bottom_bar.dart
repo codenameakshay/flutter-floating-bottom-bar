@@ -33,4 +33,4 @@ export 'src/widgets/bottom_bar_surface.dart';
 export 'src/widgets/bottom_bar_switcher.dart' show BottomBarSwitcher;
 export 'src/widgets/bottom_bar_indicator.dart'
     show BottomBarIndicator, BottomBarIndicatorBuilder;
-export 'src/widgets/bottom_bar_items.dart';
+export 'src/widgets/bottom_bar_items.dart' hide rowLabelBehavior;

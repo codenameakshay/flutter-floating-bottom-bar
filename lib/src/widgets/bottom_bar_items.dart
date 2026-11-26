@@ -78,7 +78,7 @@ class BottomBarItems extends StatelessWidget {
     super.key,
     required this.children,
     this.spacing = MainAxisAlignment.spaceAround,
-    this.labelBehavior,
+    this._labelBehavior,
     this.selectedIndex,
     this.onSelected,
     this.indicator,
@@ -101,12 +101,18 @@ class BottomBarItems extends StatelessWidget {
   /// expanded. A vertical column ignores it: it is as tall as its items.
   final MainAxisAlignment spacing;
 
-  /// Controls when descendant [BottomBarItem] labels are visible.
+  /// The label behavior configured for this row, or
+  /// [BottomBarLabelBehavior.alwaysShow] if the constructor argument was
+  /// omitted or null.
   ///
-  /// Exposed to descendants via [BottomBarItemsScope]. Defaults to
-  /// [BottomBarItemThemeData.labelBehavior], then to
-  /// [BottomBarLabelBehavior.alwaysShow].
-  final BottomBarLabelBehavior? labelBehavior;
+  /// When no behavior is configured, rendering uses
+  /// [BottomBarItemThemeData.labelBehavior], falling back to
+  /// [BottomBarLabelBehavior.alwaysShow]. [BottomBarItemsScope] exposes the
+  /// resolved value to descendants.
+  BottomBarLabelBehavior get labelBehavior =>
+      _labelBehavior ?? BottomBarLabelBehavior.alwaysShow;
+
+  final BottomBarLabelBehavior? _labelBehavior;
 
   /// The index of the selected child, or null to leave selection to each
   /// child (for example [BottomBarItem.selected]).
@@ -230,7 +236,7 @@ class BottomBarItems extends StatelessWidget {
 
     return BottomBarItemsScope(
       labelBehavior:
-          labelBehavior ??
+          rowLabelBehavior(this) ??
           itemThemeOf(context).labelBehavior ??
           BottomBarLabelBehavior.alwaysShow,
       child: LayoutBuilder(
@@ -292,7 +298,7 @@ class BottomBarItems extends StatelessWidget {
     final action = centerAction;
     return BottomBarItemsScope(
       labelBehavior:
-          labelBehavior ??
+          rowLabelBehavior(this) ??
           itemThemeOf(context).labelBehavior ??
           BottomBarLabelBehavior.alwaysShow,
       child: BottomBarItemHeightScope(
@@ -696,8 +702,21 @@ class BottomBarItemSelectionScope extends InheritedWidget {
   }
 }
 
-/// Exposes the enclosing [BottomBarItems.labelBehavior] to descendant
-/// [BottomBarItem]s.
+/// The row's behavior before theme fallback. If the constructor argument is
+/// unset and the getter returns `alwaysShow`, returns null so the theme can
+/// apply. Reads the getter to preserve 3.1.0 subclass overrides. Hidden from
+/// the package's public API.
+BottomBarLabelBehavior? rowLabelBehavior(BottomBarItems items) {
+  final behavior = items.labelBehavior;
+  if (behavior == BottomBarLabelBehavior.alwaysShow &&
+      items._labelBehavior == null) {
+    return null;
+  }
+  return behavior;
+}
+
+/// Exposes the enclosing [BottomBarItems] row's resolved label behavior to
+/// descendant [BottomBarItem]s.
 ///
 /// [BottomBarItem] reads this via [BottomBarItemsScope.maybeOf] to decide
 /// whether to render its label. An item used outside a [BottomBarItems] row

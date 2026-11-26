@@ -96,8 +96,10 @@ class BottomBarAdaptive extends StatefulWidget {
   /// for any other.
   final BottomBarRailStyle? railStyle;
 
-  /// When item labels show in the rail. Defaults to the
-  /// [BottomBarItems.labelBehavior] of [items], then the theme's.
+  /// When item labels show in the rail. This overrides the `labelBehavior`
+  /// constructor argument of [BottomBarItems]. When null, that constructor
+  /// argument takes precedence over the theme's label behavior, then
+  /// [BottomBarLabelBehavior.alwaysShow].
   final BottomBarLabelBehavior? railLabelBehavior;
 
   /// A widget above the items in the rail, such as a logo or a menu button.
@@ -265,7 +267,7 @@ class _BottomBarAdaptiveState extends State<BottomBarAdaptive> {
     final railItems = BottomBarItems(
       key: items.key,
       spacing: items.spacing,
-      labelBehavior: widget.railLabelBehavior ?? items.labelBehavior,
+      labelBehavior: widget.railLabelBehavior ?? rowLabelBehavior(items),
       selectedIndex: items.selectedIndex,
       onSelected: items.onSelected,
       indicator: items.indicator,

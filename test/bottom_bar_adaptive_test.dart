@@ -82,10 +82,12 @@ void main() {
     int index = 0,
     ValueChanged<int>? onSelected,
     bool scrollToStartOnReselect = false,
+    BottomBarLabelBehavior? labelBehavior,
   }) => BottomBarItems(
     selectedIndex: index,
     onSelected: onSelected,
     scrollToStartOnReselect: scrollToStartOnReselect,
+    labelBehavior: labelBehavior,
     indicator: const BottomBarIndicator.pill(),
     children: const [
       BottomBarItem(icon: Icon(Icons.home), label: Text('Home')),
@@ -124,6 +126,11 @@ void main() {
     ),
   );
 
+  Finder itemLabel(String label) => find.descendant(
+    of: find.byType(BottomBarItems),
+    matching: find.text(label),
+  );
+
   testWidgets('below 600 the bar shows, at 600 the rail shows', (tester) async {
     addTearDown(tester.view.reset);
     await setWidth(tester, 599);
@@ -141,6 +148,58 @@ void main() {
       tester.widget<BottomBarItems>(find.byType(BottomBarItems)).direction,
       Axis.vertical,
     );
+  });
+
+  testWidgets('rail label behavior resolves override before row and theme', (
+    tester,
+  ) async {
+    addTearDown(tester.view.reset);
+    await setWidth(tester, 599);
+    await tester.pumpWidget(adaptive(theme: BottomBarThemeData.minimal()));
+    expect(find.byType(BottomBar), findsOneWidget);
+    expect(itemLabel('Home'), findsWidgets);
+    expect(itemLabel('Search'), findsNothing);
+
+    await setWidth(tester, 600);
+    expect(find.byType(BottomBar), findsNothing);
+    expect(itemLabel('Home'), findsWidgets);
+    expect(itemLabel('Search'), findsNothing);
+
+    await tester.pumpWidget(
+      adaptive(
+        theme: BottomBarThemeData.minimal(),
+        items: railItems(labelBehavior: BottomBarLabelBehavior.alwaysShow),
+      ),
+    );
+    expect(itemLabel('Home'), findsWidgets);
+    expect(itemLabel('Search'), findsWidgets);
+
+    await tester.pumpWidget(
+      adaptive(
+        theme: BottomBarThemeData.minimal(),
+        items: railItems(labelBehavior: BottomBarLabelBehavior.alwaysShow),
+        railLabelBehavior: BottomBarLabelBehavior.alwaysHide,
+      ),
+    );
+    expect(itemLabel('Home'), findsNothing);
+    expect(itemLabel('Search'), findsNothing);
+
+    await tester.pumpWidget(adaptive(theme: BottomBarThemeData.minimal()));
+    expect(itemLabel('Home'), findsWidgets);
+    expect(itemLabel('Search'), findsNothing);
+
+    await tester.pumpWidget(adaptive());
+    expect(itemLabel('Home'), findsWidgets);
+    expect(itemLabel('Search'), findsWidgets);
+
+    await tester.pumpWidget(
+      adaptive(
+        items: const BottomBarItems(children: []),
+        theme: BottomBarThemeData.minimal(),
+      ),
+    );
+    expect(itemLabel('Home'), findsNothing);
+    expect(itemLabel('Search'), findsNothing);
   });
 
   testWidgets('a custom breakpoint of 800 keeps the bar at 700', (
